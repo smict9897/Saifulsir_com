@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 
 const Login = z.object({ email: z.string().email(), password: z.string().min(8) });
 
-export async function login(_: string, fd: FormData): Promise<string> {
+export async function loginAction(_: string, fd: FormData): Promise<string | undefined> {
   const p = login.safeParse(Object.fromEntries(fd.entries()));
 
   if (!p.success) return "Enter a valid email and a password of at least 8 characters.";
