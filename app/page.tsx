@@ -25,6 +25,7 @@ const secondary: Item[] = [
   { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: "/category/hsc-books" },
   { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: "/category/class-8-scholarship" },
 ];
+
 const compete: Item[] = [
   { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/category/guide-books" },
   { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/category/ntrca" },
