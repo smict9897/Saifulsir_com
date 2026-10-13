@@ -51,8 +51,13 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
           <SaveButton label item={{ id: p.id, type: "post", title: p.title, href }} />
         </div>
         {p.coverUrl && (
-          <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} width={1200} height={630} priority sizes="(max-width: 768px) 100vw, 672px" className="mt-6 h-auto w-full rounded-2xl" />
-        )}
+  <img 
+    src={p.coverUrl} 
+    alt={p.coverAlt ?? p.title} 
+    className="w-full rounded-2xl object-cover my-4" 
+  />
+)}
+
         <PostBody body={p.body} />
         {p.downloadUrl && (
           <a href={p.downloadUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-royal px-5 py-3 font-semibold text-white">
