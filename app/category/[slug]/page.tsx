@@ -13,6 +13,20 @@ const get = cache((slug: string) =>
   })
 );
 
+async function getAllDescendantIds(categoryId: string): Promise<string[]> {
+  const children = await db.category.findMany({
+    where: { parentId: categoryId },
+    select: { id: true },
+  });
+
+  const childIds = children.map((c) => c.id);
+  const nestedIds = await Promise.all(
+    childIds.map((id) => getAllDescendantIds(id))
+  );
+
+  return [...childIds, ...nestedIds.flat()];
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -37,11 +51,9 @@ export default async function CategoryPage({
 
   if (!c) notFound();
 
-  // ক্যাটাগরি ID এবং Child Category ID সংগ্রহ
-  const childIds = c.children.map((child) => child.id);
-  const targetCategoryIds = [c.id, ...childIds];
+  const descendantIds = await getAllDescendantIds(c.id);
+  const targetCategoryIds = [c.id, ...descendantIds];
 
-  // পোস্ট ফেচ করার সবচেয়ে নিরাপদ পদ্ধতি
   const posts = await db.post.findMany({
     where: {
       categoryId: {
