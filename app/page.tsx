@@ -103,9 +103,16 @@ export default async function Home() {
               {posts.map((p) => (
                 <Link key={p.id} href={`/blog/${p.slug ?? p.id}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="relative aspect-video bg-gradient-to-br from-royal to-sky-400">
-                    {p.coverUrl && <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />}
-                    <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
-                  </div>
+  {(p.coverImage || p.coverUrl) && (
+    <img 
+      src={p.coverImage || p.coverUrl} 
+      alt={p.title} 
+      className="h-full w-full object-cover" 
+    />
+  )}
+  <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
+</div>
+
                   <div className="p-4">
                     <h3 className="font-bold leading-snug">{p.title}</h3>
                     <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.body}</p>
