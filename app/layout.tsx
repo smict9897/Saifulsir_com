@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Hind_Siliguri } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
 import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { db } from "@/lib/db";
@@ -33,7 +34,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const wa = social.find((s) => s.name === "WhatsApp")?.url;
   return (
     <html lang="bn" className={bn.variable} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="font-sans">
         <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
         {children}
@@ -45,6 +48,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </a>
         )}
         <Analytics />
+
+        {/* Google Analytics Script */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-HQBV9KTQFV"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-HQBV9KTQFV');
+          `}
+        </Script>
       </body>
     </html>
   );
