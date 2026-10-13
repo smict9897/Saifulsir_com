@@ -2,6 +2,9 @@ import { FileDown, ShoppingCart } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { buy } from "@/app/actions/pay";
+import { catPath } from "@/lib/cat-paths";
+import SaveButton from "@/components/save-button";
+
 export default async function ResourceList({ title, category }: { title: string; category: string }) {
   const uid = (await auth())?.user?.id;
   const items = await db.resource.findMany({ where: { category }, orderBy: { createdAt: "desc" } }).catch(() => []);
@@ -12,11 +15,14 @@ export default async function ResourceList({ title, category }: { title: string;
       <h1 className="text-2xl font-bold">{title}</h1>
       {items.length === 0 && <p className="mt-6 text-slate-600">No materials yet. Check back soon.</p>}
       <ul className="mt-6 grid gap-3">{items.map((r) => (
-        <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4">
-          <div><h2 className="font-semibold">{r.title}</h2><p className="text-sm text-slate-600">{r.priceBdt > 0 ? `৳${r.priceBdt}` : "Free"} · {r.downloads} downloads</p></div>
-          {r.priceBdt > 0 && !paid.has(r.id)
-            ? <form action={buy.bind(null, r.id)}><button className={`${btn} bg-hire`}><ShoppingCart size={16} />Buy ৳{r.priceBdt}</button></form>
-            : <a href={`/api/download/${r.id}`} className={`${btn} bg-royal`}><FileDown size={16} />Download</a>}
+        <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4">
+          <div className="min-w-0 flex-1"><h2 className="font-semibold">{r.title}</h2><p className="text-sm text-slate-600">{r.priceBdt > 0 ? `৳${r.priceBdt}` : "Free"} · {r.downloads} downloads</p></div>
+          <div className="flex items-center gap-2">
+            <SaveButton item={{ id: r.id, type: "resource", title: r.title, href: catPath[r.category] ?? "/" }} />
+            {r.priceBdt > 0 && !paid.has(r.id)
+              ? <form action={buy.bind(null, r.id)}><button className={`${btn} bg-hire`}><ShoppingCart size={16} />Buy ৳{r.priceBdt}</button></form>
+              : <a href={`/api/download/${r.id}`} className={`${btn} bg-royal`}><FileDown size={16} />Download</a>}
+          </div>
         </li>))}
       </ul>
     </main>

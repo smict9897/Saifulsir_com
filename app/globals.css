@@ -4,3 +4,32 @@ body{@apply bg-paper text-navy-900 antialiased}
 @keyframes ticker{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 .ticker{animation:ticker 28s linear infinite}
 @media (prefers-reduced-motion:reduce){.ticker{animation:none}}
+
+/* Print only the cover page preview */
+@media print{
+  body *{visibility:hidden !important}
+  #print-area,#print-area *{visibility:visible !important}
+  #print-area{position:fixed;inset:0;margin:0;border-radius:0;box-shadow:none}
+}
+
+/* Dark mode: the "dark" class is set on <html> by the theme button */
+.dark body{background:#0b1220;color:#e2e8f0}
+.dark .bg-paper{background-color:#0b1220}
+.dark .bg-white,.dark .bg-white\/95,.dark .bg-white\/90{background-color:#111c33}
+.dark .bg-slate-50{background-color:#0f172a}
+.dark .bg-slate-100{background-color:#1e293b}
+.dark .bg-blue-50{background-color:#172554}
+.dark .bg-green-50{background-color:#052e16}
+.dark .bg-red-50{background-color:#450a0a}
+.dark .text-navy-900{color:#f1f5f9}
+.dark .text-slate-500{color:#94a3b8}
+.dark .text-slate-600{color:#a8b5c7}
+.dark .text-slate-700{color:#cbd5e1}
+.dark .border-slate-100,.dark .border-slate-200{border-color:#26344d}
+.dark .border-slate-300{border-color:#334155}
+.dark .hover\:bg-slate-100:hover{background-color:#1e293b}
+.dark .hover\:bg-slate-50:hover{background-color:#172033}
+.dark .from-blue-50{--tw-gradient-from:#0f1a33 var(--tw-gradient-from-position);--tw-gradient-to:rgb(15 26 51 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}
+.dark .to-paper{--tw-gradient-to:#0b1220 var(--tw-gradient-to-position)}
+.dark input,.dark textarea,.dark select{color:#e2e8f0}
+.dark ::placeholder{color:#64748b}

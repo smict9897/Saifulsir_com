@@ -6,6 +6,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { db } from "@/lib/db";
 import PostBody from "@/components/post-body";
+import SaveButton from "@/components/save-button";
 export const dynamic = "force-dynamic";
 
 const find = cache((key: string) => db.post.findFirst({ where: { OR: [{ slug: key }, { id: key }] }, include: { category: true } }));
@@ -30,10 +31,11 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
   const p = await find(key);
   if (!p) notFound();
   if (p.slug && key !== p.slug) permanentRedirect(`/blog/${p.slug}`);
+  const href = `/blog/${p.slug ?? p.id}`;
   const ld = {
     "@context": "https://schema.org", "@type": "Article", headline: p.metaTitle || p.title,
     datePublished: p.createdAt.toISOString(), author: { "@type": "Person", name: "Saiful Islam" },
-    mainEntityOfPage: `${base()}/blog/${p.slug ?? p.id}`, ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
+    mainEntityOfPage: `${base()}${href}`, ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
   };
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
@@ -44,7 +46,10 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
           {p.category && <> / <Link href={`/category/${p.category.slug}`} className="hover:text-royal">{p.category.name}</Link></>}
         </nav>
         <h1 className="text-3xl font-bold leading-tight">{p.title}</h1>
-        <p className="mt-1 text-sm text-slate-600">{p.createdAt.toLocaleDateString("en-GB")}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-600">{p.createdAt.toLocaleDateString("en-GB")}</p>
+          <SaveButton label item={{ id: p.id, type: "post", title: p.title, href }} />
+        </div>
         {p.coverUrl && (
           <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} width={1200} height={630} priority sizes="(max-width: 768px) 100vw, 672px" className="mt-6 h-auto w-full rounded-2xl" />
         )}

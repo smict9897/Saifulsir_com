@@ -1,14 +1,22 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Hind_Siliguri } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { db } from "@/lib/db";
+import { social } from "@/lib/social";
 import SiteHeader from "@/components/site-header";
+import SiteFooter from "@/components/site-footer";
 
 const bn = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn" });
-export const metadata: Metadata = { title: "SaifulSir.com", description: "Academic notes, admission, NTRCA, jobs and AI practice quizzes." };
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
+  description: "Academic notes, admission, NTRCA, jobs and AI practice quizzes.",
+};
+
+const themeScript = "try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}";
 
 async function logout() {
   "use server";
@@ -17,36 +25,21 @@ async function logout() {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const n = await db.notice.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } }).catch(() => null);
-  const notice = n?.text ?? "স্বাগতম SaifulSir.com এ";
   const u = (await auth())?.user;
-  const quick = [["Academic Notes", "/academic"], ["Admission", "/admission"], ["NTRCA", "/ntrca"], ["Jobs", "/jobs"]];
-  const more = [["Blog", "/blog"], ["Hire Me", "/hire"], ["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"]];
+  const wa = social.find((s) => s.name === "WhatsApp")?.url;
   return (
-    <html lang="bn" className={bn.variable}>
+    <html lang="bn" className={bn.variable} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body className="font-sans">
-        <div className="flex items-center bg-navy-900 text-sm text-white">
-          <span className="shrink-0 bg-hire px-3 py-1.5 font-semibold">নোটিশ</span>
-          <div className="min-w-0 flex-1 overflow-hidden py-1.5"><p className="ticker whitespace-nowrap">{notice}</p></div>
-        </div>
-        <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} />
+        <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
         {children}
-        <footer className="mt-20 bg-navy-900 text-sm text-slate-300">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3">
-            <div>
-              <p className="text-lg font-bold text-white">SaifulSir.com</p>
-              <p className="mt-2 max-w-xs">শিক্ষার সবকিছু একসাথে। নোট, প্রশ্নব্যাংক, মডেল টেস্ট আর AI কুইজ।</p>
-            </div>
-            <div>
-              <p className="font-semibold text-white">Quick links</p>
-              <ul className="mt-3 grid gap-2">{quick.map(([l, h]) => <li key={h}><Link href={h} className="hover:text-white">{l}</Link></li>)}</ul>
-            </div>
-            <div>
-              <p className="font-semibold text-white">More</p>
-              <ul className="mt-3 grid gap-2">{more.map(([l, h]) => <li key={h}><Link href={h} className="hover:text-white">{l}</Link></li>)}</ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 py-4 text-center text-xs">© {new Date().getFullYear()} SaifulSir.com</div>
-        </footer>
+        <SiteFooter />
+        {wa && (
+          <a href={wa} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
+            className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6">
+            <MessageCircle size={26} />
+          </a>
+        )}
         <Analytics />
       </body>
     </html>
