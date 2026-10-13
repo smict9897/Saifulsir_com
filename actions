@@ -100,10 +100,29 @@ model Attempt {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String
-  body      String
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  title           String
+  body            String
+  slug            String?   @unique
+  metaTitle       String?
+  metaDescription String?
+  coverUrl        String?
+  coverAlt        String?
+  downloadUrl     String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  createdAt       DateTime  @default(now())
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  posts     Post[]
+  createdAt DateTime   @default(now())
 }
 
 model Testimonial {
