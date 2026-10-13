@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // সরাসরি লাইভ ডোমেনের ইউআরএল দেওয়া হয়েছে
   const base = "https://saifulsir.com";
 
   const [posts, cats] = await Promise.all([
