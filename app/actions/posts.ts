@@ -1,0 +1,104 @@
+"use server";
+import { put, del } from "@vercel/blob";
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { staff } from "@/lib/guard";
+
+export type PostState = { msg: string };
+export type MediaState = { msg: string; snippet?: string };
+
+const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const slugField = z.string().trim().toLowerCase().refine((s) => s === "" || slugRe.test(s), "use only English letters, numbers and hyphens");
+const PostSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  body: z.string().min(20),
+  slug: slugField,
+  categoryId: z.string(),
+  metaTitle: z.string().trim().max(70),
+  metaDescription: z.string().trim().max(170),
+  coverAlt: z.string().trim().max(200),
+  downloadUrl: z.string().trim().refine((s) => s === "" || s.startsWith("https://"), "must start with https://"),
+});
+
+async function uploadImage(file: File, alt: string, folder: string): Promise<string> {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 3_000_000) throw new Error("Image must be JPG, PNG or WebP, up to 3 MB.");
+  if (!alt) throw new Error("Add alt text that describes the image.");
+  return (await put(`${folder}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`, file, { access: "public" })).url;
+}
+
+export async function savePost(id: string | null, _: PostState, fd: FormData): Promise<PostState> {
+  try {
+    await staff();
+    const d = PostSchema.parse(Object.fromEntries(fd));
+    if (d.slug) {
+      const other = await db.post.findUnique({ where: { slug: d.slug } });
+      if (other && other.id !== id) return { msg: "This URL slug is already used. Choose another." };
+    }
+    const old = id ? await db.post.findUnique({ where: { id } }) : null;
+    if (id && !old) return { msg: "Post not found." };
+    const file = fd.get("cover");
+    let coverUrl = old?.coverUrl ?? null;
+    if (file instanceof File && file.size > 0) coverUrl = await uploadImage(file, d.coverAlt, "blog");
+    else if (fd.get("removeCover") === "on") coverUrl = null;
+    if (coverUrl && !d.coverAlt) return { msg: "Add alt text that describes the cover image." };
+    const data = {
+      title: d.title, body: d.body, slug: d.slug || null, categoryId: d.categoryId || null,
+      metaTitle: d.metaTitle || null, metaDescription: d.metaDescription || null,
+      downloadUrl: d.downloadUrl || null, coverUrl, coverAlt: coverUrl ? d.coverAlt : null,
+    };
+    if (old) {
+      await db.post.update({ where: { id: old.id }, data });
+      if (old.coverUrl && old.coverUrl !== coverUrl) await del(old.coverUrl).catch(() => {});
+    } else {
+      await db.post.create({ data });
+    }
+  } catch (e) {
+    if (e instanceof z.ZodError) return { msg: `${e.issues[0].path.join(".") || "Form"}: ${e.issues[0].message}` };
+    return { msg: e instanceof Error ? e.message : "Could not save the post." };
+  }
+  revalidatePath("/", "layout");
+  redirect("/admin/posts");
+}
+
+export async function deletePost(id: string): Promise<void> {
+  await staff();
+  const p = await db.post.findUnique({ where: { id } });
+  if (!p) return;
+  await db.post.delete({ where: { id } });
+  if (p.coverUrl) await del(p.coverUrl).catch(() => {});
+  revalidatePath("/", "layout");
+}
+
+export async function addCategory(fd: FormData): Promise<void> {
+  await staff();
+  const d = z.object({
+    name: z.string().trim().min(2).max(80),
+    slug: slugField.refine((s) => s !== "", "slug is required"),
+    parentId: z.string(),
+  }).parse(Object.fromEntries(fd));
+  let slug = d.slug, n = 2;
+  while (await db.category.findUnique({ where: { slug } })) slug = `${d.slug}-${n++}`;
+  await db.category.create({ data: { name: d.name, slug, parentId: d.parentId || null } });
+  revalidatePath("/", "layout");
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await staff();
+  await db.category.delete({ where: { id } });
+  revalidatePath("/", "layout");
+}
+
+export async function uploadMedia(_: MediaState, fd: FormData): Promise<MediaState> {
+  try {
+    await staff();
+    const file = fd.get("image");
+    const alt = String(fd.get("alt") ?? "").trim();
+    if (!(file instanceof File) || file.size === 0) return { msg: "Choose an image." };
+    const url = await uploadImage(file, alt, "media");
+    return { msg: "Uploaded. Copy this line into your post text on its own paragraph.", snippet: `![${alt.replace(/[[\]]/g, "")}](${url})` };
+  } catch (e) {
+    return { msg: e instanceof Error ? e.message : "Upload failed." };
+  }
+}
