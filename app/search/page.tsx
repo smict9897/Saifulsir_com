@@ -4,7 +4,8 @@ import { CalendarDays, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+const fmt = (d: Date) =>
+  d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function SearchPage({
   searchParams,
@@ -14,20 +15,39 @@ export default async function SearchPage({
   const { q } = await searchParams;
   const query = q?.trim() || "";
 
-  const posts = query
-    ? await db.post.findMany({
-        where: {
-          OR: [
-            { title: { contains: query, mode: "insensitive" } },
-            { body: { contains: query, mode: "insensitive" } },
-            { metaDescription: { contains: query, mode: "insensitive" } },
-            { category: { name: { contains: query, mode: "insensitive" } } },
-            { category: { slug: { contains: query, mode: "insensitive" } } },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-      }).catch(() => [])
-    : [];
+  let posts: any[] = [];
+
+  if (query) {
+    // প্রথমে ম্যাচিং ক্যাটাগরি খুঁজে বের করি
+    const matchedCategories = await db.category.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { slug: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    const categoryIds = matchedCategories.map((c) => c.id);
+
+    posts = await db.post.findMany({
+      where: {
+        OR: [
+          { title: { contains: query, mode: "insensitive" } },
+          { body: { contains: query, mode: "insensitive" } },
+          { metaDescription: { contains: query, mode: "insensitive" } },
+          ...(categoryIds.length > 0
+            ? [{ categoryId: { in: categoryIds } }]
+            : []),
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: true,
+      },
+    });
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
