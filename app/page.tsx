@@ -10,29 +10,30 @@ type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: str
 const q = (s: string) => `/search?q=${encodeURIComponent(s)}`;
 
 const primary: Item[] = [
-  { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: q("Class 1") },
-  { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: q("Class 2") },
-  { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: q("Class 3") },
-  { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: q("Class 4") },
-  { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: q("Class 5") },
-  { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: q("Class 5 বৃত্তি") },
+  { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: "/category/class-1" },
+  { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: "/category/class-2" },
+  { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: "/category/class-3" },
+  { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: "/category/class-4" },
+  { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: "/category/class-5" },
+  { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: "/category/class-5-scholarship" },
 ];
 const secondary: Item[] = [
-  { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: q("Class 6") },
-  { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: q("Class 7") },
-  { en: "Class 8", bn: "৮ম শ্রেণি", icon: Compass, tint: "bg-emerald-100 text-emerald-600", href: q("Class 8") },
-  { en: "Class 9-10", bn: "এসএসসি", icon: FileText, tint: "bg-amber-100 text-amber-600", href: q("Class 9-10") },
-  { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: q("HSC") },
-  { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: q("Class 8 বৃত্তি") },
+  { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: "/category/class-6" },
+  { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: "/category/class-7" },
+  { en: "Class 8", bn: "৮ম শ্রেণি", icon: Compass, tint: "bg-emerald-100 text-emerald-600", href: "/category/class-8" },
+  { en: "Class 9-10", bn: "এসএসসি", icon: FileText, tint: "bg-amber-100 text-amber-600", href: "/category/class-9-10" },
+  { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: "/category/hsc-books" },
+  { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: "/category/class-8-scholarship" },
 ];
 const compete: Item[] = [
-  { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/library" },
-  { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/ntrca" },
-  { en: "BCS", bn: "পড়াশোনা", icon: ShieldCheck, tint: "bg-amber-100 text-amber-600", href: q("BCS") },
-  { en: "NU Studies", bn: "জাতীয় বিশ্ববিদ্যালয়", icon: Landmark, tint: "bg-indigo-100 text-indigo-600", href: q("NU") },
-  { en: "Admission", bn: "ভর্তি গাইড", icon: Rocket, tint: "bg-rose-100 text-rose-600", href: "/admission" },
-  { en: "Medical Guide", bn: "মেডিকেল গাইড", icon: Stethoscope, tint: "bg-red-100 text-red-600", href: q("Medical") },
+  { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/category/guide-books" },
+  { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/category/ntrca" },
+  { en: "BCS", bn: "পড়াশোনা", icon: ShieldCheck, tint: "bg-amber-100 text-amber-600", href: "/category/bcs" },
+  { en: "NU Studies", bn: "জাতীয় বিশ্ববিদ্যালয়", icon: Landmark, tint: "bg-indigo-100 text-indigo-600", href: "/category/nu-studies" },
+  { en: "Admission", bn: "ভর্তি গাইড", icon: Rocket, tint: "bg-rose-100 text-rose-600", href: "/category/admission" },
+  { en: "Medical Guide", bn: "মেডিকেল গাইড", icon: Stethoscope, tint: "bg-red-100 text-red-600", href: "/category/medical-guide" },
 ];
+
 const tools: Item[] = [
   { en: "ছবি ও স্বাক্ষর রিসাইজার", bn: "চাকরির আবেদনের জন্য", icon: Crop, tint: "bg-sky-100 text-sky-600", href: "/tools/photo-resizer" },
   { en: "NU CGPA", bn: "রেজাল্ট প্ল্যানার", icon: Calculator, tint: "bg-indigo-100 text-indigo-600", href: "/tools/nu-cgpa" },
