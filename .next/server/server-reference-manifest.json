@@ -1,5 +1,166 @@
 {
-  "node": {},
+  "node": {
+    "00e7b8fd9e5c56769ed689eb9cf819cbcc18018512": {
+      "workers": {
+        "app/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/login/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/admin/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/admin/jobs/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%2C%5B%7B%22id%22%3A%22400fd69b8877654ceaab940906ec745a8ae2f1f2f1%22%2C%22exportedName%22%3A%22addNotice%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%22405cf1985ddc8ddcad8a6e88dc39e5bf1247bfa481%22%2C%22exportedName%22%3A%22addJob%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%2260834fda376492df19443a6ec53207a8941863361a%22%2C%22exportedName%22%3A%22sendInquiry%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/admin/ai/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        },
+        "app/admin/pdf/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cresources.ts%22%2C%5B%7B%22id%22%3A%22401e2421e8e28592aa4be57b7b463a12154f71f8dc%22%2C%22exportedName%22%3A%22addResource%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cresources.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/page": "rsc",
+        "app/login/page": "rsc",
+        "app/admin/page": "rsc",
+        "app/admin/jobs/page": "rsc",
+        "app/admin/ai/page": "rsc",
+        "app/admin/pdf/page": "rsc"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\layout.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_0"
+    },
+    "405c861277312a74a4cbe685647c2d7866066aceb9": {
+      "workers": {
+        "app/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%2C%5B%7B%22id%22%3A%22405c861277312a74a4cbe685647c2d7866066aceb9%22%2C%22exportedName%22%3A%22generateQuiz%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        },
+        "app/admin/ai/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%2C%5B%7B%22id%22%3A%22405c861277312a74a4cbe685647c2d7866066aceb9%22%2C%22exportedName%22%3A%22generateQuiz%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cquestions.ts%22%2C%5B%7B%22id%22%3A%226005ca051a3af7202520e4daaf3744dcb7eb67293b%22%2C%22exportedName%22%3A%22saveQuestions%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cquestions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/page": "action-browser",
+        "app/admin/ai/page": "action-browser"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\generate-quiz.ts",
+      "exportedName": "generateQuiz"
+    },
+    "00ba9fac8810e1961895d3d6f6c4b33fe9df96db82": {
+      "workers": {
+        "app/login/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%2C%5B%7B%22id%22%3A%2200ba9fac8810e1961895d3d6f6c4b33fe9df96db82%22%2C%22exportedName%22%3A%22googleLogin%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%226012b8738744e8f98a5c63526fcf1d49106e106515%22%2C%22exportedName%22%3A%22login%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%2260a8c5d04ceadc802d0e308c312f45d1ff3e189145%22%2C%22exportedName%22%3A%22register%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/login/page": "action-browser"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\auth.ts",
+      "exportedName": "googleLogin"
+    },
+    "6012b8738744e8f98a5c63526fcf1d49106e106515": {
+      "workers": {
+        "app/login/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%2C%5B%7B%22id%22%3A%2200ba9fac8810e1961895d3d6f6c4b33fe9df96db82%22%2C%22exportedName%22%3A%22googleLogin%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%226012b8738744e8f98a5c63526fcf1d49106e106515%22%2C%22exportedName%22%3A%22login%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%2260a8c5d04ceadc802d0e308c312f45d1ff3e189145%22%2C%22exportedName%22%3A%22register%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/login/page": "action-browser"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\auth.ts",
+      "exportedName": "login"
+    },
+    "60a8c5d04ceadc802d0e308c312f45d1ff3e189145": {
+      "workers": {
+        "app/login/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%2C%5B%7B%22id%22%3A%2200ba9fac8810e1961895d3d6f6c4b33fe9df96db82%22%2C%22exportedName%22%3A%22googleLogin%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%226012b8738744e8f98a5c63526fcf1d49106e106515%22%2C%22exportedName%22%3A%22login%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%2C%7B%22id%22%3A%2260a8c5d04ceadc802d0e308c312f45d1ff3e189145%22%2C%22exportedName%22%3A%22register%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cauth.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/login/page": "action-browser"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\auth.ts",
+      "exportedName": "register"
+    },
+    "400fd69b8877654ceaab940906ec745a8ae2f1f2f1": {
+      "workers": {
+        "app/admin/jobs/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%2C%5B%7B%22id%22%3A%22400fd69b8877654ceaab940906ec745a8ae2f1f2f1%22%2C%22exportedName%22%3A%22addNotice%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%22405cf1985ddc8ddcad8a6e88dc39e5bf1247bfa481%22%2C%22exportedName%22%3A%22addJob%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%2260834fda376492df19443a6ec53207a8941863361a%22%2C%22exportedName%22%3A%22sendInquiry%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/admin/jobs/page": "rsc"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\content.ts",
+      "exportedName": "addNotice"
+    },
+    "405cf1985ddc8ddcad8a6e88dc39e5bf1247bfa481": {
+      "workers": {
+        "app/admin/jobs/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%2C%5B%7B%22id%22%3A%22400fd69b8877654ceaab940906ec745a8ae2f1f2f1%22%2C%22exportedName%22%3A%22addNotice%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%22405cf1985ddc8ddcad8a6e88dc39e5bf1247bfa481%22%2C%22exportedName%22%3A%22addJob%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%2260834fda376492df19443a6ec53207a8941863361a%22%2C%22exportedName%22%3A%22sendInquiry%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/admin/jobs/page": "rsc"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\content.ts",
+      "exportedName": "addJob"
+    },
+    "60834fda376492df19443a6ec53207a8941863361a": {
+      "workers": {
+        "app/admin/jobs/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%2C%5B%7B%22id%22%3A%22400fd69b8877654ceaab940906ec745a8ae2f1f2f1%22%2C%22exportedName%22%3A%22addNotice%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%22405cf1985ddc8ddcad8a6e88dc39e5bf1247bfa481%22%2C%22exportedName%22%3A%22addJob%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%2C%7B%22id%22%3A%2260834fda376492df19443a6ec53207a8941863361a%22%2C%22exportedName%22%3A%22sendInquiry%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Ccontent.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/admin/jobs/page": "rsc"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\content.ts",
+      "exportedName": "sendInquiry"
+    },
+    "6005ca051a3af7202520e4daaf3744dcb7eb67293b": {
+      "workers": {
+        "app/admin/ai/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%2C%5B%7B%22id%22%3A%22405c861277312a74a4cbe685647c2d7866066aceb9%22%2C%22exportedName%22%3A%22generateQuiz%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cgenerate-quiz.ts%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cquestions.ts%22%2C%5B%7B%22id%22%3A%226005ca051a3af7202520e4daaf3744dcb7eb67293b%22%2C%22exportedName%22%3A%22saveQuestions%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cquestions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/admin/ai/page": "action-browser"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\questions.ts",
+      "exportedName": "saveQuestions"
+    },
+    "401e2421e8e28592aa4be57b7b463a12154f71f8dc": {
+      "workers": {
+        "app/admin/pdf/page": {
+          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%2C%5B%7B%22id%22%3A%2200e7b8fd9e5c56769ed689eb9cf819cbcc18018512%22%2C%22exportedName%22%3A%22%24%24RSC_SERVER_ACTION_0%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Clayout.tsx%22%7D%5D%5D%2C%5B%22E%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cresources.ts%22%2C%5B%7B%22id%22%3A%22401e2421e8e28592aa4be57b7b463a12154f71f8dc%22%2C%22exportedName%22%3A%22addResource%22%2C%22filename%22%3A%22..%2FE%3A%5C%5CSoftwere%20Engineering%5C%5Csaifulsir-starter(1)%5C%5Capp%5C%5Cactions%5C%5Cresources.ts%22%7D%5D%5D%5D&__client_imported__=!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/admin/pdf/page": "rsc"
+      },
+      "filename": "../E:\\Softwere Engineering\\saifulsir-starter(1)\\app\\actions\\resources.ts",
+      "exportedName": "addResource"
+    }
+  },
   "edge": {},
   "encryptionKey": "/geuNTlbHThPKig/HOBlM350TT85LTGSdmJ6QtCpVdY="
 }
