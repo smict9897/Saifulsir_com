@@ -10,10 +10,14 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 
 const bn = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn" });
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL("https://saifulsir.com"),
   title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
   description: "Academic notes, admission, NTRCA, jobs and AI practice quizzes.",
+  verification: {
+    google: "UKC_lZcu2ON7AkIGKfO0IRjRx627xeHb_F-NiuTz8go",
+  },
 };
 
 const themeScript = "try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}";
