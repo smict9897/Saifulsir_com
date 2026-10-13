@@ -20,8 +20,11 @@ const groups: { title: string; items: Item[] }[] = [
     ["জব সার্কুলার", "/jobs", Briefcase, "text-emerald-300"], ["ভিডিও লেসন", "/videos", PlayCircle, "text-red-400"], ["ব্লগ", "/blog", Newspaper, "text-violet-400"],
   ] },
   { title: "নীতিমালা ও সহায়তা", items: [
-    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
+    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], 
+    ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
     ["Terms of Service", "/terms", FileText, "text-slate-300"],
+    ["Disclaimer", "/terms", FileText, "text-slate-300"],
+    ["Contact Us", "/terms", FileText, "text-slate-300"], and 
   ] },
 ];
 
