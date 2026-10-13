@@ -32,11 +32,22 @@ export default async function CategoryPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const c = await get((await params).slug);
+  const resolvedParams = await params;
+  const c = await get(resolvedParams.slug);
+
   if (!c) notFound();
 
+  // ক্যাটাগরি ID এবং Child Category ID সংগ্রহ
+  const childIds = c.children.map((child) => child.id);
+  const targetCategoryIds = [c.id, ...childIds];
+
+  // পোস্ট ফেচ করার সবচেয়ে নিরাপদ পদ্ধতি
   const posts = await db.post.findMany({
-    where: { category: { OR: [{ id: c.id }, { parentId: c.id }] } },
+    where: {
+      categoryId: {
+        in: targetCategoryIds,
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -58,7 +69,9 @@ export default async function CategoryPage({
           </>
         )}
       </nav>
+
       <h1 className="text-2xl font-bold">{c.name}</h1>
+
       {c.children.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {c.children.map((k) => (
@@ -72,9 +85,16 @@ export default async function CategoryPage({
           ))}
         </div>
       )}
+
       {posts.length === 0 && (
-        <p className="mt-6 text-slate-600">এখনো কোনো পোস্ট নেই।</p>
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+          <p className="text-lg font-semibold">এখনো কোনো পোস্ট নেই।</p>
+          <p className="mt-1 text-sm text-slate-500">
+            এই ক্যাটাগরিতে নতুন পোস্ট যুক্ত করা হলে তা এখানে দেখাবে।
+          </p>
+        </div>
       )}
+
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((p) => (
           <Link
