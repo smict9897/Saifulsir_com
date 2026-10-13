@@ -21,6 +21,8 @@ export default async function SearchPage({
             { title: { contains: query, mode: "insensitive" } },
             { body: { contains: query, mode: "insensitive" } },
             { metaDescription: { contains: query, mode: "insensitive" } },
+            { category: { name: { contains: query, mode: "insensitive" } } },
+            { category: { slug: { contains: query, mode: "insensitive" } } },
           ],
         },
         orderBy: { createdAt: "desc" },
@@ -35,7 +37,7 @@ export default async function SearchPage({
 
       {posts.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-          <p className="text-lg">পাওয়া যায়নি!</p>
+          <p className="text-lg font-bold">পাওয়া যায়নি!</p>
           <p className="mt-1 text-sm text-slate-500">
             এই ক্যাটাগরি বা কিওয়ার্ড সম্পর্কিত কোনো পোস্ট এখনো যুক্ত করা হয়নি।
           </p>
