@@ -3,38 +3,38 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Atom, Award, Backpack, Book, BookOpen, Calculator, CalendarDays, ClipboardList, Clock, Compass, Crop, FileText, FlaskConical, GraduationCap, Landmark, Library, Lightbulb, Presentation, Rocket, Search, ShieldCheck, Stethoscope, Target, Trophy } from "lucide-react";
 import { db } from "@/lib/db";
+import { getSite } from "@/lib/site";
+import { popularTags } from "@/lib/popular-tags";
 import { catPath } from "@/lib/cat-paths";
 export const dynamic = "force-dynamic";
 
-type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string };
+type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
 const q = (s: string) => `/search?q=${encodeURIComponent(s)}`;
 
 const primary: Item[] = [
-  { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: "/category/class-1" },
-  { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: "/category/class-2" },
-  { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: "/category/class-3" },
-  { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: "/category/class-4" },
-  { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: "/category/class-5" },
-  { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: "/category/class-5-scholarship" },
+  { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: q("Class 1"), slug: "class-1" },
+  { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: q("Class 2"), slug: "class-2" },
+  { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: q("Class 3"), slug: "class-3" },
+  { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: q("Class 4"), slug: "class-4" },
+  { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: q("Class 5"), slug: "class-5" },
+  { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: q("Class 5 বৃত্তি"), slug: "class-5-scholarship" },
 ];
 const secondary: Item[] = [
-  { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: "/category/class-6" },
-  { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: "/category/class-7" },
-  { en: "Class 8", bn: "৮ম শ্রেণি", icon: Compass, tint: "bg-emerald-100 text-emerald-600", href: "/category/class-8" },
-  { en: "Class 9-10", bn: "এসএসসি", icon: FileText, tint: "bg-amber-100 text-amber-600", href: "/category/class-9-10" },
-  { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: "/category/hsc-books" },
-  { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: "/category/class-8-scholarship" },
+  { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: q("Class 6"), slug: "class-6" },
+  { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: q("Class 7"), slug: "class-7" },
+  { en: "Class 8", bn: "৮ম শ্রেণি", icon: Compass, tint: "bg-emerald-100 text-emerald-600", href: q("Class 8"), slug: "class-8" },
+  { en: "Class 9-10", bn: "এসএসসি", icon: FileText, tint: "bg-amber-100 text-amber-600", href: q("Class 9-10"), slug: "class-9-10" },
+  { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: q("HSC"), slug: "hsc" },
+  { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: q("Class 8 বৃত্তি"), slug: "class-8-scholarship" },
 ];
-
 const compete: Item[] = [
-  { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/category/guide-books" },
-  { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/category/ntrca" },
-  { en: "BCS", bn: "পড়াশোনা", icon: ShieldCheck, tint: "bg-amber-100 text-amber-600", href: "/category/bcs" },
-  { en: "NU Studies", bn: "জাতীয় বিশ্ববিদ্যালয়", icon: Landmark, tint: "bg-indigo-100 text-indigo-600", href: "/category/nu-studies" },
-  { en: "Admission", bn: "ভর্তি গাইড", icon: Rocket, tint: "bg-rose-100 text-rose-600", href: "/category/admission" },
-  { en: "Medical Guide", bn: "মেডিকেল গাইড", icon: Stethoscope, tint: "bg-red-100 text-red-600", href: "/category/medical-guide" },
+  { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/library" },
+  { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/ntrca" },
+  { en: "BCS", bn: "পড়াশোনা", icon: ShieldCheck, tint: "bg-amber-100 text-amber-600", href: q("BCS") },
+  { en: "NU Studies", bn: "জাতীয় বিশ্ববিদ্যালয়", icon: Landmark, tint: "bg-indigo-100 text-indigo-600", href: q("NU") },
+  { en: "Admission", bn: "ভর্তি গাইড", icon: Rocket, tint: "bg-rose-100 text-rose-600", href: "/admission" },
+  { en: "Medical Guide", bn: "মেডিকেল গাইড", icon: Stethoscope, tint: "bg-red-100 text-red-600", href: q("Medical") },
 ];
-
 const tools: Item[] = [
   { en: "ছবি ও স্বাক্ষর রিসাইজার", bn: "চাকরির আবেদনের জন্য", icon: Crop, tint: "bg-sky-100 text-sky-600", href: "/tools/photo-resizer" },
   { en: "NU CGPA", bn: "রেজাল্ট প্ল্যানার", icon: Calculator, tint: "bg-indigo-100 text-indigo-600", href: "/tools/nu-cgpa" },
@@ -68,18 +68,23 @@ const Grid = ({ items }: { items: Item[] }) => <div className="grid gap-3 sm:gri
 const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function Home() {
-  const [posts, trending, quotes] = await Promise.all([
-    db.post.findMany({ orderBy: { createdAt: "desc" }, take: 4 }).catch(() => []),
+  const [posts, trending, quotes, cats, site, tags] = await Promise.all([
+    db.post.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 4 }).catch(() => []),
     db.resource.findMany({ orderBy: [{ downloads: "desc" }, { createdAt: "desc" }], take: 7 }).catch(() => []),
     db.testimonial.findMany({ orderBy: { createdAt: "desc" }, take: 3 }).catch(() => []),
+    db.category.findMany({ select: { slug: true } }).catch(() => []),
+    getSite(),
+    popularTags(10),
   ]);
+  const slugSet = new Set(cats.map((c) => c.slug));
+  const resolve = (items: Item[]) => items.map((it) => (it.slug && slugSet.has(it.slug) ? { ...it, href: `/category/${it.slug}` } : it));
   return (
     <main>
       <section className="bg-gradient-to-b from-blue-50 to-paper px-4 pb-10 pt-10 text-center">
         <div className="mx-auto max-w-3xl">
-          <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">শিক্ষার সবকিছু একসাথে</p>
-          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">আপনার প্রয়োজনীয় শিক্ষামূলক বই সহজেই খুঁজে নিন</h1>
-          <p className="mt-3 text-slate-600">গাইড বই, লেকচার শিট এবং প্রশ্ন সমাধান, সব শ্রেণীর জন্য এক জায়গায়।</p>
+          <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">{site.heroBadge}</p>
+          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">{site.heroTitle}</h1>
+          <p className="mt-3 text-slate-600">{site.heroSubtitle}</p>
           <form action="/search" className="mx-auto mt-6 flex max-w-2xl items-center gap-2 rounded-full border border-slate-300 bg-white p-1.5 shadow-sm">
             <input name="q" placeholder="বই বা বিষয়ের নাম লিখুন..." aria-label="Search" className="min-w-0 flex-1 bg-transparent px-4 py-2.5 outline-none" />
             <button className="flex items-center gap-2 rounded-full bg-royal px-5 py-2.5 font-semibold text-white"><Search size={18} />খুঁজুন</button>
@@ -88,12 +93,17 @@ export default async function Home() {
             {chips.map(([l, s]) => <Link key={l} href={q(s)} className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm hover:border-royal hover:text-royal">{l}</Link>)}
             <Link href="/tools/photo-resizer" className="flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-4 py-1.5 text-sm text-sky-700"><Crop size={16} />ছবি রিসাইজার</Link>
           </div>
+          {tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap justify-center gap-2" aria-label="Popular tags">
+              {tags.map(([t]) => <Link key={t} href={`/tag/${encodeURIComponent(t)}`} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-royal hover:bg-blue-100">#{t}</Link>)}
+            </div>
+          )}
         </div>
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
-        <Head>প্রাথমিক স্তর</Head><Grid items={primary} />
-        <Head>মাধ্যমিক স্তর</Head><Grid items={secondary} />
+        <Head>প্রাথমিক স্তর</Head><Grid items={resolve(primary)} />
+        <Head>মাধ্যমিক স্তর</Head><Grid items={resolve(secondary)} />
         <Head>প্রতিযোগিতামূলক পরীক্ষা</Head><Grid items={compete} />
         <Head>শিক্ষার্থী সেবা ও প্রয়োজনীয় অনলাইন টুলস</Head><Grid items={tools} />
 
@@ -105,17 +115,9 @@ export default async function Home() {
               {posts.map((p) => (
                 <Link key={p.id} href={`/blog/${p.slug ?? p.id}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="relative aspect-video bg-gradient-to-br from-royal to-sky-400">
-  {p.coverUrl && (
-    <img 
-      src={p.coverUrl} 
-      alt={p.coverAlt ?? p.title} 
-      className="h-full w-full object-cover" 
-    />
-  )}
-  <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
-</div>
-
-
+                    {p.coverUrl && <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />}
+                    <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
+                  </div>
                   <div className="p-4">
                     <h3 className="font-bold leading-snug">{p.title}</h3>
                     <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.body}</p>

@@ -1,7 +1,23 @@
 import Image from "next/image";
+import Link from "next/link";
 
 const img = /^!\[([^\]]*)\]\((https:\/\/[^\s)]+)\)$/;
 const blob = /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//;
+const tagRe = /((?:^|(?<=[\s(]))#[\p{L}\p{M}\p{N}_-]{1,40})/u;
+
+function Inline({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(tagRe).map((part, i) =>
+        i % 2 === 1 ? (
+          <Link key={i} href={`/tag/${encodeURIComponent(part.slice(1).toLowerCase())}`} className="text-royal hover:underline">{part}</Link>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
 
 export default function PostBody({ body }: { body: string }) {
   return (
@@ -18,7 +34,7 @@ export default function PostBody({ body }: { body: string }) {
         }
         if (t.startsWith("### ")) return <h3 key={i} className="mt-2 text-xl font-bold">{t.slice(4)}</h3>;
         if (t.startsWith("## ")) return <h2 key={i} className="mt-4 text-2xl font-bold">{t.slice(3)}</h2>;
-        return <p key={i} className="whitespace-pre-line">{t}</p>;
+        return <p key={i} className="whitespace-pre-line"><Inline text={t} /></p>;
       })}
     </div>
   );

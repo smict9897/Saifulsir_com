@@ -1,113 +1,62 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import type { Category, Post, Resource } from "@prisma/client";
+import { Search as SearchIcon } from "lucide-react";
 import { db } from "@/lib/db";
-import { CalendarDays, Clock } from "lucide-react";
-
+import { catPath } from "@/lib/cat-paths";
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Search", robots: { index: false } };
 
-const fmt = (d: Date) =>
-  d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+type PostRow = Post & { category: Category | null };
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
-  const query = q?.trim() || "";
-
-  let posts: any[] = [];
-
-  if (query) {
-    // প্রথমে ম্যাচিং ক্যাটাগরি খুঁজে বের করি
-    const matchedCategories = await db.category.findMany({
-      where: {
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { slug: { contains: query, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true },
-    });
-
-    const categoryIds = matchedCategories.map((c) => c.id);
-
-    posts = await db.post.findMany({
-      where: {
-        OR: [
-          { title: { contains: query, mode: "insensitive" } },
-          { body: { contains: query, mode: "insensitive" } },
-          { metaDescription: { contains: query, mode: "insensitive" } },
-          ...(categoryIds.length > 0
-            ? [{ categoryId: { in: categoryIds } }]
-            : []),
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        category: true,
-      },
-    });
+export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim().slice(0, 80);
+  let res: Resource[] = [], posts: PostRow[] = [], cats: Category[] = [];
+  if (q) {
+    const has = { contains: q, mode: "insensitive" as const };
+    try {
+      [res, posts, cats] = await Promise.all([
+        db.resource.findMany({ where: { title: has }, orderBy: { createdAt: "desc" }, take: 30 }),
+        db.post.findMany({
+          where: { published: true, OR: [{ title: has }, { body: has }, { metaTitle: has }, { metaDescription: has }, { category: { OR: [{ name: has }, { slug: has }] } }] },
+          include: { category: true }, orderBy: { createdAt: "desc" }, take: 30,
+        }),
+        db.category.findMany({ where: { OR: [{ name: has }, { slug: has }] }, take: 10 }),
+      ]);
+    } catch {}
   }
-
+  const none = res.length + posts.length + cats.length === 0;
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold">
-        অনুসন্ধান ফলাফল: <span className="text-royal">"{query}"</span>
-      </h1>
-
-      {posts.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-          <p className="text-lg font-bold">পাওয়া যায়নি!</p>
-          <p className="mt-1 text-sm text-slate-500">
-            এই ক্যাটাগরি বা কিওয়ার্ড সম্পর্কিত কোনো পোস্ট এখনো যুক্ত করা হয়নি।
-          </p>
-          <Link
-            href="/"
-            className="mt-4 inline-block rounded-xl bg-royal px-5 py-2 font-semibold text-white"
-          >
-            হোমপেজে ফিরে যান
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {posts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/blog/${p.slug ?? p.id}`}
-              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-            >
-              <div className="relative aspect-video bg-gradient-to-br from-royal to-sky-400">
-                {p.coverUrl && (
-                  <img
-                    src={p.coverUrl}
-                    alt={p.title}
-                    className="h-full w-full object-cover"
-                  />
-                )}
-                <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">
-                  BLOG
-                </span>
-              </div>
-              <div className="p-4">
-                <h2 className="font-bold leading-snug">{p.title}</h2>
-                <p className="mt-2 line-clamp-2 text-sm text-slate-500">
-                  {p.metaDescription || p.body}
-                </p>
-                <div className="mt-3 flex justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <CalendarDays size={14} />
-                    {fmt(p.createdAt)}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={14} />
-                    {Math.max(1, Math.ceil(p.body.length / 900))} min read
-                  </span>
-                </div>
-              </div>
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <form action="/search" className="flex gap-2">
+        <input name="q" defaultValue={q} placeholder="বই বা বিষয়ের নাম লিখুন..." aria-label="Search" className="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-5 py-3" />
+        <button className="flex items-center gap-2 rounded-full bg-royal px-5 py-3 font-semibold text-white"><SearchIcon size={18} />খুঁজুন</button>
+      </form>
+      {q && none && <p className="mt-8 text-slate-600">&quot;{q}&quot; এর জন্য কিছু পাওয়া যায়নি।</p>}
+      <ul className="mt-6 grid gap-3">
+        {cats.map((c) => (
+          <li key={c.id}>
+            <Link href={`/category/${c.slug}`} className="flex items-center justify-between gap-3 rounded-2xl border border-royal/40 bg-blue-50 p-4 hover:border-royal">
+              <span className="font-semibold">{c.name}</span><span className="shrink-0 text-sm text-royal">ক্যাটাগরি দেখুন</span>
             </Link>
-          ))}
-        </div>
-      )}
+          </li>
+        ))}
+        {res.map((r) => (
+          <li key={r.id}>
+            <Link href={catPath[r.category] ?? "/"} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 hover:border-royal">
+              <span className="font-semibold">{r.title}</span>
+              <span className="shrink-0 text-sm text-slate-500">{r.category} · {r.priceBdt > 0 ? `৳${r.priceBdt}` : "Free"}</span>
+            </Link>
+          </li>
+        ))}
+        {posts.map((p) => (
+          <li key={p.id}>
+            <Link href={`/blog/${p.slug ?? p.id}`} className="block rounded-2xl border border-slate-200 bg-white p-4 hover:border-royal">
+              <span className="text-sm text-royal">{p.category?.name ?? "ব্লগ"}</span><p className="font-semibold">{p.title}</p>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }

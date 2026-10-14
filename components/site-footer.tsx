@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, FileText, GraduationCap, Library, ListChecks, Mail, Newspaper, PenSquare, Phone, PlayCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
-import { contact, social } from "@/lib/social";
+import { db } from "@/lib/db";
+import { getSite } from "@/lib/site";
 
 type Item = [label: string, href: string, icon: LucideIcon, color: string];
 const tint: Record<string, string> = {
@@ -20,16 +21,15 @@ const groups: { title: string; items: Item[] }[] = [
     ["জব সার্কুলার", "/jobs", Briefcase, "text-emerald-300"], ["ভিডিও লেসন", "/videos", PlayCircle, "text-red-400"], ["ব্লগ", "/blog", Newspaper, "text-violet-400"],
   ] },
   { title: "নীতিমালা ও সহায়তা", items: [
-    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], 
-    ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
+    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
     ["Terms of Service", "/terms", FileText, "text-slate-300"],
-    ["Disclaimer", "/terms", FileText, "text-slate-300"],
-    ["Contact Us", "/terms", FileText, "text-slate-300"], and 
   ] },
 ];
 
-export default function SiteFooter() {
-  const links = social.filter((s) => s.url);
+export default async function SiteFooter() {
+  const [site, pages] = await Promise.all([getSite(), db.page.findMany({ select: { slug: true, title: true }, orderBy: { title: "asc" } }).catch(() => [])]);
+  const { contact, footerText } = site;
+  const links = site.social.filter((s) => s.url);
   const tile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10";
   return (
     <footer className="mt-20 bg-navy-900 pb-24 text-sm text-slate-300 md:pb-0">
@@ -38,7 +38,7 @@ export default function SiteFooter() {
           <Link href="/" aria-label="SaifulSir.com home" className="inline-block rounded-xl bg-white px-3 py-2">
             <Image src="/logo.png" alt="SaifulSir.com" width={689} height={245} className="h-10 w-auto" />
           </Link>
-          <p className="mt-4 max-w-sm leading-relaxed">শিক্ষার সবকিছু একসাথে। নোট, প্রশ্নব্যাংক, মডেল টেস্ট আর AI কুইজ বিনামূল্যে পেতে আমাদের সাথেই থাকুন।</p>
+          <p className="mt-4 max-w-sm leading-relaxed">{footerText}</p>
           {links.length > 0 && (
             <div className="mt-5 flex flex-wrap gap-3">
               {links.map(({ name, icon: Icon, url }) => (
@@ -61,6 +61,9 @@ export default function SiteFooter() {
                     <span className={tile}><Icon size={20} className={color} /></span><span>{label}</span>
                   </Link>
                 </li>
+              ))}
+              {gi === 2 && pages.map((pg) => (
+                <li key={pg.slug}><Link href={`/p/${pg.slug}`} className="flex items-center gap-3 hover:text-white"><span className={tile}><FileText size={20} className="text-slate-300" /></span><span>{pg.title}</span></Link></li>
               ))}
               {gi === 2 && contact.phone && (
                 <li><a href={`tel:${contact.phone}`} className="flex items-center gap-3 hover:text-white"><span className={tile}><Phone size={20} className="text-emerald-400" /></span>{contact.phone}</a></li>

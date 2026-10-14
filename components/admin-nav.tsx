@@ -1,19 +1,20 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Sparkles, FileUp, ListChecks, Briefcase, Megaphone, Newspaper, Quote, Mail, Pencil, Globe, FilePlus2, FolderTree, Images } from "lucide-react";
+import { LayoutDashboard, Sparkles, FileUp, ListChecks, Briefcase, Megaphone, Newspaper, Quote, Mail, Pencil, Globe, FilePlus2, FolderTree, Images, Settings, Users, FileText, ShoppingBag } from "lucide-react";
 
 const items = [
   ["Overview", "/admin", LayoutDashboard], ["Posts", "/admin/posts", Newspaper], ["New post", "/admin/blog", FilePlus2],
-  ["Categories", "/admin/categories", FolderTree], ["Media", "/admin/media", Images], ["AI Questions", "/admin/ai", Sparkles],
-  ["Materials & Videos", "/admin/pdf", FileUp], ["Model Tests", "/admin/tests", ListChecks], ["Job Circulars", "/admin/jobs", Briefcase],
-  ["Notices", "/admin/notices", Megaphone], ["Testimonials", "/admin/testimonials", Quote], ["Inquiries", "/admin/inquiries", Mail],
-  ["Edit / Delete", "/admin/manage", Pencil],
+  ["Categories", "/admin/categories", FolderTree], ["Pages", "/admin/pages", FileText], ["Media", "/admin/media", Images],
+  ["Notices", "/admin/notices", Megaphone], ["Materials & Videos", "/admin/pdf", FileUp], ["AI Questions", "/admin/ai", Sparkles],
+  ["Model Tests", "/admin/tests", ListChecks], ["Job Circulars", "/admin/jobs", Briefcase], ["Testimonials", "/admin/testimonials", Quote],
+  ["Inquiries", "/admin/inquiries", Mail], ["Orders", "/admin/orders", ShoppingBag], ["Users", "/admin/users", Users],
+  ["Site settings", "/admin/settings", Settings], ["Edit / Delete", "/admin/manage", Pencil],
 ] as const;
 
 export default function AdminNav({ name, role }: { name: string; role?: string }) {
   const path = usePathname();
-  const on = (h: string) => (h === "/admin" ? path === h : h === "/admin/blog" ? path === h : path.startsWith(h));
+  const on = (h: string) => (h === "/admin" || h === "/admin/blog" ? path === h : path.startsWith(h));
   return (
     <aside className="shrink-0 lg:w-64">
       <div className="rounded-2xl bg-white p-3 shadow-sm lg:sticky lg:top-20">

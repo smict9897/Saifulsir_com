@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
+import { parseTags } from "@/lib/tags";
 
 export type PostState = { msg: string };
 export type MediaState = { msg: string; snippet?: string };
@@ -16,6 +17,7 @@ const PostSchema = z.object({
   body: z.string().min(20),
   slug: slugField,
   categoryId: z.string(),
+  tags: z.string().max(800),
   metaTitle: z.string().trim().max(70),
   metaDescription: z.string().trim().max(170),
   coverAlt: z.string().trim().max(200),
@@ -45,6 +47,7 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
     if (coverUrl && !d.coverAlt) return { msg: "Add alt text that describes the cover image." };
     const data = {
       title: d.title, body: d.body, slug: d.slug || null, categoryId: d.categoryId || null,
+      tags: parseTags(d.tags, d.body), published: fd.get("published") === "on",
       metaTitle: d.metaTitle || null, metaDescription: d.metaDescription || null,
       downloadUrl: d.downloadUrl || null, coverUrl, coverAlt: coverUrl ? d.coverAlt : null,
     };

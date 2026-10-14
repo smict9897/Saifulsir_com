@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { addCategory, deleteCategory } from "@/app/actions/posts";
+import { renameCategory } from "@/app/actions/admin";
 export const dynamic = "force-dynamic";
 const f = "rounded-xl border border-slate-300 bg-white px-3 py-2";
 
@@ -24,8 +25,12 @@ export default async function Page() {
         {cats.length === 0 && <p className="text-slate-600">No categories yet.</p>}
         <ul className="grid gap-2">
           {cats.map((c) => (
-            <li key={c.id} className="flex items-center gap-2 rounded-xl border border-slate-200 p-3">
-              <span className="flex-1">{c.parentId ? `${names.get(c.parentId)} › ` : ""}{c.name} <span className="text-xs text-slate-500">/{c.slug} · {c._count.posts} posts</span></span>
+            <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 p-3">
+              <form action={renameCategory.bind(null, c.id)} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <input name="name" defaultValue={c.name} aria-label="Name" className={`${f} min-w-0 flex-1 py-1`} />
+                <button className="rounded-lg bg-royal px-3 py-1 text-sm text-white">Rename</button>
+              </form>
+              <span className="text-xs text-slate-500">{c.parentId ? `in ${names.get(c.parentId)} · ` : ""}/{c.slug} · {c._count.posts} posts</span>
               <form action={deleteCategory.bind(null, c.id)}><button className="rounded-lg border border-red-300 px-3 py-1 text-sm text-red-700">Delete</button></form>
             </li>
           ))}

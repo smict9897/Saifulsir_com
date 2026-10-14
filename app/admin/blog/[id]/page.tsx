@@ -16,8 +16,9 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
       <Link href="/admin/posts" className="text-sm text-royal">← Back to posts</Link>
       <h1 className="mb-4 mt-2 text-2xl font-bold">Edit post</h1>
       <PostForm cats={cats} post={{
-        id: p.id, title: p.title, slug: p.slug ?? "", categoryId: p.categoryId ?? "", metaTitle: p.metaTitle ?? "",
-        metaDescription: p.metaDescription ?? "", coverUrl: p.coverUrl, coverAlt: p.coverAlt ?? "", downloadUrl: p.downloadUrl ?? "", body: p.body,
+        id: p.id, title: p.title, slug: p.slug ?? "", categoryId: p.categoryId ?? "", tags: p.tags.map((t) => `#${t}`).join(" "), published: p.published,
+        metaTitle: p.metaTitle ?? "", metaDescription: p.metaDescription ?? "", coverUrl: p.coverUrl, coverAlt: p.coverAlt ?? "",
+        downloadUrl: p.downloadUrl ?? "", body: p.body,
       }} />
     </div>
   );
