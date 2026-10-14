@@ -110,6 +110,8 @@ model Post {
   coverAlt        String?
   downloadUrl     String?
   categoryId      String?
+  tags            String[]  @default([])
+  published       Boolean   @default(true)
   category        Category? @relation(fields: [categoryId], references: [id])
   createdAt       DateTime  @default(now())
 }
@@ -140,4 +142,17 @@ model Purchase {
   amount     Int
   status     String   @default("PENDING")
   createdAt  DateTime @default(now())
+}
+model Setting {
+  key   String @id
+  value String
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
