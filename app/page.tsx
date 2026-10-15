@@ -52,19 +52,27 @@ function Head({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
 function Card({ it }: { it: Item }) {
   const Icon = it.icon;
-  const cls = "flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm";
+  const cls = "flex items-center gap-2.5 sm:gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 sm:p-3 shadow-sm";
   const inner = (
     <>
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${it.tint}`}><Icon size={22} /></span>
-      <span className="min-w-0"><span className="block font-semibold">{it.en}</span><span className="block text-sm text-slate-500">{it.bn}</span></span>
-      {!it.href && <span className="ml-auto shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">শীঘ্রই</span>}
+      <span className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${it.tint}`}>
+        <Icon size={20} className="sm:hidden" />
+        <Icon size={22} className="hidden sm:block" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs sm:text-base font-semibold truncate">{it.en}</span>
+        <span className="block text-[11px] sm:text-sm text-slate-500 truncate">{it.bn}</span>
+      </span>
+      {!it.href && <span className="hidden sm:inline-block ml-auto shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">শীঘ্রই</span>}
     </>
   );
   return it.href ? <Link href={it.href} className={`${cls} transition hover:border-royal hover:shadow`}>{inner}</Link> : <div className={`${cls} opacity-70`}>{inner}</div>;
 }
-const Grid = ({ items }: { items: Item[] }) => <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((it) => <Card key={it.en} it={it} />)}</div>;
+
+const Grid = ({ items }: { items: Item[] }) => <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">{items.map((it) => <Card key={it.en} it={it} />)}</div>;
 const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function Home() {
