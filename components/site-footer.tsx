@@ -32,10 +32,16 @@ const groups: { title: string; items: Item[] }[] = [
 ];
 
 export default async function SiteFooter() {
-  const [site, pages] = await Promise.all([db.page.findMany({ select: { slug: true, title: true }, orderBy: { title: "asc" } }).catch(() => []), getSite()]);
+  // getSite() কে ১ম এবং db.page.findMany()-কে ২য় পজিশনে রাখা হয়েছে
+  const [site, pages] = await Promise.all([
+    getSite(),
+    db.page.findMany({ select: { slug: true, title: true }, orderBy: { title: "asc" } }).catch(() => [])
+  ]);
+
   const { contact, footerText } = site;
-  const links = site.social.filter((s) => s.url);
+  const links = site.social ? site.social.filter((s) => s.url) : [];
   const tile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10";
+
   return (
     <footer className="mt-20 bg-navy-900 pb-24 text-sm text-slate-300 md:pb-0">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 lg:grid-cols-4">
