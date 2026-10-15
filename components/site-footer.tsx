@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, FileText, GraduationCap, Library, ListChecks, Mail, Newspaper, PenSquare, Phone, PlayCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, FileText, GraduationCap, Info, Library, ListChecks, Mail, Newspaper, PenSquare, Phone, PlayCircle, ShieldAlert, ShieldCheck, Sparkles, UserCheck, type LucideIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 
@@ -21,13 +21,18 @@ const groups: { title: string; items: Item[] }[] = [
     ["জব সার্কুলার", "/jobs", Briefcase, "text-emerald-300"], ["ভিডিও লেসন", "/videos", PlayCircle, "text-red-400"], ["ব্লগ", "/blog", Newspaper, "text-violet-400"],
   ] },
   { title: "নীতিমালা ও সহায়তা", items: [
-    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
-    ["Terms of Service", "/terms", FileText, "text-slate-300"],
+    ["About Us", "/about-us", Info, "text-indigo-400"],
+    ["Contact Us", "/contact-us", Mail, "text-emerald-400"],
+    ["Privacy Policy", "/privacy-policy", ShieldCheck, "text-sky-400"],
+    ["Terms Conditions", "/terms-conditions", FileText, "text-slate-300"],
+    ["Disclaimer", "/disclaimer", ShieldAlert, "text-amber-400"],
+    ["DMCA Policy", "/dmca", UserCheck, "text-rose-400"],
+    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"],
   ] },
 ];
 
 export default async function SiteFooter() {
-  const [site, pages] = await Promise.all([getSite(), db.page.findMany({ select: { slug: true, title: true }, orderBy: { title: "asc" } }).catch(() => [])]);
+  const [site, pages] = await Promise.all([db.page.findMany({ select: { slug: true, title: true }, orderBy: { title: "asc" } }).catch(() => []), getSite()]);
   const { contact, footerText } = site;
   const links = site.social.filter((s) => s.url);
   const tile = "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10";
@@ -62,13 +67,13 @@ export default async function SiteFooter() {
                   </Link>
                 </li>
               ))}
-              {gi === 2 && pages.map((pg) => (
+              {gi === 2 && Array.isArray(pages) && pages.map((pg) => (
                 <li key={pg.slug}><Link href={`/p/${pg.slug}`} className="flex items-center gap-3 hover:text-white"><span className={tile}><FileText size={20} className="text-slate-300" /></span><span>{pg.title}</span></Link></li>
               ))}
-              {gi === 2 && contact.phone && (
+              {gi === 2 && contact?.phone && (
                 <li><a href={`tel:${contact.phone}`} className="flex items-center gap-3 hover:text-white"><span className={tile}><Phone size={20} className="text-emerald-400" /></span>{contact.phone}</a></li>
               )}
-              {gi === 2 && contact.email && (
+              {gi === 2 && contact?.email && (
                 <li><a href={`mailto:${contact.email}`} className="flex items-center gap-3 hover:text-white"><span className={tile}><Mail size={20} className="text-sky-400" /></span>{contact.email}</a></li>
               )}
             </ul>
