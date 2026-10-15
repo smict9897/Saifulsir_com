@@ -31,12 +31,24 @@ function options(link: boolean): sanitizeHtml.IOptions {
       strike: "s",
       del: "s",
       a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow" }),
-      img: (_t, a) => ({ tagName: "img", attribs: { ...a, loading: "lazy" } }),
+      img: (_t, a) => ({
+        tagName: "img",
+        attribs: { ...a, loading: "lazy" },
+      }),
       font: (_t, a) => {
         const style: string[] = [];
         if (a.color) style.push(`color:${a.color}`);
         if (a.size && sizes[a.size]) style.push(`font-size:${sizes[a.size]}`);
-        return { tagName: "span", attribs: style.length ? { style: style.join(";") } : {} };
+        
+        const attribs: Record<string, string> = {};
+        if (style.length > 0) {
+          attribs.style = style.join(";");
+        }
+
+        return {
+          tagName: "span",
+          attribs,
+        } as sanitizeHtml.Tag;
       },
     },
     // The text reaching this function is already escaped, so the links below are safe.
