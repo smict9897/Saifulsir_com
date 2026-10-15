@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, FileText, GraduationCap, Library, ListChecks, Mail, Newspaper, PenSquare, Phone, PlayCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, FileText, GraduationCap, Library, ListChecks, Mail, Newspaper, PenSquare, Phone, PlayCircle, ShieldCheck, Sparkles, User, type LucideIcon } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 
@@ -9,6 +9,7 @@ const tint: Record<string, string> = {
   YouTube: "bg-red-600", Facebook: "bg-blue-600", Instagram: "bg-pink-600", LinkedIn: "bg-blue-700",
   GitHub: "bg-slate-700", Telegram: "bg-sky-500", WhatsApp: "bg-emerald-600",
 };
+
 const groups: { title: string; items: Item[] }[] = [
   { title: "শিক্ষার্থী সেবা ও টুলস", items: [
     ["AI কুইজ প্র্যাকটিস", "/quiz", Sparkles, "text-amber-400"], ["মডেল টেস্ট ও লিডারবোর্ড", "/tests", ListChecks, "text-blue-400"],
@@ -21,7 +22,10 @@ const groups: { title: string; items: Item[] }[] = [
     ["জব সার্কুলার", "/jobs", Briefcase, "text-emerald-300"], ["ভিডিও লেসন", "/videos", PlayCircle, "text-red-400"], ["ব্লগ", "/blog", Newspaper, "text-violet-400"],
   ] },
   { title: "নীতিমালা ও সহায়তা", items: [
-    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
+    ["আমাদের সম্পর্কে (About Us)", "/about-us", User, "text-blue-400"],
+    ["যোগাযোগ করুন (Contact)", "/contact", Mail, "text-emerald-400"],
+    ["Hire Me (Developer)", "/hire", Code2, "text-orange-400"], 
+    ["Privacy Policy", "/privacy", ShieldCheck, "text-sky-400"],
     ["Terms of Service", "/terms", FileText, "text-slate-300"],
   ] },
 ];
