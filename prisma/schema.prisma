@@ -114,6 +114,9 @@ model Post {
   published       Boolean   @default(true)
   category        Category? @relation(fields: [categoryId], references: [id])
   createdAt       DateTime  @default(now())
+  excerpt         String?
+  focusKeyword    String?
+  keywords        String[]  @default([])
 }
 
 model Category {
