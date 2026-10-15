@@ -124,10 +124,14 @@ export default function Hire() {
             </div>
           </div>
           <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full bg-gradient-to-br from-[#e64157] to-[#415de6] p-1 md:h-72 md:w-72">
-            {/* Swap this for <Image src="/images/saiful.jpg" .../> when you have a portrait */}
-            <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--bg)] text-6xl font-bold">
-              SI
-            </div>
+            <Image
+              src="/images/saiful.jpg"
+              alt="Saiful Islam"
+              width={288}
+              height={288}
+              priority
+              className="h-full w-full rounded-full object-cover"
+            />
           </div>
         </section>
 
