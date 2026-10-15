@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import HireForm from "@/components/hire-form";
 import PortfolioShell from "@/components/portfolio-shell";
