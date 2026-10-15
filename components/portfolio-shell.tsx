@@ -59,7 +59,7 @@ export default function PortfolioShell({ children }: { children: React.ReactNode
       style={THEMES[theme] as React.CSSProperties}
       className="min-h-screen scroll-smooth bg-[var(--bg)] text-[var(--text)]"
     >
-      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur">
+      <header className="border-b border-[var(--border)] bg-[var(--bg)]">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <a href="#hero" className="font-semibold">
             <span className="text-[#e64157]">&lt;</span> Saiful Islam{" "}
@@ -92,7 +92,7 @@ export default function PortfolioShell({ children }: { children: React.ReactNode
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Back to top"
-          className="fixed bottom-5 right-5 z-40 rounded-lg bg-gradient-to-r from-[#e64157] to-[#415de6] px-3 py-2 text-white shadow-lg"
+          className="fixed bottom-24 left-4 z-40 rounded-lg bg-gradient-to-r from-[#e64157] to-[#415de6] px-3 py-2 text-white shadow-lg"
         >
           ↑
         </button>
