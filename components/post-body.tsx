@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { isHtml, renderHtml } from "@/lib/html";
 
 const img = /^!\[([^\]]*)\]\((https:\/\/[^\s)]+)\)$/;
 const blob = /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//;
@@ -20,6 +21,7 @@ function Inline({ text }: { text: string }) {
 }
 
 export default function PostBody({ body }: { body: string }) {
+  if (isHtml(body)) return <div className="post-html mt-6" dangerouslySetInnerHTML={{ __html: renderHtml(body) }} />;
   return (
     <div className="mt-6 grid gap-4 leading-relaxed">
       {body.split(/\n{2,}/).map((raw, i) => {

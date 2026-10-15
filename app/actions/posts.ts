@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
 import { parseTags } from "@/lib/tags";
+import { cleanHtml, htmlToText } from "@/lib/html";
 
 export type PostState = { msg: string };
 export type MediaState = { msg: string; snippet?: string };
@@ -14,8 +15,10 @@ const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slugField = z.string().trim().toLowerCase().refine((s) => s === "" || slugRe.test(s), "use only English letters, numbers and hyphens");
 const PostSchema = z.object({
   title: z.string().trim().min(3).max(200),
-  body: z.string().min(20),
+  body: z.string().min(1).max(250000),
   slug: slugField,
+  focusKeyword: z.string().trim().max(80),
+  keywords: z.string().max(1200),
   categoryId: z.string(),
   tags: z.string().max(800),
   metaTitle: z.string().trim().max(70),
@@ -34,6 +37,10 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
   try {
     await staff();
     const d = PostSchema.parse(Object.fromEntries(fd));
+    const html = cleanHtml(d.body);
+    const text = htmlToText(html);
+    if (text.length < 20) return { msg: "Post text is too short. Write at least 20 characters." };
+    const keywords = Array.from(new Set(d.keywords.split(/[,\n،]+/).map((k) => k.trim()).filter((k) => k.length >= 2 && k.length <= 60))).slice(0, 10);
     if (d.slug) {
       const other = await db.post.findUnique({ where: { slug: d.slug } });
       if (other && other.id !== id) return { msg: "This URL slug is already used. Choose another." };
@@ -46,8 +53,8 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
     else if (fd.get("removeCover") === "on") coverUrl = null;
     if (coverUrl && !d.coverAlt) return { msg: "Add alt text that describes the cover image." };
     const data = {
-      title: d.title, body: d.body, slug: d.slug || null, categoryId: d.categoryId || null,
-      tags: parseTags(d.tags, d.body), published: fd.get("published") === "on",
+      title: d.title, body: html, excerpt: text.slice(0, 300), focusKeyword: d.focusKeyword || null, keywords, slug: d.slug || null, categoryId: d.categoryId || null,
+      tags: parseTags(d.tags, text), published: fd.get("published") === "on",
       metaTitle: d.metaTitle || null, metaDescription: d.metaDescription || null,
       downloadUrl: d.downloadUrl || null, coverUrl, coverAlt: coverUrl ? d.coverAlt : null,
     };
@@ -103,5 +110,17 @@ export async function uploadMedia(_: MediaState, fd: FormData): Promise<MediaSta
     return { msg: "Uploaded. Copy this line into your post text on its own paragraph.", snippet: `![${alt.replace(/[[\]]/g, "")}](${url})` };
   } catch (e) {
     return { msg: e instanceof Error ? e.message : "Upload failed." };
+  }
+}
+
+export async function uploadInline(fd: FormData): Promise<{ url?: string; error?: string }> {
+  try {
+    await staff();
+    const file = fd.get("image");
+    const alt = String(fd.get("alt") ?? "").trim();
+    if (!(file instanceof File) || file.size === 0) return { error: "ছবি বাছুন।" };
+    return { url: await uploadImage(file, alt, "media") };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Upload failed." };
   }
 }

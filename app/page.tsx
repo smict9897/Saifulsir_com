@@ -120,7 +120,7 @@ export default async function Home() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-bold leading-snug">{p.title}</h3>
-                    <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.body}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.excerpt || p.body}</p>
                     <div className="mt-3 flex justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
                       <span className="flex items-center gap-1"><CalendarDays size={14} />{fmt(p.createdAt)}</span>
                       <span className="flex items-center gap-1"><Clock size={14} />{Math.max(1, Math.ceil(p.body.length / 900))} min read</span>

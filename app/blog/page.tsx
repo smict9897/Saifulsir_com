@@ -33,7 +33,7 @@ export default async function Blog() {
             </div>
             <div className="p-4">
               <h2 className="font-bold leading-snug">{p.title}</h2>
-              <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.body}</p>
+              <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.excerpt || p.body}</p>
               <p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><CalendarDays size={14} />{p.createdAt.toLocaleDateString("en-GB")}</p>
             </div>
           </Link>

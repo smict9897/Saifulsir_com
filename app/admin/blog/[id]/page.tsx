@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { bodyToEditorHtml, cleanHtml } from "@/lib/html";
 import PostForm from "@/components/post-form";
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
       <h1 className="mb-4 mt-2 text-2xl font-bold">Edit post</h1>
       <PostForm cats={cats} post={{
         id: p.id, title: p.title, slug: p.slug ?? "", categoryId: p.categoryId ?? "", tags: p.tags.map((t) => `#${t}`).join(" "), published: p.published,
+        focusKeyword: p.focusKeyword ?? "", keywords: p.keywords.join(", "),
         metaTitle: p.metaTitle ?? "", metaDescription: p.metaDescription ?? "", coverUrl: p.coverUrl, coverAlt: p.coverAlt ?? "",
-        downloadUrl: p.downloadUrl ?? "", body: p.body,
+        downloadUrl: p.downloadUrl ?? "", body: cleanHtml(bodyToEditorHtml(p.body)),
       }} />
     </div>
   );

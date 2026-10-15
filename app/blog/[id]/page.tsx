@@ -19,10 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!p) return { title: "Not found" };
   if (!p.published) return { title: p.title, robots: { index: false, follow: false } };
   const title = p.metaTitle || p.title;
-  const description = p.metaDescription || p.body.replace(/[#!\[\]()]/g, "").replace(/\s+/g, " ").slice(0, 155);
+  const description = p.metaDescription || p.excerpt || p.body.replace(/[#!\[\]()]/g, "").replace(/\s+/g, " ").slice(0, 155);
   const path = `/blog/${p.slug ?? p.id}`;
   return {
-    title, description, alternates: { canonical: path }, keywords: p.tags,
+    title, description, alternates: { canonical: path }, keywords: [...p.keywords, ...p.tags],
     openGraph: { type: "article", title, description, url: path, publishedTime: p.createdAt.toISOString(), tags: p.tags,
       ...(p.coverUrl ? { images: [{ url: p.coverUrl, alt: p.coverAlt ?? p.title }] } : {}) },
     twitter: { card: p.coverUrl ? "summary_large_image" : "summary", title, description },
@@ -42,7 +42,7 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
   const ld = {
     "@context": "https://schema.org", "@type": "Article", headline: p.metaTitle || p.title,
     datePublished: p.createdAt.toISOString(), author: { "@type": "Person", name: "Saiful Islam" },
-    mainEntityOfPage: `${base()}${href}`, keywords: p.tags.join(", "), ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
+    mainEntityOfPage: `${base()}${href}`, keywords: [...p.keywords, ...p.tags].join(", "), ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
   };
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
