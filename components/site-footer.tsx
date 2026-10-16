@@ -4,8 +4,9 @@ import {
   BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, 
   FileText, GraduationCap, Info, Library, ListChecks, Mail, 
   Newspaper, PenSquare, Phone, PlayCircle, ShieldAlert, ShieldCheck, 
-  Sparkles, UserCheck, type LucideIcon 
+  Sparkles, UserCheck,Building2, type LucideIcon 
 } from "lucide-react";
+
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 
@@ -50,6 +51,7 @@ const groups: { title: string; items: Item[] }[] = [
       ["Disclaimer", "/disclaimer", ShieldAlert, "bg-amber-500/10 text-amber-400"],
       ["DMCA Policy", "/dmca", UserCheck, "bg-rose-500/10 text-rose-400"],
       ["Hire Me (Developer)", "/hire", Code2, "bg-orange-500/10 text-orange-400"],
+       ["S.N.P High School & College", "/s-n-p", Building2, "bg-blue-500/10 text-blue-400"],
     ] 
   },
 ];
