@@ -17,6 +17,29 @@ const unwrapRaw = (b: string) => {
   return isRawBody(t) ? t.slice(OPEN.length).replace(/<\/div>\s*$/, "").trim() : b;
 };
 
+// মোবাইলের বড় ছবি আপলোডের আগে ফোনেই ছোট করে (সর্বোচ্চ 1600px, WebP)
+async function compressImage(file: File, maxSide = 1600, quality = 0.82): Promise<File> {
+  try {
+    if (!file.type.startsWith("image/")) return file;
+    if (file.size <= 600_000 && ["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file;
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", quality));
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 export type PostFormData = {
   id?: string; title: string; slug: string; categoryId: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
   metaTitle: string; metaDescription: string; coverUrl: string | null; coverAlt: string; downloadUrl: string; body: string;
@@ -68,6 +91,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
   const [raw, setRaw] = useState(startRaw); // true হলে কোড হুবহু সেভ হবে (Blogspot HTML ট্যাবের মতো)
   const [tab, setTab] = useState<Tab>(startRaw ? "html" : "compose");
   const [info, setInfo] = useState({ text: "", headings: [] as string[], words: 0 });
+  const [coverMsg, setCoverMsg] = useState("");
   const on = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value });
 
   useEffect(() => {
@@ -82,6 +106,25 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       setRaw(false);
     }
     setTab(next);
+  };
+
+  // কভার ছবি বাছাই করলেই ফোনে ছোট করে ফর্মে বসিয়ে দেয়
+  const onCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file) { setCoverMsg(""); return; }
+    setCoverMsg("ছবি ছোট করা হচ্ছে…");
+    const small = await compressImage(file);
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(small);
+      input.files = dt.files;
+    } catch {
+      // পুরনো ব্রাউজারে অরিজিনাল ছবিই যাবে
+    }
+    setCoverMsg(small.size > 3_000_000
+      ? "ছবিটি এখনও ৩ MB-এর বেশি, ছোট ছবি বাছুন।"
+      : `ছবি তৈরি (${Math.round(small.size / 1024)} KB)।`);
   };
 
   const previewDoc =
@@ -179,7 +222,11 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" name="removeCover" />Remove this cover image</label>
         </div>
       )}
-      <label><L t={post.coverUrl ? "Replace cover image" : "Cover image"} hint="JPG, PNG or WebP, up to 3 MB" /><input name="cover" type="file" accept="image/jpeg,image/png,image/webp" className={f} /></label>
+      <label>
+        <L t={post.coverUrl ? "Replace cover image" : "Cover image"} hint="মোবাইলের ছবিও চলবে, নিজে ছোট হবে" />
+        <input name="cover" type="file" accept="image/*" onChange={onCover} className={f} />
+      </label>
+      {coverMsg && <p className="-mt-2 text-xs text-slate-500">{coverMsg}</p>}
       <label><L t="Cover image alt text" hint="required with a cover image" /><input name="coverAlt" maxLength={200} defaultValue={post.coverAlt} className={f} /></label>
       <label><L t="Download link" hint="Google Drive or PDF link, optional" /><input name="downloadUrl" type="url" defaultValue={post.downloadUrl} className={f} placeholder="https://" /></label>
 
@@ -206,4 +253,4 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       </button>
     </form>
   );
-        }
+}
