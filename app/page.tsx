@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 import { popularTags } from "@/lib/popular-tags";
 import { catPath } from "@/lib/cat-paths";
+
 export const dynamic = "force-dynamic";
 
 type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
@@ -120,22 +121,40 @@ export default async function Home() {
             <h2 className="text-2xl font-bold">Latest Articles</h2>
             {posts.length === 0 && <p className="mt-4 text-slate-600">শীঘ্রই নতুন লেখা আসছে।</p>}
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {posts.map((p) => (
-                <Link key={p.id} href={`/blog/${p.slug ?? p.id}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-                  <div className="relative aspect-video bg-gradient-to-br from-royal to-sky-400">
-                    {p.coverUrl && <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />}
-                    <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold leading-snug">{p.title}</h3>
-                    <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.excerpt || p.body}</p>
-                    <div className="mt-3 flex justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                      <span className="flex items-center gap-1"><CalendarDays size={14} />{fmt(p.createdAt)}</span>
-                      <span className="flex items-center gap-1"><Clock size={14} />{Math.max(1, Math.ceil(p.body.length / 900))} min read</span>
+              {posts.map((p) => {
+                // ইমেজের সঠিক ইউআরএল চেক ও ফলব্যাক নির্ধারণ
+                let imgSrc = "/placeholder.jpg";
+                if (p.coverUrl) {
+                  if (p.coverUrl.startsWith("/") || p.coverUrl.startsWith("http")) {
+                    imgSrc = p.coverUrl;
+                  } else {
+                    imgSrc = `/${p.coverUrl}`;
+                  }
+                }
+
+                return (
+                  <Link key={p.id} href={`/blog/${p.slug ?? p.id}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+                    <div className="relative aspect-video bg-slate-100">
+                      <Image 
+                        src={imgSrc} 
+                        alt={p.coverAlt ?? p.title} 
+                        fill 
+                        sizes="(max-width: 640px) 100vw, 360px" 
+                        className="object-cover" 
+                      />
+                      <span className="absolute left-3 top-3 rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white">BLOG</span>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                    <div className="p-4">
+                      <h3 className="font-bold leading-snug">{p.title}</h3>
+                      <p className="mt-2 line-clamp-2 text-sm text-slate-500">{p.metaDescription || p.excerpt || p.body}</p>
+                      <div className="mt-3 flex justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><CalendarDays size={14} />{fmt(p.createdAt)}</span>
+                        <span className="flex items-center gap-1"><Clock size={14} />{Math.max(1, Math.ceil(p.body.length / 900))} min read</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
