@@ -5,13 +5,11 @@ const tagRe = /(^|[\s(])#([\p{L}\p{M}\p{N}_-]{1,40})/gu;
 
 function options(link: boolean): sanitizeHtml.IOptions {
   return {
-    // টেবিল, সেল এবং সাধারণ সব লেআউট ট্যাগ অ্যালাউ করা হলো
     allowedTags: [
       "p", "br", "strong", "em", "u", "s", "sub", "sup", "h1", "h2", "h3", "h4", "h5", "h6",
       "blockquote", "ul", "ol", "li", "a", "img", "hr", "span", "mark", "div", "section",
       "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col"
     ],
-    // ইনলাইন স্টাইল, ক্লাস এবং টেবিল অ্যাট্রিবিউটগুলো পারমিশন দেওয়া হলো
     allowedAttributes: {
       "*": ["style", "class", "id", "title", "dir", "align"],
       a: ["href", "target", "rel"],
@@ -21,12 +19,8 @@ function options(link: boolean): sanitizeHtml.IOptions {
       th: ["rowspan", "colspan", "width", "scope", "style", "class"],
       td: ["rowspan", "colspan", "width", "style", "class"],
     },
-    // কোনো CSS স্টাইল যেন ফিল্টার আউট বা ব্লক না হয়
-    allowedStyles: {
-      "*": {
-        "*": [/.*/],
-      },
-    },
+    // গুরুত্বপূর্ণ: এখানে allowedStyles দেওয়া যাবে না।
+    // না দিলে সব inline style (border, background, color ...) অক্ষত থাকে।
     allowedSchemes: ["https", "http", "mailto", "data"],
     allowedSchemesByTag: { img: ["https", "http", "data"] },
     allowProtocolRelative: false,
