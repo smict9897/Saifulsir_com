@@ -52,6 +52,17 @@ export default function NTRCAPage() {
             <h3 className="font-bold text-slate-900 text-base">শূন্যপদের তালিকা</h3>
             <p className="text-xs text-slate-600">গণবিজ্ঞপ্তির জেলা ও উপজেলাভিত্তিক পোস্ট সার্চ</p>
           </Link>
+          <Link 
+            href="/ntrca/school-2" 
+            className="p-5 rounded-2xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 transition space-y-2 group"
+          >
+            <div className="p-3 bg-indigo-600 text-white rounded-xl w-fit group-hover:scale-105 transition">
+              <School size={22} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-base">স্কুল পর্যায়-2</h3>
+            <p className="text-xs text-slate-600">জুনিয়র শিক্ষক প্রস্তুতি</p>
+          </Link>
+          
 
           <Link 
             href="/ntrca/school" 
