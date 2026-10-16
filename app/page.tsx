@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
 const q = (s: string) => `/search?q=${encodeURIComponent(s)}`;
 
-const primary: Item[] = [
+//const primary: Item[] = [
   { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: q("Class 1"), slug: "class-1" },
   { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: q("Class 2"), slug: "class-2" },
   { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: q("Class 3"), slug: "class-3" },
