@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { 
   BookOpen, GraduationCap, PenSquare, Search, 
-  FileText, Award, ArrowRight, CheckCircle2, HelpCircle 
+  School, Award 
 } from "lucide-react";
-import ResourceList from "@/components/resource-list"; // আপনার আগের রিসোর্স কম্পোনেন্ট
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +41,7 @@ export default function NTRCAPage() {
         </div>
 
         {/* Sub-sections Quick Grid Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link 
             href="/ntrca/vacant" 
             className="p-5 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 transition space-y-2 group"
@@ -52,6 +51,28 @@ export default function NTRCAPage() {
             </div>
             <h3 className="font-bold text-slate-900 text-base">শূন্যপদের তালিকা</h3>
             <p className="text-xs text-slate-600">গণবিজ্ঞপ্তির জেলা ও উপজেলাভিত্তিক পোস্ট সার্চ</p>
+          </Link>
+
+          <Link 
+            href="/ntrca/school" 
+            className="p-5 rounded-2xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 transition space-y-2 group"
+          >
+            <div className="p-3 bg-indigo-600 text-white rounded-xl w-fit group-hover:scale-105 transition">
+              <School size={22} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-base">স্কুল পর্যায়</h3>
+            <p className="text-xs text-slate-600">সহকারী শিক্ষক ও জুনিয়র শিক্ষক প্রস্তুতি</p>
+          </Link>
+
+          <Link 
+            href="/ntrca/college" 
+            className="p-5 rounded-2xl border border-sky-200 bg-sky-50/50 hover:bg-sky-100/60 transition space-y-2 group"
+          >
+            <div className="p-3 bg-sky-600 text-white rounded-xl w-fit group-hover:scale-105 transition">
+              <GraduationCap size={22} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-base">কলেজ পর্যায়</h3>
+            <p className="text-xs text-slate-600">প্রভাষক পদের প্রস্তুতি ও নির্দেশিকা</p>
           </Link>
 
           <Link 
@@ -87,22 +108,6 @@ export default function NTRCAPage() {
             <p className="text-xs text-slate-600">টাইমারসহ NTRCA স্পেশাল কুইজ প্র্যাকটিস</p>
           </Link>
         </div>
-
-        {/* Existing Resource List Section */}
-        <section className="space-y-4 pt-4">
-          <div className="border-l-4 border-blue-600 pl-3">
-            <h2 className="text-2xl font-bold text-slate-900">
-              NTRCA সাম্প্রতিক নোট ও রিসোর্সসমূহ
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              নিচে এনটিআরসিএ পরীক্ষার জন্য সাম্প্রতিক আপডেটকৃত সকল স্টাডি মেটেরিয়াল
-            </p>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-6">
-            <ResourceList category="ntrca" />
-          </div>
-        </section>
 
       </div>
     </main>
