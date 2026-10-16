@@ -6,6 +6,29 @@ import {
 } from "lucide-react";
 import { uploadInline } from "@/app/actions/posts";
 
+// মোবাইলের বড় ছবি আপলোডের আগে ফোনেই ছোট করে (সর্বোচ্চ 1600px, WebP)
+async function compressImage(file: File, maxSide = 1600, quality = 0.82): Promise<File> {
+  try {
+    if (!file.type.startsWith("image/")) return file;
+    if (file.size <= 600_000 && ["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file;
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", quality));
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 function Btn({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" title={label} aria-label={label} onMouseDown={(e) => e.preventDefault()} onClick={onClick}
@@ -59,8 +82,10 @@ export default function RichEditor({ name, initialHtml, onChange }: { name: stri
     const alt = (window.prompt("ছবির বর্ণনা লিখুন (alt text, গুগলের জন্য দরকারি)") ?? "").trim();
     if (!alt) { setErr("ছবির বর্ণনা ছাড়া ছবি যোগ হবে না।"); return; }
     setBusy(true); setErr("");
+    const small = await compressImage(file);
+    if (small.size > 3_000_000) { setBusy(false); setErr("ছবিটি এখনও ৩ MB-এর বেশি, ছোট ছবি বাছুন।"); return; }
     const fd = new FormData();
-    fd.set("image", file); fd.set("alt", alt);
+    fd.set("image", small); fd.set("alt", alt);
     const r = await uploadInline(fd);
     setBusy(false);
     if (!r.url) { setErr(r.error ?? "ছবি আপলোড হয়নি।"); return; }
@@ -108,7 +133,7 @@ export default function RichEditor({ name, initialHtml, onChange }: { name: stri
         {sep}
         <Btn label="আগের অবস্থায়" onClick={() => run("undo")}><Undo2 size={18} /></Btn>
         <Btn label="আবার করুন" onClick={() => run("redo")}><Redo2 size={18} /></Btn>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={pickImage} className="hidden" aria-hidden="true" tabIndex={-1} />
+        <input ref={fileRef} type="file" accept="image/*" onChange={pickImage} className="hidden" aria-hidden="true" tabIndex={-1} />
       </div>
       <div
         ref={ref}
@@ -124,7 +149,7 @@ export default function RichEditor({ name, initialHtml, onChange }: { name: stri
         className="post-html rich-editor min-h-[320px] rounded-b-xl border border-slate-300 bg-white p-4 outline-none focus:border-royal"
       />
       <input type="hidden" name={name} value={html} />
-      {busy && <p className="mt-1 text-sm text-slate-500">ছবি আপলোড হচ্ছে…</p>}
+      {busy && <p className="mt-1 text-sm text-slate-500">ছবি ছোট করে আপলোড হচ্ছে…</p>}
       {err && <p role="alert" className="mt-1 text-sm text-red-600">{err}</p>}
       <p className="mt-1 text-xs text-slate-500">লেখা পেস্ট করলে ফরম্যাট ছাড়া সাধারণ লেখা আসে। #হ্যাশট্যাগ লিখলে নিজে থেকে ট্যাগ হবে।</p>
     </div>
