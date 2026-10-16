@@ -5,6 +5,7 @@ import { savePost, type PostState } from "@/app/actions/posts";
 import { parseTags } from "@/lib/tags";
 import RichEditor from "@/components/rich-editor";
 import SeoPanel from "@/components/seo-panel";
+import { Code, Eye } from "lucide-react"; // HTML Switcher আইকন এর জন্য
 
 export type PostFormData = {
   id?: string; title: string; slug: string; categoryId: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
@@ -34,7 +35,9 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     title: post.title, slug: post.slug, tags: post.tags, focusKeyword: post.focusKeyword, keywords: post.keywords,
     metaTitle: post.metaTitle, metaDescription: post.metaDescription,
   });
+  
   const [html, setHtml] = useState(post.body);
+  const [isHtmlMode, setIsHtmlMode] = useState(false); // Blogspot Style HTML View State
   const [info, setInfo] = useState({ text: "", headings: [] as string[], words: 0 });
   const on = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value });
 
@@ -49,9 +52,48 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     <form action={action} className="grid gap-4">
       <label><L t="Title" n={v.title.length} max={200} /><input name="title" required value={v.title} onChange={on("title")} className={f} /></label>
 
+      {/* Post Text & Blogspot HTML View Toggle */}
       <div>
-        <L t="Post text" hint={`${info.words} শব্দ`} />
-        <RichEditor name="body" initialHtml={post.body} onChange={setHtml} />
+        <div className="flex items-center justify-between mb-1">
+          <L t="Post text" hint={`${info.words} শব্দ`} />
+          
+          {/* Blogspot Style HTML / Compose Switcher */}
+          <button
+            type="button"
+            onClick={() => setIsHtmlMode(!isHtmlMode)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition mb-1"
+          >
+            {isHtmlMode ? (
+              <>
+                <Eye size={14} className="text-royal" />
+                <span>Compose View (Visual)</span>
+              </>
+            ) : (
+              <>
+                <Code size={14} className="text-royal" />
+                <span>HTML View (Code)</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Dynamic Editor Mode */}
+        {isHtmlMode ? (
+          <textarea
+            name="body"
+            value={html}
+            onChange={(e) => setHtml(e.target.value)}
+            rows={12}
+            placeholder="সরাসরি HTML কোড পেস্ট করুন (যেমন: <h2>শিরোনাম</h2> <p>টেক্সট...</p>)..."
+            className="w-full p-3 font-mono text-xs sm:text-sm bg-slate-900 text-emerald-400 border border-slate-300 rounded-xl focus:outline-none leading-relaxed"
+          />
+        ) : (
+          <RichEditor name="body" initialHtml={html} onChange={setHtml} />
+        )}
+        
+        <p className="text-[11px] text-slate-500 mt-1">
+          {isHtmlMode ? "HTML Mode Active: ট্যাগ ও কোড সরাসরি এডিট করতে পারবেন।" : "Visual Mode Active: সাধারণ লেখার জন্য রিখ এডিটর ব্যবহার করুন।" }
+        </p>
       </div>
 
       <label><L t="Hashtags" hint="separate with spaces, e.g. #hsc #গণিত #class8" n={tagList.length} max={15} />
