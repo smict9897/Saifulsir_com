@@ -95,7 +95,7 @@ export default function NTRCAVacantPage() {
             </p>
           </div>
           <a
-            href="http://ngca.teletalk.com.bd"
+            href="https://ntrca-vacancy.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-blue-700 transition shrink-0 shadow-md"
