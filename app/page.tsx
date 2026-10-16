@@ -11,14 +11,14 @@ export const dynamic = "force-dynamic";
 type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
 const q = (s: string) => `/search?q=${encodeURIComponent(s)}`;
 
-//const primary: Item[] = [
+/*const primary: Item[] = [
   { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: q("Class 1"), slug: "class-1" },
   { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: q("Class 2"), slug: "class-2" },
   { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: q("Class 3"), slug: "class-3" },
   { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: q("Class 4"), slug: "class-4" },
   { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: q("Class 5"), slug: "class-5" },
   { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: q("Class 5 বৃত্তি"), slug: "class-5-scholarship" },
-];
+];*/
 const secondary: Item[] = [
   { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: q("Class 6"), slug: "class-6" },
   { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: q("Class 7"), slug: "class-7" },
@@ -110,7 +110,7 @@ export default async function Home() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
-        <Head>প্রাথমিক স্তর</Head><Grid items={resolve(primary)} />
+        //<Head>প্রাথমিক স্তর</Head><Grid items={resolve(primary)} />
         <Head>মাধ্যমিক স্তর</Head><Grid items={resolve(secondary)} />
         <Head>প্রতিযোগিতামূলক পরীক্ষা</Head><Grid items={compete} />
         <Head>শিক্ষার্থী সেবা ও প্রয়োজনীয় অনলাইন টুলস</Head><Grid items={tools} />
