@@ -5,22 +5,23 @@ const tagRe = /(^|[\s(])#([\p{L}\p{M}\p{N}_-]{1,40})/gu;
 
 function options(link: boolean): sanitizeHtml.IOptions {
   return {
-    // সমস্ত সাধারণ, টেবিল এবং লেআউট ট্যাগগুলো অ্যালাউ করা হলো
+    // টেবিল, সেল এবং সাধারণ সব লেআউট ট্যাগ অ্যালাউ করা হলো
     allowedTags: [
       "p", "br", "strong", "em", "u", "s", "sub", "sup", "h1", "h2", "h3", "h4", "h5", "h6",
-      "blockquote", "ul", "ol", "li", "a", "img", "hr", "span", "mark", "div", "section", "article",
+      "blockquote", "ul", "ol", "li", "a", "img", "hr", "span", "mark", "div", "section",
       "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col"
     ],
-    // ট্যাগগুলোতে ইনলাইন CSS style, class এবং অন্যান্য দরকারি অ্যাট্রিবিউট পারমিশন দেওয়া হলো
+    // ইনলাইন স্টাইল, ক্লাস এবং টেবিল অ্যাট্রিবিউটগুলো পারমিশন দেওয়া হলো
     allowedAttributes: {
       "*": ["style", "class", "id", "title", "dir", "align"],
       a: ["href", "target", "rel"],
       img: ["src", "alt", "width", "height", "loading"],
-      table: ["border", "cellpadding", "cellspacing", "width"],
-      th: ["rowspan", "colspan", "width", "scope"],
-      td: ["rowspan", "colspan", "width"],
+      table: ["border", "cellpadding", "cellspacing", "width", "style", "class"],
+      tr: ["style", "class"],
+      th: ["rowspan", "colspan", "width", "scope", "style", "class"],
+      td: ["rowspan", "colspan", "width", "style", "class"],
     },
-    // যেকোনো CSS স্টাইল প্রপার্টি (যেমন background, border, flex, padding ইত্যাদি) যাতে ব্লক না হয়
+    // কোনো CSS স্টাইল যেন ফিল্টার আউট বা ব্লক না হয়
     allowedStyles: {
       "*": {
         "*": [/.*/],
@@ -53,7 +54,7 @@ export const cleanHtml = (html: string) => sanitizeHtml(html, options(false));
 export const renderHtml = (html: string) => sanitizeHtml(html, options(true));
 
 export function htmlToText(html: string): string {
-  const spaced = html.replace(/<\/(p|h[1-6]|li|blockquote|div|tr|td|th|section|article)>|<br\s*\/?>/gi, " ");
+  const spaced = html.replace(/<\/(p|h[1-6]|li|blockquote|div|tr|td|th|section)>|<br\s*\/?>/gi, " ");
   return sanitizeHtml(spaced, { allowedTags: [], allowedAttributes: {} })
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ").trim();
