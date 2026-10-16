@@ -14,7 +14,7 @@ const bn = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500",
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
   return {
-    metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+    metadataBase: new URL(process.env.SITE_URL ?? "https://saifulsir.com"),
     title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
