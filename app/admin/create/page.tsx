@@ -20,7 +20,7 @@ async function createPost(formData: FormData) {
   const imageFile = formData.get("coverImage") as File;
   let coverUrl = "";
 
-  // যদি মোবাইল বা ডিভাইস থেকে ছবি সিলেক্ট করা হয়, তবে তা public/uploads ফোল্ডারে সেভ হবে
+  // যদি মোবাইল বা ডিভাইস থেকে ছবি সিলেক্ট করা হয়
   if (imageFile && imageFile.size > 0) {
     const bytes = await imageFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -59,8 +59,8 @@ export default function CreatePostPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <div className="flex items-center justify-between mb-6">
-        <Link href="/admin" className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-royal">
-          <ArrowLeft size={16} /> ড্যাশবোর্ডে ফিরে যান
+        <Link href="/blog" className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-blue-600">
+          <ArrowLeft size={16} /> ব্লগে ফিরে যান
         </Link>
         <h1 className="text-xl font-bold text-slate-900">নতুন পোস্ট তৈরি করুন</h1>
       </div>
@@ -75,7 +75,7 @@ export default function CreatePostPage() {
             name="title" 
             required 
             placeholder="যেমন: NTRCA প্রিলিমিনারি প্রস্তুতি গাইড ২০২৬"
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-royal focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
@@ -86,7 +86,7 @@ export default function CreatePostPage() {
             type="text" 
             name="slug" 
             placeholder="ntrca-preliminary-preparation"
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-royal focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           />
           <p className="text-xs text-slate-500 mt-1">খালি রাখলে শিরোনাম থেকে স্বয়ংক্রিয়ভাবে তৈরি হবে।</p>
         </div>
@@ -98,5 +98,59 @@ export default function CreatePostPage() {
             type="file" 
             name="coverImage" 
             accept="image/*" 
-            className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-royal hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-xl"
-            
+            className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-xl"
+          />
+        </div>
+
+        {/* Meta Description / Excerpt */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">সংক্ষিপ্ত বিবরণ (Meta Description)</label>
+          <textarea 
+            name="metaDescription" 
+            rows={2}
+            placeholder="পোস্টের সংক্ষিপ্ত বিবরণ যা গুগলে বা ব্লগের কার্ডে দেখাবে..."
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Main Body */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">মূল লেখা (Body / Content) *</label>
+          <textarea 
+            name="body" 
+            rows={8} 
+            required
+            placeholder="আপনার বিস্তারিত আর্টিকেল বা নোট এখানে লিখুন..."
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Published Toggle */}
+        <div className="flex items-center gap-3 pt-2">
+          <input 
+            type="checkbox" 
+            name="published" 
+            id="published" 
+            defaultChecked 
+            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+          />
+          <label htmlFor="published" className="text-sm font-medium text-slate-700 select-none">
+            সরাসরি পাবলিশ করুন (Publish immediately)
+          </label>
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-4 border-t border-slate-200">
+          <button 
+            type="submit" 
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-blue-700 transition shadow-md"
+          >
+            <PlusCircle size={18} />
+            <span>পোস্ট সেভ ও পাবলিশ করুন</span>
+          </button>
+        </div>
+
+      </form>
+    </main>
+  );
+}
