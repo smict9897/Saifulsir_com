@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import PostBody from "@/components/post-body";
 import SaveButton from "@/components/save-button";
 import ShareBar from "@/components/share-bar";
+import CopyGuard from "@/components/copy-guard";
 export const dynamic = "force-dynamic";
 
 const find = cache((key: string) => db.post.findFirst({ where: { OR: [{ slug: key }, { id: key }] }, include: { category: true } }));
@@ -61,7 +62,10 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
         {p.coverUrl && (
           <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} width={1200} height={630} priority sizes="(max-width: 768px) 100vw, 672px" className="mt-6 h-auto w-full rounded-2xl" />
         )}
-        <PostBody body={p.body} />
+                <CopyGuard />
+        <div className="no-copy">
+          <PostBody body={p.body} />
+        </div>
         {p.downloadUrl && (
           <a href={p.downloadUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-royal px-5 py-3 font-semibold text-white">
             <Download size={18} />Download
