@@ -3,9 +3,10 @@ import { useActionState, useEffect, useState } from "react";
 import Image from "next/image";
 import { savePost, type PostState } from "@/app/actions/posts";
 import { parseTags } from "@/lib/tags";
+import { isRawBody, unwrapRaw, wrapRaw } from "@/lib/raw-html";
 import RichEditor from "@/components/rich-editor";
 import SeoPanel from "@/components/seo-panel";
-import { Code, Eye } from "lucide-react"; // HTML Switcher আইকন এর জন্য
+import { Code, Eye, Pencil, Wrench } from "lucide-react";
 
 export type PostFormData = {
   id?: string; title: string; slug: string; categoryId: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
@@ -17,6 +18,23 @@ const empty: PostFormData = {
 };
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
 const init: PostState = { msg: "" };
+
+type Tab = "compose" | "html" | "preview";
+const isEscapedTable = (s: string) => /&lt;\s*table\b/i.test(s);
+const risky = (s: string) => /<table\b|style=/i.test(s);
+
+// Compose এডিটরে পেস্ট হয়ে &lt;table&gt; হয়ে যাওয়া কোড আবার ঠিক করে
+function repairEscapedHtml(s: string): string {
+  return s
+    .replace(/<\/(div|p)>\s*<(div|p)[^>]*>/gi, "\n")
+    .replace(/^\s*<(div|p)[^>]*>/i, "")
+    .replace(/<\/(div|p)>\s*$/i, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?a\b[^>]*>/gi, "")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .trim();
+}
 
 function L({ t, hint, n, max }: { t: string; hint?: string; n?: number; max?: number }) {
   return (
@@ -35,9 +53,11 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     title: post.title, slug: post.slug, tags: post.tags, focusKeyword: post.focusKeyword, keywords: post.keywords,
     metaTitle: post.metaTitle, metaDescription: post.metaDescription,
   });
-  
-  const [html, setHtml] = useState(post.body);
-  const [isHtmlMode, setIsHtmlMode] = useState(false); // Blogspot Style HTML View State
+
+  const startRaw = isRawBody(post.body) || /<table\b/i.test(post.body) || isEscapedTable(post.body);
+  const [html, setHtml] = useState(isRawBody(post.body) ? unwrapRaw(post.body) : post.body);
+  const [raw, setRaw] = useState(startRaw); // true হলে কোড হুবহু সেভ হবে (Blogspot HTML ট্যাবের মতো)
+  const [tab, setTab] = useState<Tab>(startRaw ? "html" : "compose");
   const [info, setInfo] = useState({ text: "", headings: [] as string[], words: 0 });
   const on = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value });
 
@@ -47,52 +67,84 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     setInfo({ text, headings: Array.from(doc.querySelectorAll("h2,h3,h4")).map((h) => (h.textContent ?? "").trim()), words: text ? text.split(" ").length : 0 });
   }, [html]);
 
+  const goTab = (next: Tab) => {
+    if (next === "compose" && raw) {
+      if (risky(html) && !confirm("Compose এডিটর টেবিল ও স্টাইল মুছে ফেলতে পারে। তবুও Compose-এ যাবেন?")) return;
+      setRaw(false);
+    }
+    setTab(next);
+  };
+
+  const previewDoc =
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<style>body{margin:0;padding:12px;font-family:system-ui,sans-serif;line-height:1.7;color:#0f172a;background:#fff}</style>` +
+    `</head><body>${html}</body></html>`;
+
+  const tabBtn = (t: Tab, label: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      onClick={() => goTab(t)}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${tab === t ? "bg-royal text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+    >
+      {icon}<span>{label}</span>
+    </button>
+  );
+
   const tagList = parseTags(v.tags, info.text);
   return (
     <form action={action} className="grid gap-4">
       <label><L t="Title" n={v.title.length} max={200} /><input name="title" required value={v.title} onChange={on("title")} className={f} /></label>
 
-      {/* Post Text & Blogspot HTML View Toggle */}
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <L t="Post text" hint={`${info.words} শব্দ`} />
-          
-          {/* Blogspot Style HTML / Compose Switcher */}
-          <button
-            type="button"
-            onClick={() => setIsHtmlMode(!isHtmlMode)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition mb-1"
-          >
-            {isHtmlMode ? (
-              <>
-                <Eye size={14} className="text-royal" />
-                <span>Compose View (Visual)</span>
-              </>
-            ) : (
-              <>
-                <Code size={14} className="text-royal" />
-                <span>HTML View (Code)</span>
-              </>
-            )}
-          </button>
+        </div>
+        <div className="mb-2 flex flex-wrap gap-2">
+          {tabBtn("compose", "Compose", <Pencil size={14} />)}
+          {tabBtn("html", "HTML", <Code size={14} />)}
+          {tabBtn("preview", "Preview", <Eye size={14} />)}
         </div>
 
-        {/* Dynamic Editor Mode */}
-        {isHtmlMode ? (
-          <textarea
-            name="body"
-            value={html}
-            onChange={(e) => setHtml(e.target.value)}
-            rows={12}
-            placeholder="সরাসরি HTML কোড পেস্ট করুন (যেমন: <h2>শিরোনাম</h2> <p>টেক্সট...</p>)..."
-            className="w-full p-3 font-mono text-xs sm:text-sm bg-slate-900 text-emerald-400 border border-slate-300 rounded-xl focus:outline-none leading-relaxed"
-          />
-        ) : (
-          <RichEditor name="body" initialHtml={html} onChange={setHtml} />
+        {isEscapedTable(html) && (
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+            <span>এই পোস্টের টেবিল কোড লেখা হিসেবে সেভ হয়ে গেছে। এক ক্লিকে ঠিক করা যাবে।</span>
+            <button
+              type="button"
+              onClick={() => { setHtml(repairEscapedHtml(html)); setRaw(true); setTab("html"); }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white hover:bg-amber-700"
+            >
+              <Wrench size={14} /> টেবিল কোড ঠিক করুন
+            </button>
+          </div>
         )}
-        
-        <p className="text-[11px] text-slate-500 mt-1">
-          {isHtmlMode ? "HTML Mode Active: ট্যাগ ও কোড সরাসরি এডিট করতে পারবেন।" : "Visual Mode Active: সাধারণ লেখার জন্য রিখ এডিটর ব্যবহার করুন।" }
+
+        {/* সার্ভারে সবসময় এই একটি ফিল্ডই যায়। raw হলে কোড হুবহু র‍্যাপারসহ সেভ হয় */}
+        <input type="hidden" name="body" value={raw ? wrapRaw(html) : html} />
+
+        {tab === "compose" && <RichEditor name="body_editor" initialHtml={html} onChange={setHtml} />}
+
+        {tab === "html" && (
+          <textarea
+            value={html}
+            onChange={(e) => { setHtml(e.target.value); setRaw(true); }}
+            rows={18}
+            spellCheck={false}
+            placeholder="সরাসরি HTML কোড পেস্ট করুন"
+            className="w-full rounded-xl border border-slate-300 bg-slate-900 p-3 font-mono text-xs leading-relaxed text-emerald-400 focus:outline-none sm:text-sm"
+          />
+        )}
+
+        {tab === "preview" && (
+          <iframe
+            title="Preview"
+            sandbox=""
+            srcDoc={previewDoc}
+            className="h-[480px] w-full rounded-xl border border-slate-300 bg-white"
+          />
+        )}
+
+        <p className="mt-1 text-[11px] text-slate-500">
+          {tab === "html" ? "HTML ট্যাবের কোড হুবহু সেভ হবে (টেবিল, বর্ডার ও রঙসহ)।" : tab === "preview" ? "এটা সেভ করার আগের প্রিভিউ।" : "সাধারণ লেখার জন্য Compose। টেবিলের কোড HTML ট্যাবে দিন।"}
         </p>
       </div>
 
