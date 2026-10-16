@@ -3,10 +3,19 @@ import { useActionState, useEffect, useState } from "react";
 import Image from "next/image";
 import { savePost, type PostState } from "@/app/actions/posts";
 import { parseTags } from "@/lib/tags";
-import { isRawBody, unwrapRaw, wrapRaw } from "@/lib/raw-html";
 import RichEditor from "@/components/rich-editor";
 import SeoPanel from "@/components/seo-panel";
 import { Code, Eye, Pencil, Wrench } from "lucide-react";
+
+// HTML ট্যাবে লেখা পোস্ট চেনার জন্য একটি র‍্যাপার ব্যবহার হয়।
+// not-prose ক্লাস Tailwind prose এর স্টাইল থেকে পোস্টকে আলাদা রাখে।
+const OPEN = '<div class="raw-html not-prose">';
+const isRawBody = (b: string) => b.trim().startsWith(OPEN);
+const wrapRaw = (h: string) => (isRawBody(h) ? h.trim() : `${OPEN}${h.trim()}</div>`);
+const unwrapRaw = (b: string) => {
+  const t = b.trim();
+  return isRawBody(t) ? t.slice(OPEN.length).replace(/<\/div>\s*$/, "").trim() : b;
+};
 
 export type PostFormData = {
   id?: string; title: string; slug: string; categoryId: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
@@ -197,4 +206,4 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       </button>
     </form>
   );
-}
+        }
