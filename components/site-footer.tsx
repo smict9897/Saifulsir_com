@@ -43,7 +43,7 @@ const groups: { title: string; items: Item[] }[] = [
   { 
     title: "নীতিমালা ও সহায়তা", 
     items: [
-      ["About Us", "/about", Info, "bg-indigo-500/10 text-indigo-400"],
+      ["about-us", "/AboutUs", Info, "bg-indigo-500/10 text-indigo-400"],
       ["Contact Us", "/contact", Mail, "bg-emerald-500/10 text-emerald-400"],
       ["Privacy Policy", "/privacy", ShieldCheck, "bg-sky-500/10 text-sky-400"],
       ["Terms Conditions", "/terms", FileText, "bg-slate-500/10 text-slate-300"],
