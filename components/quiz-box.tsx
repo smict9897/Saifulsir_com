@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, Loader2, LogIn, Sparkles, X } from "lucide-react";
+import { FilePlus2, Loader2, LogIn, Sparkles, Square, X } from "lucide-react";
 import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
 
 type Triple = { category: string; subject: string; topic: string };
@@ -12,13 +12,24 @@ const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Adm
 const OTHER = "__other__";
 const BN = ["ক", "খ", "গ", "ঘ"];
 const DRAFT = "qb:draft";
+const BATCH = 10; // একবারে ১০টি করে তৈরি ও সেভ
+const PREVIEW = 30; // পর্দায় সর্বোচ্চ কতটি দেখাবে
+const MAX_PAPER = 50; // এর বেশি প্রশ্ন হলে সরাসরি প্রশ্নপত্র বোতাম আসবে না
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 const classLabel = (v: string) => (/^\d+$/.test(v) ? `ক্লাস ${v}` : v);
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
 
-export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
+function countOptions(role: string | null): number[] {
+  if (role === "ADMIN") return [20, 25, 30, 50, 100, 200, 300, 500, 1000];
+  if (role === "TEACHER") return [20, 25, 30];
+  return [5, 10];
+}
+
+export default function QuizBox({ triples = [], role = null }: { triples?: Triple[]; role?: string | null }) {
   const router = useRouter();
   const classes = useMemo(() => uniq([...BASE_CLASSES, ...triples.map((t) => t.category)]), [triples]);
+  const opts = countOptions(role);
 
   const [cat, setCat] = useState("");
   const [subjSel, setSubjSel] = useState("");
@@ -26,7 +37,7 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
   const [topSel, setTopSel] = useState("");
   const [topOther, setTopOther] = useState("");
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
-  const [count, setCount] = useState(10);
+  const [count, setCount] = useState<number>(opts[0]);
   const [lang, setLang] = useState<"Bangla" | "English">("Bangla");
 
   const [items, setItems] = useState<QuizItem[]>([]);
@@ -37,6 +48,7 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loginMsg, setLoginMsg] = useState("");
+  const stopRef = useRef(false);
 
   // লগইন করে ফিরে এলে আগের তৈরি করা প্রশ্ন আবার ফিরিয়ে আনে
   useEffect(() => {
@@ -67,40 +79,85 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
 
   async function generate() {
     setError("");
+    setLoginMsg("");
     setSavedIds(null);
     setPicked({});
     setItems([]);
+    try {
+      localStorage.removeItem(DRAFT);
+    } catch {}
     if (!cat || !subject || !topic) {
       setError("ক্লাস, বিষয় ও অধ্যায় তিনটিই দিন।");
       return;
     }
+    const m: Meta = { subject, category: cat, topic, difficulty, lang };
+    setMeta(m);
+    stopRef.current = false;
     setLoading(true);
+
+    const all: QuizItem[] = [];
+    const ids: string[] = [];
+    let fails = 0;
+    let lastErr = "";
+    let stopped = false;
+    let err = "";
+
     try {
-      const r = await generateQuiz({ subject, category: cat, topic, difficulty, count, lang });
-      if (r.ok) {
-        const m: Meta = { subject, category: cat, topic, difficulty, lang };
-        setItems(r.items);
-        setMeta(m);
-        try {
-          localStorage.setItem(DRAFT, JSON.stringify({ items: r.items, meta: m }));
-        } catch {}
-      } else {
-        setError(r.error);
+      while (all.length < count && !stopRef.current && fails < 3) {
+        const need = Math.min(BATCH, count - all.length);
+        const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => q.text.slice(0, 80)) });
+        if (!r.ok) {
+          fails++;
+          lastErr = r.error;
+          continue;
+        }
+        const seen = new Set(all.map((q) => norm(q.text)));
+        const fresh = r.items.filter((q) => !seen.has(norm(q.text))).slice(0, need);
+        if (!fresh.length) {
+          fails++;
+          continue;
+        }
+        // তৈরি হওয়ার সাথে সাথে ক্লাস-বিষয়-অধ্যায় অনুযায়ী প্রশ্ন ব্যাংকে সেভ
+        const s = await saveQuizToBank({ ...m, items: fresh });
+        if (!s.ok) {
+          all.push(...fresh);
+          setItems([...all]);
+          stopped = true;
+          if (s.error.includes("লগইন")) {
+            setLoginMsg(s.error);
+            if (ids.length === 0 && all.length <= MAX_PAPER) {
+              try {
+                localStorage.setItem(DRAFT, JSON.stringify({ items: all, meta: m }));
+              } catch {}
+            }
+          } else {
+            err = s.error;
+          }
+          break;
+        }
+        ids.push(...s.ids);
+        all.push(...fresh);
+        setItems([...all]);
       }
     } catch {
-      setError("প্রশ্ন তৈরি হয়নি। আবার চেষ্টা করুন।");
+      err = "প্রশ্ন তৈরি হয়নি। আবার চেষ্টা করুন।";
     }
+
+    if (ids.length > 0) setSavedIds(ids);
+    if (!err && !stopped && !stopRef.current && all.length < count) err = lastErr || "কিছু প্রশ্ন তৈরি হয়নি।";
+    if (err) setError(all.length ? `${err} (এ পর্যন্ত ${all.length} টি প্রশ্ন তৈরি হয়েছে)` : err);
     setLoading(false);
   }
 
   async function makePaper() {
     if (!meta || !items.length) return;
     setError("");
-    let ids = savedIds;
-    if (!ids) {
+    let ids = savedIds ?? [];
+    const rest = items.slice(ids.length);
+    if (rest.length) {
       setSaving(true);
       try {
-        const r = await saveQuizToBank({ ...meta, items });
+        const r = await saveQuizToBank({ ...meta, items: rest });
         if (!r.ok) {
           setSaving(false);
           // লগইনের বার্তা এলে পপআপ দেখাবে, অন্য এরর হলে আগের মতো লাল লেখা
@@ -108,7 +165,7 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
           else setError(r.error);
           return;
         }
-        ids = r.ids;
+        ids = [...ids, ...r.ids];
         setSavedIds(ids);
       } catch {
         setError("সেভ হয়নি। আবার চেষ্টা করুন।");
@@ -123,6 +180,8 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
     } catch {}
     router.push("/question-builder/build");
   }
+
+  const allSaved = !!savedIds && savedIds.length === items.length && items.length > 0;
 
   return (
     <div>
@@ -170,7 +229,7 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void generate();
+          if (!loading) void generate();
         }}
         className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4"
       >
@@ -265,14 +324,11 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
           </label>
           <label className="grid gap-1 text-sm font-medium">
             <span>প্রশ্ন সংখ্যা</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={count}
-              onChange={(e) => setCount(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
-              className={f}
-            />
+            <select value={count} onChange={(e) => setCount(Number(e.target.value))} className={f} disabled={loading}>
+              {opts.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
             <span>ভাষা</span>
@@ -289,25 +345,66 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {loading ? "প্রশ্ন তৈরি হচ্ছে…" : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
+          {loading ? `প্রশ্ন তৈরি হচ্ছে… ${items.length}/${count}` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
         </button>
+
+        {loading && (
+          <>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div className="h-full bg-blue-600 transition-all" style={{ width: `${Math.min(100, Math.round((items.length / count) * 100))}%` }} />
+            </div>
+            <p className="text-xs text-slate-500">
+              {role === "ADMIN" || role === "TEACHER"
+                ? "প্রতিটি ভাগ তৈরি হওয়ার সাথে সাথে প্রশ্ন ব্যাংকে সেভ হচ্ছে। পেজ খোলা রাখুন, ফোনের স্ক্রিন বন্ধ করবেন না।"
+                : "প্রশ্ন তৈরি হচ্ছে, একটু অপেক্ষা করুন।"}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                stopRef.current = true;
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl border border-red-300 px-4 py-2 text-sm text-red-600"
+            >
+              <Square size={14} /> থামান
+            </button>
+          </>
+        )}
       </form>
 
       {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
 
-      {items.length > 0 && (
+      {items.length > 0 && !loading && (
         <div className="mt-5 grid gap-4">
-          <p className="text-sm text-slate-600">{items.length} টি প্রশ্ন তৈরি হয়েছে</p>
-          <button
-            type="button"
-            onClick={() => void makePaper()}
-            disabled={saving}
-            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white disabled:opacity-60"
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <FilePlus2 size={18} />}
-            {saving ? "সেভ হচ্ছে…" : "প্রশ্নপত্র তৈরি করুন"}
-          </button>
-          {items.map((q, i) => {
+          <p className="text-sm text-slate-600">
+            {allSaved && meta
+              ? `${items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে (${meta.category} › ${meta.subject} › ${meta.topic})`
+              : `${items.length} টি প্রশ্ন তৈরি হয়েছে`}
+          </p>
+
+          {items.length <= MAX_PAPER ? (
+            <button
+              type="button"
+              onClick={() => void makePaper()}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <FilePlus2 size={18} />}
+              {saving ? "সেভ হচ্ছে…" : "প্রশ্নপত্র তৈরি করুন"}
+            </button>
+          ) : (
+            <Link
+              href="/question-builder"
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white"
+            >
+              <FilePlus2 size={18} /> প্রশ্ন বেছে প্রশ্নপত্র বানান
+            </Link>
+          )}
+
+          {items.length > PREVIEW && (
+            <p className="text-xs text-slate-500">নিচে প্রথম {PREVIEW} টি প্রশ্ন দেখানো হলো। বাকিগুলো প্রশ্ন ব্যাংকে আছে।</p>
+          )}
+
+          {items.slice(0, PREVIEW).map((q, i) => {
             const chosen = picked[i];
             return (
               <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
