@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Sparkles, FileUp, ListChecks, Briefcase, Megaphone, Newspaper, Quote, Mail, Pencil, Globe, FilePlus2, FolderTree, Images, Settings, Users, FileText, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Sparkles, FileUp, ListChecks, Briefcase, Megaphone, Newspaper, Quote, Mail, Pencil, Globe, FilePlus2, FolderTree, Images, Settings, Users, FileText, ShoppingBag,Library } from "lucide-react";
 
 const items = [
   ["Overview", "/admin", LayoutDashboard], ["Posts", "/admin/posts", Newspaper], ["New post", "/admin/blog", FilePlus2],
   ["Categories", "/admin/categories", FolderTree], ["Pages", "/admin/pages", FileText], ["Media", "/admin/media", Images],
-  ["Notices", "/admin/notices", Megaphone], ["Materials & Videos", "/admin/pdf", FileUp], ["AI Questions", "/admin/ai", Sparkles],
+  ["Notices", "/admin/notices", Megaphone], ["Materials & Videos", "/admin/pdf", FileUp], ["AI Questions", "/admin/ai", Sparkles],["Question Bank", "/admin/questions", Library],
   ["Model Tests", "/admin/tests", ListChecks], ["Job Circulars", "/admin/jobs", Briefcase], ["Testimonials", "/admin/testimonials", Quote],
   ["Inquiries", "/admin/inquiries", Mail], ["Orders", "/admin/orders", ShoppingBag], ["Users", "/admin/users", Users],
   ["Site settings", "/admin/settings", Settings], ["Edit / Delete", "/admin/manage", Pencil],
