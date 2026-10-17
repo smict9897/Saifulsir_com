@@ -33,7 +33,7 @@ const DEF_INFO = {
   inst: "", address: "", exam: "", minutes: "", marks: "", code: "",
   instr: "সঠিক উত্তরের বৃত্তটি বল পয়েন্ট কলম দিয়ে ভরাট করো। কাটাকাটি করা যাবে না।",
 };
-const DEF_CFG = { format: "qa", cols: 2, style: "circle", label: "bn" as LabelKey, optCols: 2 };
+const DEF_CFG = { format: "qa", cols: 2, style: "circle", label: "bn" as LabelKey, optCols: 2, ansKey: false };
 
 const STORE = "qb:selected";
 const SETTINGS = "qb:settings";
@@ -153,8 +153,9 @@ export default function QbBuilder() {
 
   const isMcq = view.some((v) => v.opts.length > 0);
   const fullMarks = info.marks || String(items.length);
-  // উত্তরমালা শুধু "উত্তরপত্র" ফরম্যাটে আসবে
-  const showKey = isMcq && cfg.format === "ans";
+  // "উত্তরপত্র" ফরম্যাটে শুধু উত্তর। অন্য ফরম্যাটে টিক দিলে তবেই উত্তরমালা, নতুন পাতায়।
+  const showKey = isMcq && (cfg.format === "ans" || cfg.ansKey);
+  const keyOnNewPage = cfg.format !== "ans";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -177,6 +178,9 @@ export default function QbBuilder() {
             ))}
           </div>
           <label className="mt-3 flex items-center gap-2">
+            <input type="checkbox" checked={cfg.ansKey} onChange={(e) => setCfg({ ...cfg, ansKey: e.target.checked })} /> উত্তরপত্র সাথে দিন (আলাদা পাতায়)
+          </label>
+          <label className="mt-1 flex items-center gap-2">
             <input type="checkbox" checked={edit} onChange={(e) => setEdit(e.target.checked)} /> এডিটিং মুড (লেখায় ক্লিক করে বদলান)
           </label>
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -311,7 +315,10 @@ export default function QbBuilder() {
           )}
 
           {showKey && (
-            <div className="mt-4 border-t border-black pt-2">
+            <div
+              className={keyOnNewPage ? "mt-4 border-t border-black pt-2 print:mt-0 print:border-0 print:pt-0" : "mt-4 border-t border-black pt-2"}
+              style={keyOnNewPage ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}
+            >
               <p className="text-sm font-bold">উত্তরমালা: সেট {setName}</p>
               <div className="mt-1 grid grid-cols-5 gap-x-3 gap-y-0.5 text-xs">
                 {view.map((v, i) => v.ci >= 0 && <span key={i}>{i + 1}. {L[v.ci]}</span>)}
@@ -341,4 +348,4 @@ export default function QbBuilder() {
       </section>
     </div>
   );
-                                    }
+}
