@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Hind_Siliguri } from "next/font/google";
+import localFont from "next/font/local";
+import { Tinos } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
@@ -9,7 +10,18 @@ import { getSite } from "@/lib/site";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 
-const bn = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn" });
+const bn = localFont({
+  src: "./fonts/AdorshoLipi.ttf",
+  variable: "--font-bn",
+  display: "swap",
+});
+
+const en = Tinos({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-en",
+  display: "swap",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
@@ -36,9 +48,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   ]);
   const wa = site.social.find((s) => s.name === "WhatsApp")?.url;
   return (
-    <html lang="bn" className={bn.variable} suppressHydrationWarning>
+    <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
-      <body className="font-sans">
+      <body
+        className="font-sans"
+        style={{ fontFamily: '"Times New Roman", Times, var(--font-en), var(--font-bn), serif' }}
+      >
         <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
         {children}
         <SiteFooter />
