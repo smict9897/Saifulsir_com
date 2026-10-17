@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ListChecks, Zap, ArrowRight } from "lucide-react";
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import QuizBox from "@/components/quiz-box";
 import Practice, { type Q } from "@/components/practice";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export default async function QuizPage({ searchParams }: { searchParams: Promise<{ subject?: string }> }) {
   const { subject } = await searchParams;
+  const role = (await auth())?.user?.role ?? null;
   const [rows, grouped] = await Promise.all([
     db.question.findMany({ where: { approved: true, ...(subject ? { subject } : {}) }, take: 50 }).catch(() => []),
     db.question.groupBy({ by: ["category", "subject", "topic"], where: { approved: true } }).catch(() => []),
@@ -44,7 +47,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
       </div>
       <section id="ai" className="scroll-mt-24">
         <h1 className="mb-4 text-2xl font-bold">এক ক্লিকে প্রশ্ন তৈরি করুন (AI)</h1>
-        <QuizBox triples={triples} />
+        <QuizBox triples={triples} role={role} />
       </section>
       <section><h2 className="mb-4 text-2xl font-bold">Practice from the question bank</h2>
         {qs.length ? <Practice qs={qs} /> : <p className="text-slate-600">No approved questions yet.</p>}</section>
