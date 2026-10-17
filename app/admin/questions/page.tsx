@@ -11,6 +11,13 @@ const PER_PAGE = 20;
 const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700";
 const btn = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white";
 
+const QUICK: [string, string, string][] = [
+  ["/admin/questions", "প্রশ্ন ব্যাংক", "সব প্রশ্ন দেখুন ও যোগ করুন"],
+  ["/question-builder", "প্রশ্নপত্র তৈরি", "প্রশ্ন বেছে প্রশ্নপত্র বানান"],
+  ["/question-builder/saved", "সংরক্ষিত প্রশ্নপত্র", "আগে সেভ করা প্রশ্নপত্র"],
+  ["/admin/questions/extract", "ইমপোর্ট প্রশ্ন", "PDF বা ছবি থেকে প্রশ্ন তুলুন"],
+];
+
 function Common() {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -54,6 +61,23 @@ export default async function AdminQuestions({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <h1 className="text-2xl font-bold">প্রশ্ন ব্যাংক ({total})</h1>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="mb-3 font-semibold">প্রশ্ন ব্যাংক মেনু</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {QUICK.map(([href, title, sub]) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-xl border border-slate-200 p-3 transition hover:border-blue-500 hover:bg-blue-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <p className="text-sm font-semibold">{title}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{sub}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
       {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{ok}</p>}
 
