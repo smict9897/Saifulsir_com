@@ -1,5 +1,6 @@
 import QbBuilder from "@/components/qb-builder";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "প্রশ্নপত্র বিল্ডার" };
 
 export default function BuildPage() {
@@ -9,4 +10,3 @@ export default function BuildPage() {
     </main>
   );
 }
-
