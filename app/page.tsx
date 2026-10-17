@@ -111,6 +111,19 @@ export default async function Home() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
+                <Link
+          href="/question-builder"
+          className="mt-8 flex items-center gap-4 rounded-2xl border border-royal/30 bg-white p-5 shadow-sm transition hover:border-royal hover:shadow-md"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-royal text-white">
+            <ClipboardList size={28} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-bold">বিনামূল্যে প্রশ্নপত্র তৈরি করুন</span>
+            <span className="block text-sm text-slate-600">প্রশ্নব্যাংক থেকে প্রশ্ন বেছে প্রিন্ট করার মতো প্রশ্নপত্র বানান।</span>
+          </span>
+          <span className="hidden shrink-0 rounded-full bg-royal px-4 py-2 text-sm font-semibold text-white sm:block">শুরু করুন</span>
+        </Link>
         <Head>প্রাথমিক স্তর</Head><Grid items={resolve(primary)} />
         <Head>মাধ্যমিক স্তর</Head><Grid items={resolve(secondary)} />
         <Head>প্রতিযোগিতামূলক পরীক্ষা</Head><Grid items={compete} />
