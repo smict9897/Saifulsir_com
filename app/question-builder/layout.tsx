@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { auth } from "@/auth";
 
 export default async function QuestionBuilderLayout({
@@ -9,11 +8,9 @@ export default async function QuestionBuilderLayout({
 }) {
   const session = await auth();
 
+  // লগইন না থাকলে লগইন পেজে পাঠাবে, লগইনের পর আবার প্রশ্নপত্র পেজে ফিরবে
   if (!session?.user) {
-    // লগইনের পর ইউজার যে পেজে যেতে চেয়েছিল সেখানেই ফিরবে
-    const h = await headers();
-    const path = h.get("x-pathname") || "/question-builder";
-    redirect(`/login?callbackUrl=${encodeURIComponent(path)}`);
+    redirect("/login?next=" + encodeURIComponent("/question-builder"));
   }
 
   return <>{children}</>;
