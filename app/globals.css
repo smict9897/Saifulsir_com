@@ -5,11 +5,14 @@ body{@apply bg-paper text-navy-900 antialiased}
 .ticker{animation:ticker 28s linear infinite}
 @media (prefers-reduced-motion:reduce){.ticker{animation:none}}
 
-/* Print only the cover page preview */
+/* Print: cover page preview (#print-area) or question paper (#paper) */
 @media print{
   body *{visibility:hidden !important}
-  #print-area,#print-area *{visibility:visible !important}
+  #print-area,#print-area *,#paper,#paper *{visibility:visible !important}
   #print-area{position:fixed;inset:0;margin:0;border-radius:0;box-shadow:none}
+  /* Question paper page: remove everything except the paper so no blank space is left */
+  body:has(#paper) *:not(#paper):not(#paper *):not(:has(#paper)){display:none !important}
+  #paper{margin:0 !important;max-width:none !important;box-shadow:none !important;background:#fff !important;color:#000 !important}
 }
 
 /* Dark mode: the "dark" class is set on <html> by the theme button */
