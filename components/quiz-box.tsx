@@ -1,7 +1,8 @@
 "use client";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus2, Loader2, Sparkles } from "lucide-react";
+import { FilePlus2, Loader2, LogIn, Sparkles, X } from "lucide-react";
 import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
 
 type Triple = { category: string; subject: string; topic: string };
@@ -10,6 +11,7 @@ type Meta = { subject: string; category: string; topic: string; difficulty: "Eas
 const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const OTHER = "__other__";
 const BN = ["ক", "খ", "গ", "ঘ"];
+const DRAFT = "qb:draft";
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
 const classLabel = (v: string) => (/^\d+$/.test(v) ? `ক্লাস ${v}` : v);
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
@@ -34,6 +36,20 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loginMsg, setLoginMsg] = useState("");
+
+  // লগইন করে ফিরে এলে আগের তৈরি করা প্রশ্ন আবার ফিরিয়ে আনে
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.items) && d.items.length > 0 && d.meta) {
+        setItems(d.items);
+        setMeta(d.meta);
+      }
+    } catch {}
+  }, []);
 
   const subjects = useMemo(
     () => uniq(triples.filter((t) => t.category === cat).map((t) => t.subject)),
@@ -62,8 +78,12 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
     try {
       const r = await generateQuiz({ subject, category: cat, topic, difficulty, count, lang });
       if (r.ok) {
+        const m: Meta = { subject, category: cat, topic, difficulty, lang };
         setItems(r.items);
-        setMeta({ subject, category: cat, topic, difficulty, lang });
+        setMeta(m);
+        try {
+          localStorage.setItem(DRAFT, JSON.stringify({ items: r.items, meta: m }));
+        } catch {}
       } else {
         setError(r.error);
       }
@@ -82,8 +102,10 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
       try {
         const r = await saveQuizToBank({ ...meta, items });
         if (!r.ok) {
-          setError(r.error);
           setSaving(false);
+          // লগইনের বার্তা এলে পপআপ দেখাবে, অন্য এরর হলে আগের মতো লাল লেখা
+          if (r.error.includes("লগইন")) setLoginMsg(r.error);
+          else setError(r.error);
           return;
         }
         ids = r.ids;
@@ -97,12 +119,54 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
     }
     try {
       localStorage.setItem("qb:selected", JSON.stringify(ids));
+      localStorage.removeItem(DRAFT);
     } catch {}
     router.push("/question-builder/build");
   }
 
   return (
     <div>
+      {loginMsg && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLoginMsg("")}
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLoginMsg("")}
+              aria-label="বন্ধ করুন"
+              className="absolute right-3 top-3 rounded-full p-1 text-slate-500 hover:bg-slate-100"
+            >
+              <X size={18} />
+            </button>
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <LogIn size={24} />
+            </span>
+            <h3 className="mt-3 text-lg font-bold text-slate-900">লগইন করুন</h3>
+            <p className="mt-2 text-sm text-slate-600">{loginMsg}</p>
+            <p className="mt-1 text-xs text-slate-500">আপনার তৈরি করা প্রশ্নগুলো সংরক্ষিত থাকবে।</p>
+            <div className="mt-5 grid gap-2">
+              <Link
+                href={`/login?next=${encodeURIComponent("/quiz")}`}
+                className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white"
+              >
+                লগইন করুন
+              </Link>
+              <button
+                type="button"
+                onClick={() => setLoginMsg("")}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700"
+              >
+                এখন না
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -243,7 +307,6 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
             {saving ? <Loader2 size={18} className="animate-spin" /> : <FilePlus2 size={18} />}
             {saving ? "সেভ হচ্ছে…" : "প্রশ্নপত্র তৈরি করুন"}
           </button>
-
           {items.map((q, i) => {
             const chosen = picked[i];
             return (
@@ -284,4 +347,4 @@ export default function QuizBox({ triples = [] }: { triples?: Triple[] }) {
       )}
     </div>
   );
-        }
+}
