@@ -1,22 +1,44 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Sparkles } from "lucide-react";
-import { generateQuiz, type QuizItem } from "@/app/actions/generate-quiz";
+import { useRouter } from "next/navigation";
+import { Sparkles, FilePlus2 } from "lucide-react";
+import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
 
 const field = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm";
+type Meta = { subject: string; category: string; topic: string; difficulty: string; lang: string };
+
 export default function QuizBox() {
+  const router = useRouter();
   const [items, setItems] = useState<QuizItem[]>([]);
+  const [meta, setMeta] = useState<Meta | null>(null);
   const [picked, setPicked] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const [saving, startSave] = useTransition();
 
   function onSubmit(fd: FormData) {
     setError(""); setPicked({});
+    const f = Object.fromEntries(fd) as Record<string, string>;
     start(async () => {
-      const r = await generateQuiz(Object.fromEntries(fd));
-      if (r.ok) setItems(r.items); else setError(r.error);
+      const r = await generateQuiz(f);
+      if (r.ok) {
+        setItems(r.items);
+        setMeta({ subject: f.subject, category: f.category, topic: f.topic, difficulty: f.difficulty, lang: f.lang });
+      } else setError(r.error);
     });
   }
+
+  function makePaper() {
+    if (!meta || !items.length) return;
+    setError("");
+    startSave(async () => {
+      const r = await saveQuizToBank({ ...meta, items });
+      if (!r.ok) { setError(r.error); return; }
+      try { localStorage.setItem("qb:selected", JSON.stringify(r.ids)); } catch {}
+      router.push("/question-builder/build");
+    });
+  }
+
   return (
     <div className="rounded-xl bg-white p-5 text-navy-900 shadow-xl">
       <form action={onSubmit} className="grid grid-cols-2 gap-3">
@@ -31,6 +53,18 @@ export default function QuizBox() {
         </button>
       </form>
       {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+
+      {items.length > 0 && (
+        <button
+          type="button"
+          onClick={makePaper}
+          disabled={saving}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
+        >
+          <FilePlus2 size={18} /> {saving ? "অপেক্ষা করুন…" : "প্রশ্নপত্র তৈরি করুন"}
+        </button>
+      )}
+
       <ol className="mt-4 space-y-4">
         {items.map((q, i) => (
           <li key={i} className="text-sm">
