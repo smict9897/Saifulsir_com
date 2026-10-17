@@ -36,13 +36,13 @@ function Common() {
 export default async function AdminQuestions({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; err?: string; ok?: string }>;
 }) {
   const session = await auth();
   const role = session?.user?.role;
   if (role !== "ADMIN" && role !== "TEACHER") redirect("/");
 
-  const { page: p } = await searchParams;
+  const { page: p, err, ok } = await searchParams;
   const page = Math.max(1, Number(p) || 1);
 
   const [rows, total] = await Promise.all([
@@ -54,6 +54,8 @@ export default async function AdminQuestions({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <h1 className="text-2xl font-bold">প্রশ্ন ব্যাংক ({total})</h1>
+      {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
+      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{ok}</p>}
 
       <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <h2 className="mb-3 font-semibold">একটি প্রশ্ন যোগ করুন</h2>
