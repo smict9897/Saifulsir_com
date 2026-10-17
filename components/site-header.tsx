@@ -35,7 +35,7 @@ const navTree: NavItem[] = [
     ],
   },
   { label: "জব", href: "/jobs" },
-  { label: "AI কুইজ", href: "/quiz" },
+  { label: "ফ্রি প্রশ্নপত্র তৈরি করুন", href: "/quiz" },
   { label: "ই-বুক", href: "/library" },
   { label: "ভিডিও", href: "/videos" },
   { label: "মডেল টেস্ট", href: "/tests" },
