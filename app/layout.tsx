@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Tinos } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
@@ -12,6 +13,13 @@ import SiteFooter from "@/components/site-footer";
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
   variable: "--font-bn",
+  display: "swap",
+});
+
+const en = Tinos({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-en",
   display: "swap",
 });
 
@@ -40,11 +48,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   ]);
   const wa = site.social.find((s) => s.name === "WhatsApp")?.url;
   return (
-    <html lang="bn" className={bn.variable} suppressHydrationWarning>
+    <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body
         className="font-sans"
-        style={{ fontFamily: 'var(--font-bn), "Times New Roman", Times, serif' }}
+        style={{ fontFamily: '"Times New Roman", Times, var(--font-en), var(--font-bn), serif' }}
       >
         <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
         {children}
