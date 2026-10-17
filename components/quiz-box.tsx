@@ -11,13 +11,14 @@ export default function QuizBox() {
   const router = useRouter();
   const [items, setItems] = useState<QuizItem[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [savedIds, setSavedIds] = useState<string[] | null>(null);
   const [picked, setPicked] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const [saving, startSave] = useTransition();
 
   function onSubmit(fd: FormData) {
-    setError(""); setPicked({});
+    setError(""); setPicked({}); setSavedIds(null);
     const f = Object.fromEntries(fd) as Record<string, string>;
     start(async () => {
       const r = await generateQuiz(f);
@@ -28,14 +29,20 @@ export default function QuizBox() {
     });
   }
 
+  function openBuilder(ids: string[]) {
+    try { localStorage.setItem("qb:selected", JSON.stringify(ids)); } catch {}
+    router.push("/question-builder/build");
+  }
+
   function makePaper() {
     if (!meta || !items.length) return;
     setError("");
+    if (savedIds) { openBuilder(savedIds); return; }
     startSave(async () => {
       const r = await saveQuizToBank({ ...meta, items });
       if (!r.ok) { setError(r.error); return; }
-      try { localStorage.setItem("qb:selected", JSON.stringify(r.ids)); } catch {}
-      router.push("/question-builder/build");
+      setSavedIds(r.ids);
+      openBuilder(r.ids);
     });
   }
 
