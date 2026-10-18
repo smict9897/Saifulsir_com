@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import curriculum from "@/../nctb-curriculum.json";
+import curriculum from "../nctb-curriculum.json";
 
 type Pair = { category: string; subject: string };
 const LOW = ["1", "2", "3", "4", "5", "6", "7", "8"];
