@@ -126,10 +126,10 @@ export default function QbExtract() {
           }}
         >
           {CLASSES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
+  <option key={c} value={c}>
+    {c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : /^\d+$/.test(c) ? `ক্লাস ${c}` : c}
+  </option>
+))}
         </select>
 
         {/* Subject */}
