@@ -10,71 +10,9 @@ import {
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import SavedLink from "@/components/saved-link";
+import Logo from "./Logo"; // 👈 আপনার তৈরি করা Logo.tsx এখানে কানেক্ট করা হলো
 
 type U = { name?: string | null; role?: string } | null;
-
-// 🎓 সম্পূর্ণ ভেক্টর প্রফেশনাল লোগো কম্পোনেন্ট
-function SiteLogo() {
-  return (
-    <div className="flex items-center gap-2.5 sm:gap-3 select-none">
-      {/* ভেক্টর মনোগ্রাম আইকন */}
-      <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center">
-        <svg
-          viewBox="0 0 48 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-full w-full drop-shadow-sm"
-        >
-          <defs>
-            <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#2563EB" />
-              <stop offset="100%" stopColor="#1E40AF" />
-            </linearGradient>
-            <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#38BDF8" />
-              <stop offset="100%" stopColor="#0284C7" />
-            </linearGradient>
-          </defs>
-
-          {/* ব্যাকগ্রাউন্ড স্কয়ার */}
-          <rect width="48" height="48" rx="13" fill="url(#primaryGrad)" />
-
-          {/* গ্র্যাজুয়েশন ক্যাপের উপরের অংশ */}
-          <path
-            d="M24 11L38 18L24 25L10 18L24 11Z"
-            fill="white"
-            fillOpacity="0.95"
-          />
-
-          {/* 'S' আকৃতির কার্ভ */}
-          <path
-            d="M15 22.5V29C15 32.5 19 35.5 24 35.5C29 35.5 33 32.5 33 29V22.5L24 27L15 22.5Z"
-            fill="url(#cyanGrad)"
-          />
-
-          {/* গোল্ডেন ক্যাপ ট্যাসেল */}
-          <circle cx="36.5" cy="22" r="2" fill="#FBBF24" />
-          <path d="M36.5 22V26" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </div>
-
-      {/* ব্র্যান্ড টেক্সট */}
-      <div className="flex flex-col text-left">
-        <div className="flex items-center gap-1 leading-none">
-          <span className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Saiful<span className="text-blue-600">Sir</span>
-          </span>
-          <span className="rounded bg-blue-50 dark:bg-blue-950 px-1 py-0.5 text-[9px] sm:text-[10px] font-black text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-            .COM
-          </span>
-        </div>
-        <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 tracking-wider mt-0.5 sm:mt-1">
-          স্মার্ট শিক্ষা প্ল্যাটফর্ম
-        </span>
-      </div>
-    </div>
-  );
-}
 
 const groupedNav = [
   {
@@ -195,7 +133,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
               <Menu size={22} />
             </button>
             <Link href="/" aria-label="SaifulSir.com home" className="shrink-0 flex items-center">
-              <SiteLogo />
+              <Logo />
             </Link>
           </div>
 
@@ -279,7 +217,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} />
           <div className="fixed inset-y-0 left-0 flex w-80 max-w-[85%] flex-col bg-white dark:bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-4">
-              <SiteLogo />
+              <Logo />
               <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
                 <X size={20} />
               </button>
@@ -352,4 +290,4 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
       )}
     </>
   );
-                          }
+}
