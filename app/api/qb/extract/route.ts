@@ -25,7 +25,7 @@ const fail = (error: string, status = 400) => NextResponse.json({ ok: false, err
 export async function POST(req: Request) {
   const session = await auth();
   const role = session?.user?.role;
-  if (role !== "ADMIN") return fail("অনুমতি নেই", 403);
+    if (role !== "ADMIN") return fail("অনুমতি নেই", 403);
 
   let fd: FormData;
   try { fd = await req.formData(); } catch { return fail("ফাইল পড়া যায়নি।"); }
