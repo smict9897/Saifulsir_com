@@ -352,4 +352,4 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
       )}
     </>
   );
-}
+                          }
