@@ -19,7 +19,7 @@ const fmt = (d: Date) => new Date(d).toLocaleDateString("en-GB", { dateStyle: "m
 
 export default function RecentArticles({ posts }: { posts: Post[] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const perPage = 2; // একসাথে সম্পূর্ণ ২টি কার্ড দেখাবে
+  const perPage = 2; // প্রতি পেজে উপর-নিচে ২টি কার্ড দেখাবে
   const totalPages = Math.ceil(posts.length / perPage);
 
   if (!posts || posts.length === 0) return null;
@@ -29,8 +29,8 @@ export default function RecentArticles({ posts }: { posts: Post[] }) {
   return (
     <div className="mt-7 text-left">
       {/* হেডার */}
-      <div className="flex items-center justify-between pb-2 mb-1 px-1">
-        <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+      <div className="flex items-center justify-between pb-2 mb-2 px-1">
+        <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           সাম্প্রতিক আর্টিকেল ও গাইডলাইন
         </span>
@@ -39,8 +39,8 @@ export default function RecentArticles({ posts }: { posts: Post[] }) {
         </Link>
       </div>
 
-      {/* সম্পূর্ণ ২টি কার্ড (মোবাইলেও পাশাপাশি ফিট থাকবে, কোনো কার্ড কাটবে না) */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+      {/* মোবাইলে উপর-নিচে ২টি সম্পূর্ণ ফুল কার্ড (grid-cols-1) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {currentPosts.map((p) => {
           let imgSrc = "/placeholder.jpg";
           if (p.coverUrl) {
@@ -55,31 +55,33 @@ export default function RecentArticles({ posts }: { posts: Post[] }) {
               href={`/blog/${p.slug ?? p.id}`} 
               className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-royal hover:shadow-md flex flex-col"
             >
-              <div className="relative aspect-[16/10] w-full bg-slate-100">
+              {/* ফুল উইডথ থাম্বনেইল */}
+              <div className="relative aspect-[16/9] w-full bg-slate-100 overflow-hidden">
                 <Image 
                   src={imgSrc} 
                   alt={p.coverAlt ?? p.title} 
                   fill 
-                  sizes="(max-width: 640px) 50vw, 300px" 
+                  sizes="(max-width: 640px) 100vw, 50vw" 
                   className="object-cover transition-transform duration-300 group-hover:scale-105" 
                 />
-                <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                <span className="absolute left-2.5 top-2.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white tracking-wide">
                   BLOG
                 </span>
               </div>
               
-              <div className="p-2 sm:p-3 flex flex-col flex-1 justify-between">
-                <h3 className="font-bold text-[11px] sm:text-xs text-slate-800 leading-snug line-clamp-2 group-hover:text-royal transition-colors">
+              {/* টাইটেল ও মেটা ডেটা */}
+              <div className="p-3.5 flex flex-col flex-1 justify-between">
+                <h3 className="font-bold text-sm sm:text-base text-slate-800 leading-snug line-clamp-2 group-hover:text-royal transition-colors">
                   {p.title}
                 </h3>
-                <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-1.5 text-[9px] text-slate-400">
-                  <span className="flex items-center gap-0.5">
-                    <CalendarDays size={10} />
+                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <CalendarDays size={13} />
                     {fmt(p.createdAt)}
                   </span>
-                  <span className="flex items-center gap-0.5">
-                    <Clock size={10} />
-                    {Math.max(1, Math.ceil(p.body.length / 900))}m
+                  <span className="flex items-center gap-1">
+                    <Clock size={13} />
+                    {Math.max(1, Math.ceil(p.body.length / 900))} min read
                   </span>
                 </div>
               </div>
@@ -88,25 +90,25 @@ export default function RecentArticles({ posts }: { posts: Post[] }) {
         })}
       </div>
 
-      {/* পেজিনেশন ও নাম্বারিং (১, ২, ৩...) */}
+      {/* কার্ড দুটির ঠিক নিচে পেজিনেশন বাটন */}
       {totalPages > 1 && (
-        <div className="mt-3.5 flex items-center justify-center gap-1.5">
+        <div className="mt-4 flex items-center justify-center gap-2">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition shadow-sm"
             aria-label="Previous page"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} />
           </button>
 
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
             <button
               key={num}
               onClick={() => setCurrentPage(num)}
-              className={`h-7 min-w-[28px] px-1.5 rounded-lg text-xs font-bold transition ${
+              className={`h-8 min-w-[32px] px-2 rounded-xl text-xs font-bold transition shadow-sm ${
                 currentPage === num
-                  ? "bg-royal text-white shadow-sm"
+                  ? "bg-royal text-white"
                   : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -117,10 +119,10 @@ export default function RecentArticles({ posts }: { posts: Post[] }) {
           <button
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition shadow-sm"
             aria-label="Next page"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
