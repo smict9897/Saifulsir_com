@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ListChecks, Zap, ArrowRight } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import QuizBox from "@/components/quiz-box";
 import Practice, { type Q } from "@/components/practice";
+
+export const metadata: Metadata = {
+  title: "প্রশ্নপত্র তৈরি করুন",
+  description:
+    "ক্লাস, বিষয় ও অধ্যায় বেছে এক ক্লিকে AI দিয়ে প্রশ্ন তৈরি করুন, প্রশ্ন ব্যাংক থেকে প্রশ্নপত্র বানান আর PDF নামান। বিনামূল্যে কুইজ প্র্যাকটিসও করুন।",
+  alternates: { canonical: "/quiz" },
+};
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export default async function QuizPage({ searchParams }: { searchParams: Promise<{ subject?: string }> }) {
