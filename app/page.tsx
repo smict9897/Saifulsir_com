@@ -2,15 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { 
-  ArrowRight, Atom, Award, Backpack, Book, BookOpen, Calculator, 
-  CalendarDays, ClipboardList, Clock, Compass, Crop, FileText, 
-  FlaskConical, GraduationCap, Landmark, Library, Lightbulb, 
+  Atom, Award, Backpack, Book, BookOpen, Calculator, 
+  ClipboardList, Compass, Crop, FileText, FlaskConical, 
+  GraduationCap, Landmark, Library, Lightbulb, 
   Presentation, Rocket, Search, ShieldCheck, Stethoscope, Target, Trophy 
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
-import { popularTags } from "@/lib/popular-tags";
 import { catPath } from "@/lib/cat-paths";
+import RecentArticles from "@/components/RecentArticles"; // <-- নতুন কম্পোনেন্ট ইমপোর্ট
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +85,8 @@ const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function Home() {
   const [posts, trending, quotes, cats, site] = await Promise.all([
-    db.post.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 4 }).catch(() => []),
+    // take: 8 দেওয়া হয়েছে যাতে ২টি করে কার্ড ৪টি পেজ পর্যন্ত দেখা যায়
+    db.post.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 8 }).catch(() => []),
     db.resource.findMany({ orderBy: [{ downloads: "desc" }, { createdAt: "desc" }], take: 7 }).catch(() => []),
     db.testimonial.findMany({ orderBy: { createdAt: "desc" }, take: 3 }).catch(() => []),
     db.category.findMany({ select: { slug: true } }).catch(() => []),
@@ -110,62 +111,8 @@ export default async function Home() {
             <button className="flex items-center gap-2 rounded-full bg-royal px-5 py-2.5 font-semibold text-white"><Search size={18} />খুঁজুন</button>
           </form>
 
-          {/* 🎯 চিহ্নিত জায়গাতে (Marked Place) আর্টিকেল সোয়াইপ কার্ড */}
-          {posts.length > 0 && (
-            <div className="mt-7 text-left">
-              <div className="flex items-center justify-between pb-2 mb-1 px-1">
-                <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  সাম্প্রতিক আর্টিকেল ও গাইডলাইন
-                </span>
-                <Link href="/blog" className="text-xs font-bold text-royal hover:underline flex items-center gap-0.5">
-                  সবগুলো <ArrowRight size={13} />
-                </Link>
-              </div>
-
-              {/* মোবাইলে ডানে-বামে সোয়াইপ, পিসিতে গ্রিড */}
-              <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
-                {posts.map((p) => {
-                  let imgSrc = "/placeholder.jpg";
-                  if (p.coverUrl) {
-                    imgSrc = (p.coverUrl.startsWith("/") || p.coverUrl.startsWith("http")) 
-                      ? p.coverUrl 
-                      : `/${p.coverUrl}`;
-                  }
-
-                  return (
-                    <Link 
-                      key={p.id} 
-                      href={`/blog/${p.slug ?? p.id}`} 
-                      className="w-[250px] sm:w-auto shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-royal hover:shadow-md flex flex-col"
-                    >
-                      <div className="relative aspect-[16/10] w-full bg-slate-100">
-                        <Image 
-                          src={imgSrc} 
-                          alt={p.coverAlt ?? p.title} 
-                          fill 
-                          sizes="(max-width: 640px) 250px, 300px" 
-                          className="object-cover" 
-                        />
-                        <span className="absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 text-[9px] font-bold text-white">
-                          BLOG
-                        </span>
-                      </div>
-                      <div className="p-3 flex flex-col flex-1 justify-between">
-                        <h3 className="font-bold text-xs text-slate-800 leading-snug line-clamp-2">
-                          {p.title}
-                        </h3>
-                        <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] text-slate-400">
-                          <span className="flex items-center gap-1"><CalendarDays size={11} />{fmt(p.createdAt)}</span>
-                          <span className="flex items-center gap-1"><Clock size={11} />{Math.max(1, Math.ceil(p.body.length / 900))} min</span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* 🎯 ঠিক সার্চ বারের নিচে: সম্পূর্ণ ২টি কার্ড + ১, ২, ৩ নাম্বারিং পেজিনেশন */}
+          <RecentArticles posts={posts} />
         </div>
       </section>
 
@@ -173,7 +120,7 @@ export default async function Home() {
         {/* প্রশ্নপত্র তৈরি করার ব্যানার */}
         <Link
           href="/question-builder"
-          className="mt-4 flex items-center gap-4 rounded-2xl border border-royal/30 bg-white p-4 sm:p-5 shadow-sm transition hover:border-royal hover:shadow-md"
+          className="mt-6 flex items-center gap-4 rounded-2xl border border-royal/30 bg-white p-4 sm:p-5 shadow-sm transition hover:border-royal hover:shadow-md"
         >
           <span className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-royal text-white">
             <ClipboardList size={26} />
@@ -256,4 +203,4 @@ export default async function Home() {
       </div>
     </main>
   );
-}
+              }
