@@ -3,10 +3,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { addQuestion, importQuestions, deleteQuestion, toggleApproved } from "./actions";
+import AdminQuestionMeta from "@/components/admin-question-meta";
 
 export const dynamic = "force-dynamic";
 
-const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const PER_PAGE = 20;
 const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700";
 const btn = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white";
@@ -18,28 +18,6 @@ const QUICK: [string, string, string][] = [
   ["/question-builder/saved", "সংরক্ষিত প্রশ্নপত্র", "আগে সেভ করা প্রশ্নপত্র"],
   ["/admin/questions/extract", "ইমপোর্ট প্রশ্ন", "PDF বা ছবি থেকে প্রশ্ন তুলুন"],
 ];
-
-function Common() {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <select name="category" className={input} required>
-        {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <input name="subject" placeholder="বিষয় (যেমন: গণিত)" className={input} required />
-      <input name="topic" placeholder="অধ্যায়" className={input} />
-      <input name="source" placeholder="বোর্ড-সাল (যেমন: ঢাকা বোর্ড ২০২৬)" className={input} />
-      <select name="difficulty" className={input} defaultValue="MEDIUM">
-        <option value="EASY">Easy</option>
-        <option value="MEDIUM">Medium</option>
-        <option value="HARD">Hard</option>
-      </select>
-      <select name="lang" className={input}>
-        <option value="Bangla">Bangla</option>
-        <option value="English">English</option>
-      </select>
-    </div>
-  );
-}
 
 export default async function AdminQuestions({
   searchParams,
@@ -85,7 +63,7 @@ export default async function AdminQuestions({
       <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <h2 className="mb-3 font-semibold">একটি প্রশ্ন যোগ করুন</h2>
         <form action={addQuestion} className="space-y-2">
-          <Common />
+          <AdminQuestionMeta />
           <select name="type" className={input} defaultValue="MCQ">
             <option value="MCQ">বহুনির্বাচনি (MCQ)</option>
             <option value="WRITTEN">লিখিত</option>
@@ -97,7 +75,11 @@ export default async function AdminQuestions({
             ))}
           </div>
           <select name="correct" className={input} defaultValue="A">
-            {["A", "B", "C", "D"].map((k) => <option key={k} value={k}>সঠিক উত্তর: {k}</option>)}
+            {["A", "B", "C", "D"].map((k) => (
+              <option key={k} value={k}>
+                সঠিক উত্তর: {k}
+              </option>
+            ))}
           </select>
           <textarea name="explanation" placeholder="ব্যাখ্যা (ঐচ্ছিক)" rows={2} className={input} />
           <button className={btn}>যোগ করুন</button>
@@ -110,7 +92,7 @@ export default async function AdminQuestions({
           প্রতি লাইনে একটি প্রশ্ন, আলাদা করুন | দিয়ে: প্রশ্ন | A | B | C | D | সঠিক (A-D) | ব্যাখ্যা
         </p>
         <form action={importQuestions} className="space-y-2">
-          <Common />
+          <AdminQuestionMeta />
           <textarea
             name="bulk"
             rows={6}
@@ -145,7 +127,9 @@ export default async function AdminQuestions({
         </ul>
         <div className="mt-4 flex items-center justify-center gap-3 text-sm">
           {page > 1 && <Link href={`?page=${page - 1}`}>‹ Prev</Link>}
-          <span>{page} / {pages}</span>
+          <span>
+            {page} / {pages}
+          </span>
           {page < pages && <Link href={`?page=${page + 1}`}>Next ›</Link>}
         </div>
       </section>
