@@ -18,7 +18,12 @@ const PREVIEW = 30;
 const MAX_PAPER = 50;
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
-const classLabel = (v: string) => (/^\d+$/.test(v) ? `ক্লাস ${v}` : v);
+const classLabel = (v: string) => {
+  if (/^\d+$/.test(v)) return `ক্লাস ${v}`;
+  if (v === "SSC") return "SSC (নবম-দশম)";
+  if (v === "HSC") return "HSC (একাদশ-দ্বাদশ)";
+  return v;
+};
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
 
 // NCTB JSON থেকে ক্লাস ম্যাপিং
