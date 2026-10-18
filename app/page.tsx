@@ -365,9 +365,26 @@ export default async function Home() {
             </Link>
           </div>
 
+          
           {/* Card 2: NTRCA & Job Special (Replacing Hire Me) */}
           <div className="rounded-2xl bg-gradient-to-br from-indigo-900 to-blue-900 p-7 text-white shadow-md">
             <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs text-indigo-300 mb-2 font-medium">
               <GraduationCap size={12} /> স্পেশাল প্রিপারেশন
             </span>
-    
+            <h2 className="text-xl font-bold">শিক্ষক নিবন্ধন ও নিয়োগ গাইড</h2>
+            <p className="mt-1 text-xs sm:text-sm text-indigo-200">
+              বিগত বছরের প্রশ্ন ও সিলেবাসভিত্তিক পূর্ণাঙ্গ প্রস্তুতি শিট সংগ্রহ করুন।
+            </p>
+            <Link 
+              href="/ntrca" 
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white text-indigo-900 hover:bg-indigo-50 px-4 py-2.5 text-xs sm:text-sm font-semibold transition"
+            >
+              প্রস্তুতি দেখুন <ArrowRight size={14} />
+            </Link>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  );
+}
