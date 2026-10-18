@@ -28,7 +28,7 @@ function qs(o: Record<string, string | undefined>) {
 export default async function ManageQuestions({ searchParams }: { searchParams: Promise<SP> }) {
   const session = await auth();
   const role = session?.user?.role;
-  if (role !== "ADMIN" && role !== "TEACHER") redirect("/");
+  if (role !== "ADMIN" redirect("/");
 
   const sp = await searchParams;
   const f = {
