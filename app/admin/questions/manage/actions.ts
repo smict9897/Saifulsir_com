@@ -82,3 +82,4 @@ export async function deleteMany(back: string, fd: FormData): Promise<void> {
   revalidatePath(BASE);
   go(back, "ok", `${n} টি প্রশ্ন মোছা হয়েছে।`);
 }
+
