@@ -12,8 +12,13 @@ import {
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import SavedLink from "@/components/saved-link";
+import Logo from "@/components/Logo";
+
 
 type U = { name?: string | null; role?: string } | null;
+<Link href="/" aria-label="SaifulSir.com home" className="shrink-0 flex items-center">
+  <Logo />
+</Link>
 
 // ক্যাটাগরিভিত্তিক আধুনিক মেনু স্ট্রাকচার
 const groupedNav = [
@@ -221,7 +226,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} />
           <div className="fixed inset-y-0 left-0 flex w-80 max-w-[85%] flex-col bg-white dark:bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-4">
-              <Image src="/logo.png" alt="SaifulSir.com" width={689} height={245} className="h-9 w-auto" />
+              <Logo />
               <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
                 <X size={20} />
               </button>
