@@ -12,6 +12,7 @@ const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
 const btn = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white";
 
 const QUICK: [string, string, string][] = [
+  ["/admin/questions/manage", "প্রশ্ন ম্যানেজ", "গণনা, ফিল্টার, অনুমোদন ও মোছা"],
   ["/admin/questions", "প্রশ্ন ব্যাংক", "সব প্রশ্ন দেখুন ও যোগ করুন"],
   ["/question-builder", "প্রশ্নপত্র তৈরি", "প্রশ্ন বেছে প্রশ্নপত্র বানান"],
   ["/question-builder/saved", "সংরক্ষিত প্রশ্নপত্র", "আগে সেভ করা প্রশ্নপত্র"],
