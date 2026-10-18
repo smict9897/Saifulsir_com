@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { FileUp } from "lucide-react";
-import curriculum from "@/../nctb-curriculum.json";
+import curriculum from "../nctb-curriculum.json";
 
 const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const MAX = 4_000_000;
