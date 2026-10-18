@@ -10,7 +10,7 @@ const BASE = "/admin/questions/manage";
 async function roleOf() {
   return (await auth())?.user?.role ?? null;
 }
-const isStaff = (  return role === "ADMIN";
+const isStaff = (r: string | null) => r === "ADMIN";
 
 function go(back: string, key: "ok" | "err", msg: string): never {
   const safe = back.startsWith(BASE) ? back : BASE;
