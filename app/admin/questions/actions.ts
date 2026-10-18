@@ -10,7 +10,7 @@ const BACK = "/admin/questions";
 async function isStaff() {
   const s = await auth();
   const role = s?.user?.role;
-  return role === "ADMIN" || role === "TEACHER";
+  return role === "ADMIN";
 }
 
 const DIFFS = ["EASY", "MEDIUM", "HARD"] as const;
