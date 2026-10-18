@@ -70,18 +70,18 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
           ))}
         </select>
         {CHIPS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={chip(category === c)}
-            onClick={() => {
-              setCategory(category === c ? "" : c);
-              setSubject("");
-            }}
-          >
-            {c}
-          </button>
-        ))}
+  <button
+    key={c}
+    type="button"
+    className={chip(category === c)}
+    onClick={() => {
+      setCategory(category === c ? "" : c);
+      setSubject("");
+    }}
+  >
+    {c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}
+  </button>
+))}
       </div>
 
       <select
