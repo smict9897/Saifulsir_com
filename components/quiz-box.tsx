@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Loader2, LogIn, Sparkles, Square, X } from "lucide-react";
 import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
-import curriculum from "@/../nctb-curriculum.json";
+import curriculum from "../nctb-curriculum.json";
 
 type Triple = { category: string; subject: string; topic: string };
 type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English" };
