@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Loader2, LogIn, Sparkles, Square, X } from "lucide-react";
 import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
+import curriculum from "@/../nctb-curriculum.json";
 
 type Triple = { category: string; subject: string; topic: string };
 type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English" };
@@ -12,13 +13,38 @@ const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Adm
 const OTHER = "__other__";
 const BN = ["ক", "খ", "গ", "ঘ"];
 const DRAFT = "qb:draft";
-const BATCH = 10; // একবারে ১০টি করে তৈরি ও সেভ
-const PREVIEW = 30; // পর্দায় সর্বোচ্চ কতটি দেখাবে
-const MAX_PAPER = 50; // এর বেশি প্রশ্ন হলে সরাসরি প্রশ্নপত্র বোতাম আসবে না
+const BATCH = 10;
+const PREVIEW = 30;
+const MAX_PAPER = 50;
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 const classLabel = (v: string) => (/^\d+$/.test(v) ? `ক্লাস ${v}` : v);
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
+
+// NCTB JSON থেকে ক্লাস ম্যাপিং
+const CLASS_MAP: Record<string, string> = {
+  "6": "Class 6",
+  "7": "Class 7",
+  "8": "Class 8",
+  "SSC": "Class 9-10",
+  "HSC": "Class 11-12",
+};
+
+function getCurriculumSubjects(cat: string): string[] {
+  const key = CLASS_MAP[cat];
+  if (!key) return [];
+  const cls = curriculum.classes.find((c) => c.class === key);
+  return cls ? cls.subjects.map((s) => s.name) : [];
+}
+
+function getCurriculumChapters(cat: string, subject: string): string[] {
+  const key = CLASS_MAP[cat];
+  if (!key) return [];
+  const cls = curriculum.classes.find((c) => c.class === key);
+  if (!cls) return [];
+  const sub = cls.subjects.find((s) => s.name === subject);
+  return sub ? sub.chapters : [];
+}
 
 function countOptions(role: string | null): number[] {
   if (role === "ADMIN") return [20, 25, 30, 50, 100, 200, 300, 500, 1000];
@@ -50,7 +76,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const [loginMsg, setLoginMsg] = useState("");
   const stopRef = useRef(false);
 
-  // লগইন করে ফিরে এলে আগের তৈরি করা প্রশ্ন আবার ফিরিয়ে আনে
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT);
@@ -63,17 +88,25 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
     } catch {}
   }, []);
 
-  const subjects = useMemo(
+  // Curriculum + database subjects
+  const curriculumSubjects = useMemo(() => getCurriculumSubjects(cat), [cat]);
+  const dbSubjects = useMemo(
     () => uniq(triples.filter((t) => t.category === cat).map((t) => t.subject)),
     [triples, cat],
   );
+  const subjects = useMemo(() => uniq([...curriculumSubjects, ...dbSubjects]), [curriculumSubjects, dbSubjects]);
+
   const subjIsOther = subjSel === OTHER || (cat !== "" && subjects.length === 0);
   const subject = subjIsOther ? subjOther.trim() : subjSel;
 
-  const topics = useMemo(
+  // Curriculum + database chapters
+  const curriculumChapters = useMemo(() => getCurriculumChapters(cat, subjSel), [cat, subjSel]);
+  const dbTopics = useMemo(
     () => (subjIsOther ? [] : uniq(triples.filter((t) => t.category === cat && t.subject === subjSel).map((t) => t.topic))),
     [triples, cat, subjSel, subjIsOther],
   );
+  const topics = useMemo(() => uniq([...curriculumChapters, ...dbTopics]), [curriculumChapters, dbTopics]);
+
   const topIsOther = topSel === OTHER || (subject !== "" && topics.length === 0);
   const topic = topIsOther ? topOther.trim() : topSel;
 
@@ -117,7 +150,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           fails++;
           continue;
         }
-        // তৈরি হওয়ার সাথে সাথে ক্লাস-বিষয়-অধ্যায় অনুযায়ী প্রশ্ন ব্যাংকে সেভ
         const s = await saveQuizToBank({ ...m, items: fresh });
         if (!s.ok) {
           all.push(...fresh);
@@ -160,7 +192,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
         const r = await saveQuizToBank({ ...meta, items: rest });
         if (!r.ok) {
           setSaving(false);
-          // লগইনের বার্তা এলে পপআপ দেখাবে, অন্য এরর হলে আগের মতো লাল লেখা
           if (r.error.includes("লগইন")) setLoginMsg(r.error);
           else setError(r.error);
           return;
@@ -345,7 +376,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {loading ? `প্রশ্ন তৈরি হচ্ছে… ${items.length}/${count}` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
+          {loading ? `প্রশ্ন তৈরি হচ্ছে… \( {items.length}/ \){count}` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
         </button>
 
         {loading && (
@@ -377,7 +408,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
         <div className="mt-5 grid gap-4">
           <p className="text-sm text-slate-600">
             {allSaved && meta
-              ? `${items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে (${meta.category} › ${meta.subject} › ${meta.topic})`
+              ? `\( {items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে ( \){meta.category} › ${meta.subject} › ${meta.topic})`
               : `${items.length} টি প্রশ্ন তৈরি হয়েছে`}
           </p>
 
@@ -444,4 +475,4 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       )}
     </div>
   );
-}
+                               }
