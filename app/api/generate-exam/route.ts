@@ -1,16 +1,74 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const { className, subject, chapter, difficulty, count, language } = await req.json();
+    const { mode, className, subject, chapter, difficulty, count, language } = await req.json();
 
+    // ==========================================
+    // ১. ডাটাবেজ মোড (Database Mode - Instant)
+    // ==========================================
+    if (mode === "DB") {
+      // ডাটাবেজ থেকে শর্ত অনুযায়ী প্রশ্ন খোঁজা
+      const dbQuestions = await db.question.findMany({
+        where: {
+          category: { contains: className, mode: "insensitive" },
+          subject: { contains: subject, mode: "insensitive" },
+          ...(chapter && chapter !== "সম্পূর্ণ বই / সিলেবাস"
+            ? { topic: { contains: chapter, mode: "insensitive" } }
+            : {}),
+        },
+        take: parseInt(count) || 20,
+      });
+
+      // ডাটাবেজে প্রশ্ন না থাকলে
+      if (!dbQuestions || dbQuestions.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: "ডাটাবেজে এই অধ্যায়ের কোনো প্রশ্ন পাওয়া যায়নি। দয়া করে উপরে 'AI দিয়ে পরীক্ষা' মোডটি সিলেক্ট করুন।",
+        });
+      }
+
+      // Live MCQ ফরম্যাটে রূপান্তর
+      const formatted = dbQuestions.map((q, idx) => {
+        let opts: string[] = [];
+        try {
+          opts = Array.isArray(q.options) ? (q.options as string[]) : JSON.parse(q.options as string);
+        } catch {
+          opts = ["ক", "খ", "গ", "ঘ"];
+        }
+
+        // সঠিক উত্তরের ইন্ডেক্স নির্ধারণ
+        let correctIdx = 0;
+        if (!isNaN(Number(q.correct))) {
+          correctIdx = parseInt(q.correct);
+        } else {
+          const found = opts.findIndex((o) => o === q.correct);
+          correctIdx = found !== -1 ? found : 0;
+        }
+
+        return {
+          id: q.id || idx + 1,
+          question: q.text,
+          options: opts,
+          correctAnswer: correctIdx,
+          explanation: q.explanation || "ব্যাখ্যা উপলব্ধ নেই।",
+        };
+      });
+
+      return NextResponse.json({ success: true, questions: formatted, source: "DB" });
+    }
+
+    // ==========================================
+    // ২. AI মোড (Gemini AI Mode)
+    // ==========================================
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: "Vercel-এ GEMINI_API_KEY পাওয়া যায়নি! দয়া করে Environment Variables চেক করুন।" },
+        { success: false, error: "Vercel-এ GEMINI_API_KEY পাওয়া যায়নি!" },
         { status: 400 }
       );
     }
@@ -35,81 +93,68 @@ JSON Format:
     "explanation": "সঠিক উত্তরের ব্যাখ্যা"
   }
 ]
-Note: "correctAnswer" must be integer index (0, 1, 2, or 3).
 `;
 
+    // গুগলের একাধিক মডেল ব্যাকআপ লিস্ট (High demand এড়াানোর জন্য)
+    const models = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-3.8-flash",
+      "gemini-1.5-pro",
+    ];
+
     let rawText = "";
+    let lastError = "";
 
-    // ১. গুগলের নতুন Interactions API ট্রাই করা (gemini-3.8-flash)
-    try {
-      const interactionRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "models/gemini-3.8-flash",
-            input: prompt,
-            generation_config: {
-              response_mime_type: "application/json",
-            },
-          }),
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.7,
+                responseMimeType: "application/json",
+              },
+            }),
+          }
+        );
+
+        const data = await response.json();
+        if (data.error) {
+          lastError = data.error.message;
+          continue;
         }
-      );
 
-      const intData = await interactionRes.json();
-      
-      // Interactions API আউটপুট থেকে টেক্সট নেওয়া
-      if (intData?.steps && intData.steps.length > 0) {
-        const lastStep = intData.steps[intData.steps.length - 1];
-        rawText = lastStep?.output?.text || lastStep?.content?.parts?.[0]?.text || "";
-      } else if (intData?.output?.text) {
-        rawText = intData.output.text;
-      }
-    } catch (e) {
-      console.log("Interactions API fallback to generateContent...");
-    }
-
-    // ২. ফলব্যাক: generateContent মেথডে gemini-3.8-flash
-    if (!rawText) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-            },
-          }),
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          rawText = text;
+          break;
         }
-      );
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message);
+      } catch (err: any) {
+        lastError = err.message;
       }
-      rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
 
     if (!rawText) {
       return NextResponse.json(
-        { success: false, error: "Gemini থেকে প্রশ্ন তৈরি করা যায়নি। আবার চেষ্টা করুন।" },
+        { success: false, error: lastError || "Google সার্ভার ব্যস্ত আছে। দয়া করে 'ডাটাবেজ থেকে পরীক্ষা' মোডটি ব্যবহার করুন।" },
         { status: 500 }
       );
     }
 
-    // ৩. রেসপন্স ক্লিন ও JSON পার্সিং
     let cleaned = rawText.trim();
     if (cleaned.startsWith("```")) {
       cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
     }
 
     const questions = JSON.parse(cleaned);
-    return NextResponse.json({ success: true, questions });
+    return NextResponse.json({ success: true, questions, source: "AI" });
   } catch (error: any) {
-    console.error("Exam Gen Error:", error);
+    console.error("Exam Route Error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "সার্ভার এরর হয়েছে" },
       { status: 500 }
