@@ -5,6 +5,7 @@ import { Sparkles, Zap, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import LiveExamPlayer, { ExamQuestion } from "@/components/LiveExamPlayer";
 import rawCurriculum from "@/nctb-curriculum.json";
 
+// ক্লাসের নাম সুন্দরভাবে বাংলায় প্রদর্শনের ম্যাপিং
 const classLabelMap: Record<string, string> = {
   "Class 6": "৬ষ্ঠ শ্রেণি (Class 6)",
   "Class 7": "৭ম শ্রেণি (Class 7)",
@@ -22,23 +23,27 @@ export default function ExamPage() {
   const [count, setCount] = useState("20");
   const [language, setLanguage] = useState("বাংলা");
 
+  // লোডিং ও স্টেট ট্রানজিশন
   const [loading, setLoading] = useState(false);
   const [examReady, setExamReady] = useState(false);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // ১. সিলেক্টেড ক্লাসের বিষয়গুলো ফিল্টার করা
   const availableSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const foundClass = rawCurriculum.classes.find((c) => c.class === selectedClass);
     return foundClass ? foundClass.subjects : [];
   }, [selectedClass]);
 
+  // ২. সিলেক্টেড বিষয়ের অধ্যায়গুলো ফিল্টার করা
   const availableChapters = useMemo(() => {
     if (!selectedSubject) return [];
     const foundSubject = availableSubjects.find((s) => s.name === selectedSubject);
     return foundSubject && foundSubject.chapters ? foundSubject.chapters : [];
   }, [selectedSubject, availableSubjects]);
 
+  // ফর্ম সাবমিট ও জেমিনি AI থেকে প্রশ্ন ফেচ করা
   const handleStartExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClass || !selectedSubject) {
@@ -46,7 +51,9 @@ export default function ExamPage() {
       return;
     }
 
-    const finalChapter = selectedChapter === "custom" ? customChapter : (selectedChapter || "সম্পূর্ণ বই / সিলেবাস");
+    const finalChapter = selectedChapter === "custom" 
+      ? customChapter 
+      : (selectedChapter || "সম্পূর্ণ বই / সিলেবাস");
 
     setErrorMsg("");
     setLoading(true);
@@ -66,34 +73,40 @@ export default function ExamPage() {
       });
 
       const data = await res.json();
+      
       if (data.success && data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
-        setExamReady(true);
+        setExamReady(true); // প্রশ্ন রেডি হলে সরাসরি লাইভ পরীক্ষায় চলে যাবে
       } else {
-        setErrorMsg("প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
+        // গুগল বা সার্ভার থেকে আসা আসল এরর মেসেজ দেখাবে
+        setErrorMsg(data.error || "প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
       }
-    } catch (err) {
-      setErrorMsg("সার্ভারে সমস্যা হয়েছে। ইন্টারনেট কানেকশন চেক করুন।");
+    } catch (err: any) {
+      setErrorMsg(err.message || "সার্ভারে সমস্যা হয়েছে। ইন্টারনেট কানেকশন চেক করুন।");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ প্রশ্ন রেডি হলে লাইভ এক্সাম প্লেয়ার চালু হবে
   if (examReady && questions.length > 0) {
     const finalChapterText = selectedChapter === "custom" ? customChapter : selectedChapter;
     return (
       <LiveExamPlayer
         examTitle={`${selectedClass} • ${selectedSubject} ${finalChapterText ? `(${finalChapterText})` : ""}`}
         questions={questions}
-        timeInMinutes={parseInt(count)}
+        timeInMinutes={parseInt(count)} // প্রতিটি প্রশ্নের জন্য ১ মিনিট
         negativeMark={0.5}
       />
     );
   }
 
+  // 📋 সিলেকশন ফর্ম
   return (
     <div className="min-h-screen bg-slate-50/70 py-6 px-4 sm:px-6">
       <div className="mx-auto max-w-xl">
+        
+        {/* টপ ব্যানার */}
         <div className="mb-6 flex items-center justify-between rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 p-4 text-white shadow-md">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md">
@@ -107,19 +120,23 @@ export default function ExamPage() {
           <ArrowRight size={20} className="text-emerald-200" />
         </div>
 
+        {/* ফর্ম কার্ড */}
         <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm">
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-6 flex items-center gap-2">
             এক ক্লিকে প্রশ্ন তৈরি করুন <span className="text-blue-600">(AI)</span>
           </h1>
 
+          {/* এরর মেসেজ বক্স */}
           {errorMsg && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-600 border border-red-100">
-              <AlertCircle size={16} />
-              <span>{errorMsg}</span>
+            <div className="mb-4 flex items-start gap-2.5 rounded-2xl bg-red-50 p-3.5 text-xs font-semibold text-red-600 border border-red-200">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{errorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleStartExam} className="space-y-4">
+            
+            {/* ১. ক্লাস সিলেক্ট */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">ক্লাস</label>
               <select
@@ -141,6 +158,7 @@ export default function ExamPage() {
               </select>
             </div>
 
+            {/* ২. বিষয় সিলেক্ট */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">বিষয়</label>
               <select
@@ -151,31 +169,43 @@ export default function ExamPage() {
                   setSelectedChapter("");
                   setCustomChapter("");
                 }}
-                className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none shadow-xs ${
-                  !selectedClass ? "bg-slate-50 text-slate-400 border-slate-200" : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
+                className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none shadow-xs transition ${
+                  !selectedClass 
+                    ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
+                    : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
                 }`}
               >
-                <option value="">{selectedClass ? "বিষয় নির্বাচন করুন" : "আগে ক্লাস বাছুন"}</option>
+                <option value="">
+                  {selectedClass ? "বিষয় নির্বাচন করুন" : "আগে ক্লাস বাছুন"}
+                </option>
                 {availableSubjects.map((sub) => (
-                  <option key={sub.name} value={sub.name}>{sub.name}</option>
+                  <option key={sub.name} value={sub.name}>
+                    {sub.name}
+                  </option>
                 ))}
               </select>
             </div>
 
+            {/* ৩. অধ্যায় সিলেক্ট (এনসিটিবি লিস্ট অনুযায়ী) */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">অধ্যায়</label>
+              
               {availableChapters.length > 0 ? (
                 <select
                   disabled={!selectedSubject}
                   value={selectedChapter}
                   onChange={(e) => setSelectedChapter(e.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none shadow-xs ${
-                    !selectedSubject ? "bg-slate-50 text-slate-400 border-slate-200" : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none shadow-xs transition ${
+                    !selectedSubject 
+                      ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
+                      : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
                   }`}
                 >
                   <option value="">সম্পূর্ণ বই / সকল অধ্যায়</option>
                   {availableChapters.map((chap) => (
-                    <option key={chap} value={chap}>{chap}</option>
+                    <option key={chap} value={chap}>
+                      {chap}
+                    </option>
                   ))}
                   <option value="custom">✏️ নিজের মতো টপিক লিখুন...</option>
                 </select>
@@ -186,10 +216,15 @@ export default function ExamPage() {
                   disabled={!selectedSubject}
                   value={customChapter}
                   onChange={(e) => setCustomChapter(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none transition ${
+                    !selectedSubject 
+                      ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
+                      : "border-slate-200 focus:border-blue-500"
+                  }`}
                 />
               )}
 
+              {/* কাস্টম টপিক ইনপুট */}
               {selectedChapter === "custom" && (
                 <input
                   type="text"
@@ -202,13 +237,14 @@ export default function ExamPage() {
               )}
             </div>
 
+            {/* ৪. কঠিনতা, প্রশ্ন সংখ্যা ও ভাষা */}
             <div className="grid grid-cols-3 gap-2.5 pt-1">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">কঠিনতা</label>
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 shadow-xs"
                 >
                   <option value="সহজ">সহজ</option>
                   <option value="মাঝারি">মাঝারি</option>
@@ -221,7 +257,7 @@ export default function ExamPage() {
                 <select
                   value={count}
                   onChange={(e) => setCount(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 shadow-xs"
                 >
                   <option value="10">10</option>
                   <option value="15">15</option>
@@ -236,7 +272,7 @@ export default function ExamPage() {
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 shadow-xs"
                 >
                   <option value="বাংলা">বাংলা</option>
                   <option value="English">English</option>
@@ -244,6 +280,7 @@ export default function ExamPage() {
               </div>
             </div>
 
+            {/* সাবমিট বাটন */}
             <button
               type="submit"
               disabled={loading}
@@ -262,8 +299,9 @@ export default function ExamPage() {
               )}
             </button>
           </form>
+
         </div>
       </div>
     </div>
   );
-                    }
+}
