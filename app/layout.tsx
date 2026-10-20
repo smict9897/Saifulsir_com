@@ -9,7 +9,8 @@ import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
-import MobileBottomNav from "@/components/MobileBottomNav"; // <-- ১. এটি ইমপোর্ট করুন
+import MobileBottomNav from "@/components/MobileBottomNav";
+import InstallPrompt from "@/components/InstallPrompt"; // ← নতুন
 
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
@@ -31,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
+    icons: { apple: "/pwa-icon?size=180" }, // ← নতুন (iPhone আইকন)
   };
 }
 
@@ -48,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     getSite(),
   ]);
   const wa = site.social.find((s) => s.name === "WhatsApp")?.url;
-  
+
   return (
     <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
@@ -57,11 +59,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         style={{ fontFamily: '"Times New Roman", Times, var(--font-en), var(--font-bn), serif' }}
       >
         <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
-        
+
         <main>{children}</main>
-        
+
         <SiteFooter />
-        
+
         {/* মোবাইলের নিচের স্মার্ট অ্যাপ বার */}
         <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
 
@@ -71,6 +73,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <MessageCircle size={26} />
           </a>
         )}
+
+        <InstallPrompt /> {/* ← নতুন */}
         <Analytics />
       </body>
     </html>
