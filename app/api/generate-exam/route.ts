@@ -9,26 +9,77 @@ export async function POST(req: Request) {
     const { mode, className, subject, chapter, difficulty, count, language } = await req.json();
 
     // ==========================================
-    // ১. ডাটাবেজ মোড (Database Mode - Instant)
+    // ১. ডাটাবেজ মোড (Database Mode - Smart Match)
     // ==========================================
     if (mode === "DB") {
-      // ডাটাবেজ থেকে শর্ত অনুযায়ী প্রশ্ন খোঁজা
-      const dbQuestions = await db.question.findMany({
+      const takeCount = parseInt(count) || 20;
+
+      // অধ্যায়ের আগের সংখ্যা বাদ দেওয়া (যেমন: "১. বাস্তব সংখ্যা" -> "বাস্তব সংখ্যা")
+      const cleanChapter = chapter
+        ? chapter.replace(/^[০-৯\d]+[\.\:\s\-]+/g, "").replace(/^Unit\s+\d+[\:\.\s]+/gi, "").trim()
+        : "";
+
+      // ক্লাসের বিকল্প নামগুলো তৈরি করা
+      const classKeywords = [className];
+      if (className.includes("9-10")) classKeywords.push("SSC", "Class 9", "Class 10", "৯ম", "১০ম");
+      if (className.includes("11-12")) classKeywords.push("HSC", "Class 11", "Class 12", "১১শ", "১২শ");
+      if (className.includes("6")) classKeywords.push("৬ষ্ঠ");
+      if (className.includes("7")) classKeywords.push("৭ম");
+      if (className.includes("8")) classKeywords.push("৮ম", "JSC");
+
+      // ১. প্রথম চেষ্টা: ক্লাস + বিষয় + অধ্যায় মিলিয়ে খোঁজা
+      let dbQuestions = await db.question.findMany({
         where: {
-          category: { contains: className, mode: "insensitive" },
+          OR: classKeywords.map((k) => ({ category: { contains: k, mode: "insensitive" } })),
           subject: { contains: subject, mode: "insensitive" },
-          ...(chapter && chapter !== "সম্পূর্ণ বই / সিলেবাস"
-            ? { topic: { contains: chapter, mode: "insensitive" } }
+          ...(cleanChapter && cleanChapter !== "সম্পূর্ণ বই / সিলেবাস"
+            ? {
+                OR: [
+                  { topic: { contains: cleanChapter, mode: "insensitive" } },
+                  { topic: { contains: chapter, mode: "insensitive" } },
+                ],
+              }
             : {}),
         },
-        take: parseInt(count) || 20,
+        take: takeCount,
       });
 
-      // ডাটাবেজে প্রশ্ন না থাকলে
+      // ২. দ্বিতীয় চেষ্টা: যদি ক্লাস নাম নিয়ে সমস্যা থাকে, শুধু বিষয় ও অধ্যায় দিয়ে খোঁজা
       if (!dbQuestions || dbQuestions.length === 0) {
+        if (cleanChapter && cleanChapter !== "সম্পূর্ণ বই / সিলেবাস") {
+          dbQuestions = await db.question.findMany({
+            where: {
+              subject: { contains: subject, mode: "insensitive" },
+              topic: { contains: cleanChapter, mode: "insensitive" },
+            },
+            take: takeCount,
+          });
+        }
+      }
+
+      // ৩. তৃতীয় চেষ্টা: অধ্যায়ের নাম না মিললে পুরো বিষয়ের যেকোনো প্রশ্ন নেওয়া
+      if (!dbQuestions || dbQuestions.length === 0) {
+        dbQuestions = await db.question.findMany({
+          where: {
+            subject: { contains: subject, mode: "insensitive" },
+          },
+          take: takeCount,
+        });
+      }
+
+      // ৪. এখনো না পেলে ডাটাবেজের একটি নমুনা দেখিয়ে সাহায্য করা
+      if (!dbQuestions || dbQuestions.length === 0) {
+        const sample = await db.question.findFirst({
+          select: { category: true, subject: true, topic: true },
+        });
+
+        const sampleInfo = sample 
+          ? `(ডাটাবেজে বর্তমানে Category: "${sample.category}", Subject: "${sample.subject}", Topic: "${sample.topic}" হিসেবে ডেটা আছে)` 
+          : "(ডাটাবেজের Question টেবিলে কোনো প্রশ্ন পাওয়া যায়নি)";
+
         return NextResponse.json({
           success: false,
-          error: "ডাটাবেজে এই অধ্যায়ের কোনো প্রশ্ন পাওয়া যায়নি। দয়া করে উপরে 'AI দিয়ে পরীক্ষা' মোডটি সিলেক্ট করুন।",
+          error: `ডাটাবেজে "${subject}" বিষয়ের প্রশ্ন মেলানো যায়নি। ${sampleInfo}`,
         });
       }
 
@@ -41,7 +92,6 @@ export async function POST(req: Request) {
           opts = ["ক", "খ", "গ", "ঘ"];
         }
 
-        // সঠিক উত্তরের ইন্ডেক্স নির্ধারণ
         let correctIdx = 0;
         if (!isNaN(Number(q.correct))) {
           correctIdx = parseInt(q.correct);
@@ -63,7 +113,7 @@ export async function POST(req: Request) {
     }
 
     // ==========================================
-    // ২. AI মোড (Gemini AI Mode)
+    // ২. AI মোড
     // ==========================================
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -74,7 +124,6 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-You are an expert question setter for Bangladeshi schools and exams.
 Generate exactly ${count} multiple choice questions (MCQs) in Bengali.
 - Class: ${className}
 - Subject: ${subject}
@@ -82,8 +131,7 @@ Generate exactly ${count} multiple choice questions (MCQs) in Bengali.
 - Difficulty: ${difficulty}
 - Language: ${language || "বাংলা"}
 
-Return a pure JSON array ONLY (no markdown code blocks, no backticks, no introduction, no explanation outside JSON).
-JSON Format:
+Return a pure JSON array ONLY:
 [
   {
     "id": 1,
@@ -95,14 +143,7 @@ JSON Format:
 ]
 `;
 
-    // গুগলের একাধিক মডেল ব্যাকআপ লিস্ট (High demand এড়াানোর জন্য)
-    const models = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-3.8-flash",
-      "gemini-1.5-pro",
-    ];
-
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.8-flash"];
     let rawText = "";
     let lastError = "";
 
@@ -141,7 +182,7 @@ JSON Format:
 
     if (!rawText) {
       return NextResponse.json(
-        { success: false, error: lastError || "Google সার্ভার ব্যস্ত আছে। দয়া করে 'ডাটাবেজ থেকে পরীক্ষা' মোডটি ব্যবহার করুন।" },
+        { success: false, error: lastError || "AI মডেল ব্যস্ত আছে। আবার চেষ্টা করুন।" },
         { status: 500 }
       );
     }
