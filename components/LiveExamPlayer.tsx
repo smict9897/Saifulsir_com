@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  ArrowLeft, CheckCircle2, Trophy, Medal, 
-  Clock, User, School, Hash, RefreshCcw, Eye
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, Trophy, Clock, RefreshCcw } from "lucide-react";
 
 export const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
@@ -29,7 +26,7 @@ interface LiveExamProps {
   questions: ExamQuestion[];
   timeInMinutes?: number;
   negativeMark?: number;
-  studentInfo: StudentInfo;
+  studentInfo?: StudentInfo;
 }
 
 export default function LiveExamPlayer({
@@ -37,7 +34,7 @@ export default function LiveExamPlayer({
   questions = [],
   timeInMinutes = 20,
   negativeMark = 0.5,
-  studentInfo,
+  studentInfo = { name: "পরীক্ষার্থী", className: "সাধারণ", roll: "১" },
 }: LiveExamProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(timeInMinutes * 60);
@@ -45,7 +42,6 @@ export default function LiveExamPlayer({
   const [viewState, setViewState] = useState<"EXAM" | "RESULT" | "REVIEW" | "LEADERBOARD">("EXAM");
   const [expandedExplanation, setExpandedExplanation] = useState<Record<number, boolean>>({});
 
-  // লিডারবোর্ড স্টেট
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
@@ -74,7 +70,6 @@ export default function LiveExamPlayer({
     setSelectedAnswers((prev) => ({ ...prev, [qIndex]: optIndex }));
   };
 
-  // সাবমিট এবং লিডারবোর্ডে মার্কস সেভ
   const handleFinalSubmit = async () => {
     setShowWarningModal(false);
     setViewState("RESULT");
@@ -97,10 +92,10 @@ export default function LiveExamPlayer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           examTitle,
-          studentName: studentInfo.name,
-          studentClass: studentInfo.className,
-          rollNumber: studentInfo.roll,
-          institution: studentInfo.institution || "",
+          studentName: studentInfo?.name || "পরীক্ষার্থী",
+          studentClass: studentInfo?.className || "সাধারণ",
+          rollNumber: studentInfo?.roll || "১",
+          institution: studentInfo?.institution || "",
           score: finalScore,
           totalMarks: questions.length,
           timeSpent: Math.max(1, timeSpent),
@@ -111,7 +106,6 @@ export default function LiveExamPlayer({
     }
   };
 
-  // লিডারবোর্ড ফেচ করা
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
     setViewState("LEADERBOARD");
@@ -144,19 +138,20 @@ export default function LiveExamPlayer({
   return (
     <div className="min-h-screen bg-slate-100/70 pb-20 font-sans text-slate-800">
       
-      {/* ================= ১. পরীক্ষা চলাকালীন স্ক্রিন ================= */}
+      {/* ১. পরীক্ষা স্ক্রিন */}
       {viewState === "EXAM" && (
         <>
           <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <div className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">
-              {studentInfo.name} (রোল: {toBn(studentInfo.roll)})
+            <div className="text-xs font-semibold text-slate-700 truncate max-w-[140px]">
+              {studentInfo?.name} (রোল: {toBn(studentInfo?.roll || "১")})
             </div>
 
+            {/* Submit বাটনকে বাংলায় 'জমা দিন' করা হলো */}
             <button
               onClick={() => setShowWarningModal(true)}
               className="rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-1.5 text-sm font-bold text-white shadow-md active:scale-95 transition"
             >
-              Submit
+              জমা দিন
             </button>
 
             <div className="text-right">
@@ -165,13 +160,13 @@ export default function LiveExamPlayer({
                 {toBn(formatTime(timeLeft))}
               </div>
               <div className="text-[10px] font-bold text-emerald-600">
-                {toBn(answeredCount)} / {toBn(questions.length)} উত্তর
+                {toBn(answeredCount)} / {toBn(questions.length)}
               </div>
             </div>
           </div>
 
           <div className="mx-4 mt-3 rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2 text-xs font-medium text-amber-900">
-            প্রতি সঠিক উত্তরের মান ১ ও ভুলের জন্য ০.৫০ কাটা যাবে।
+            প্রতি সঠিক উত্তরের মান ১ ও ভুল উত্তরের জন্য ০.৫০ কাটা যাবে।
           </div>
 
           <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
@@ -214,7 +209,7 @@ export default function LiveExamPlayer({
         </>
       )}
 
-      {/* ================= ২. সাবমিট ওয়ার্নিং মোডাল ================= */}
+      {/* ২. সাবমিট সতর্কতা মোডাল (সম্পূর্ণ বাংলায়) */}
       {showWarningModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
@@ -243,13 +238,13 @@ export default function LiveExamPlayer({
         </div>
       )}
 
-      {/* ================= ৩. রেজাল্ট পেজ ================= */}
+      {/* ৩. ফলাফল পেজ */}
       {viewState === "RESULT" && (
         <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
           <div className="rounded-2xl bg-indigo-600 p-4 text-center text-white font-bold text-lg shadow-md flex items-center justify-between">
-            <span className="text-sm font-normal">পরীক্ষার্থী: {studentInfo.name}</span>
+            <span className="text-sm font-normal">পরীক্ষার্থী: {studentInfo?.name}</span>
             <span>ফলাফল</span>
-            <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">রোল: {toBn(studentInfo.roll)}</span>
+            <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">রোল: {toBn(studentInfo?.roll || "১")}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -273,7 +268,6 @@ export default function LiveExamPlayer({
             </div>
           </div>
 
-          {/* অ্যাকশন বাটনসমূহ */}
           <div className="space-y-2.5 pt-2">
             <button
               onClick={fetchLeaderboard}
@@ -300,7 +294,7 @@ export default function LiveExamPlayer({
         </div>
       )}
 
-      {/* ================= ৪. লিডারবোর্ড স্ক্রিন (Leaderboard Screen) ================= */}
+      {/* ৪. লিডারবোর্ড স্ক্রিন */}
       {viewState === "LEADERBOARD" && (
         <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
           <div className="rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-700 p-4 text-white shadow-md flex items-center justify-between">
@@ -326,7 +320,6 @@ export default function LiveExamPlayer({
             </div>
           ) : (
             <>
-              {/* টপ ৩ মেডেল উইনার্স */}
               <div className="grid grid-cols-3 gap-2 pt-2">
                 {leaderboard.slice(0, 3).map((u, i) => {
                   const medals = ["🥇 ১ম স্থান", "🥈 ২য় স্থান", "🥉 ৩য় স্থান"];
@@ -344,7 +337,6 @@ export default function LiveExamPlayer({
                 })}
               </div>
 
-              {/* পুরো র‍্যাঙ্কিং তালিকা */}
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                 <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-xs font-bold text-slate-600 flex justify-between">
                   <span>র‍্যাংক ও নাম</span>
@@ -353,7 +345,7 @@ export default function LiveExamPlayer({
 
                 <div className="divide-y divide-slate-100">
                   {leaderboard.map((item, idx) => {
-                    const isMe = item.studentName === studentInfo.name && String(item.rollNumber) === String(studentInfo.roll);
+                    const isMe = item.studentName === studentInfo?.name && String(item.rollNumber) === String(studentInfo?.roll);
                     return (
                       <div
                         key={idx}
@@ -398,7 +390,7 @@ export default function LiveExamPlayer({
         </div>
       )}
 
-      {/* ================= ৫. উত্তরপত্র ও ব্যাখ্যা রিভিউ ================= */}
+      {/* ৫. উত্তরপত্র ও ব্যাখ্যা */}
       {viewState === "REVIEW" && (
         <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
           <div className="rounded-2xl bg-indigo-600 p-4 text-center text-white font-bold text-lg shadow-md flex items-center justify-between">
