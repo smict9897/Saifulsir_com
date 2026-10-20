@@ -10,14 +10,22 @@ import { getSite } from "@/lib/site";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import InstallPrompt from "@/components/InstallPrompt"; // ← নতুন
+import InstallPrompt from "@/components/InstallPrompt";
 
+// 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ সীমাবদ্ধ করা হলো
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
   variable: "--font-bn",
   display: "swap",
+  declarations: [
+    {
+      prop: "unicode-range",
+      value: "U+0980-09FF, U+200C-200D", // শুধু বাংলা অক্ষর থাকলে এটি কাজ করবে
+    },
+  ],
 });
 
+// 🎯 ২. ইংরেজি ও গণিতের চিহ্নের জন্য Tinos (Times New Roman-এর হুবহু অফিশিয়াল সংস্করণ)
 const en = Tinos({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -53,10 +61,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
-        className="font-sans pb-16 md:pb-0"
-        style={{ fontFamily: '"Times New Roman", Times, var(--font-en), var(--font-bn), serif' }}
+        className="pb-16 md:pb-0"
+        style={{
+          // 💡 প্রথমে ইংরেজি ফন্ট (Times New Roman / Tinos), এরপর বাংলা (AdorshoLipi)
+          fontFamily: 'var(--font-en), "Times New Roman", var(--font-bn), serif',
+        }}
       >
         <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
 
@@ -68,13 +81,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
 
         {wa && (
-          <a href={wa} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
-            className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform">
+          <a
+            href={wa}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+            className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform"
+          >
             <MessageCircle size={26} />
           </a>
         )}
 
-        <InstallPrompt /> {/* ← নতুন */}
+        <InstallPrompt />
         <Analytics />
       </body>
     </html>
