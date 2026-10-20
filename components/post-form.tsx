@@ -5,6 +5,7 @@ import { savePost, type PostState } from "@/app/actions/posts";
 import { parseTags } from "@/lib/tags";
 import RichEditor from "@/components/rich-editor";
 import SeoPanel from "@/components/seo-panel";
+import AdminKeywordTool from "@/components/admin-keyword-tool";
 import { Code, Eye, Pencil, Wrench } from "lucide-react";
 
 // HTML ট্যাবে লেখা পোস্ট চেনার জন্য একটি র‍্যাপার ব্যবহার হয়।
@@ -93,6 +94,29 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
   const [info, setInfo] = useState({ text: "", headings: [] as string[], words: 0 });
   const [coverMsg, setCoverMsg] = useState("");
   const on = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value });
+
+  // AI কিওয়ার্ড টুল থেকে কিওয়ার্ড ফর্মে বসায়: ফোকাস খালি থাকলে সেখানে, নইলে Keywords ঘরে যোগ হয়
+  const addKeyword = (kw: string, target: "auto" | "focus" | "keywords" = "auto") => {
+    setV((p) => {
+      const toFocus = target === "focus" || (target === "auto" && !p.focusKeyword.trim());
+      if (toFocus) return { ...p, focusKeyword: kw.slice(0, 80) };
+      const list = p.keywords.split(",").map((s) => s.trim()).filter(Boolean);
+      if (list.some((s) => s.toLowerCase() === kw.toLowerCase())) return p;
+      return { ...p, keywords: [...list, kw].slice(0, 10).join(", ") };
+    });
+  };
+
+  // AI SEO প্যাক থেকে শিরোনাম, slug, meta ও ট্যাগ ফর্মে বসায়
+  const applySeo = (p: { title?: string; slug?: string; metaTitle?: string; metaDescription?: string; tags?: string }) => {
+    setV((s) => ({
+      ...s,
+      ...(p.title !== undefined ? { title: p.title.slice(0, 200) } : {}),
+      ...(p.slug !== undefined ? { slug: p.slug } : {}),
+      ...(p.metaTitle !== undefined ? { metaTitle: p.metaTitle.slice(0, 70) } : {}),
+      ...(p.metaDescription !== undefined ? { metaDescription: p.metaDescription.slice(0, 170) } : {}),
+      ...(p.tags !== undefined ? { tags: p.tags } : {}),
+    }));
+  };
 
   useEffect(() => {
     const doc = new DOMParser().parseFromString(html.replace(/<\/(p|h[1-6]|li|blockquote|div)>/gi, " </$1>"), "text/html");
@@ -232,6 +256,14 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
 
       <fieldset className="grid gap-4 rounded-2xl border border-slate-200 p-4">
         <legend className="px-2 text-sm font-semibold">SEO (গুগল সার্চের জন্য)</legend>
+
+        <details className="rounded-xl border border-slate-200 p-3">
+          <summary className="cursor-pointer text-sm font-semibold">AI কিওয়ার্ড রিসার্চ (ঐচ্ছিক)</summary>
+          <div className="mt-3">
+            <AdminKeywordTool compact onSelectKeyword={addKeyword} onApplySeo={applySeo} />
+          </div>
+        </details>
+
         <label><L t="Focus keyword" hint="যে শব্দ লিখে সার্চে আসতে চান, একটি" /><input name="focusKeyword" maxLength={80} value={v.focusKeyword} onChange={on("focusKeyword")} className={f} placeholder="যেমন: ৮ম শ্রেণির গণিত সমাধান" /></label>
         <label><L t="Keywords" hint="কমা দিয়ে আলাদা করুন, সর্বোচ্চ ১০টি" /><textarea name="keywords" rows={2} value={v.keywords} onChange={on("keywords")} className={f} placeholder="class 8 math, ৮ম শ্রেণির গণিত, গণিত সমাধান pdf" /></label>
         <label><L t="URL slug" hint="English letters, numbers, hyphens. Blank = use ID" /><input name="slug" value={v.slug} onChange={on("slug")} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={f} placeholder="class-8-math-guide" /></label>
@@ -253,4 +285,4 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       </button>
     </form>
   );
-}
+        }
