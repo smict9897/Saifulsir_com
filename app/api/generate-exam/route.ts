@@ -38,59 +38,69 @@ JSON Format:
 Note: "correctAnswer" must be integer index (0, 1, 2, or 3).
 `;
 
-    // গুগলের বর্তমান অ্যাক্টিভ মডেলগুলোর তালিকা (অটো-ফলব্যাক)
-    const candidateModels = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-001"
-    ];
-
     let rawText = "";
-    let lastError = "";
 
-    // যে মডেলটি পাওয়া যাবে সেটি দিয়ে সরাসরি প্রশ্ন তৈরি করবে
-    for (const model of candidateModels) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature: 0.7,
-                responseMimeType: "application/json",
-              },
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.error) {
-          lastError = data.error.message;
-          continue; // এই মডেল না পেলে পরের মডেলে ট্রাই করবে
+    // ১. গুগলের নতুন Interactions API ট্রাই করা (gemini-3.8-flash)
+    try {
+      const interactionRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "models/gemini-3.8-flash",
+            input: prompt,
+            generation_config: {
+              response_mime_type: "application/json",
+            },
+          }),
         }
+      );
 
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          rawText = text;
-          break; // সফলভাবে উত্তর পাওয়া গেছে
-        }
-      } catch (err: any) {
-        lastError = err.message;
+      const intData = await interactionRes.json();
+      
+      // Interactions API আউটপুট থেকে টেক্সট নেওয়া
+      if (intData?.steps && intData.steps.length > 0) {
+        const lastStep = intData.steps[intData.steps.length - 1];
+        rawText = lastStep?.output?.text || lastStep?.content?.parts?.[0]?.text || "";
+      } else if (intData?.output?.text) {
+        rawText = intData.output.text;
       }
+    } catch (e) {
+      console.log("Interactions API fallback to generateContent...");
+    }
+
+    // ২. ফলব্যাক: generateContent মেথডে gemini-3.8-flash
+    if (!rawText) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+            },
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+      rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
 
     if (!rawText) {
       return NextResponse.json(
-        { success: false, error: lastError || "Gemini থেকে প্রশ্ন পাওয়া যায়নি।" },
+        { success: false, error: "Gemini থেকে প্রশ্ন তৈরি করা যায়নি। আবার চেষ্টা করুন।" },
         { status: 500 }
       );
     }
 
-    // ব্যাকটিক (```json) থাকলে ক্লিন করা
+    // ৩. রেসপন্স ক্লিন ও JSON পার্সিং
     let cleaned = rawText.trim();
     if (cleaned.startsWith("```")) {
       cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -99,7 +109,7 @@ Note: "correctAnswer" must be integer index (0, 1, 2, or 3).
     const questions = JSON.parse(cleaned);
     return NextResponse.json({ success: true, questions });
   } catch (error: any) {
-    console.error("Exam Gen Catch Error:", error);
+    console.error("Exam Gen Error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "সার্ভার এরর হয়েছে" },
       { status: 500 }
