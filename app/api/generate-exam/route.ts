@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const prompt = `
 You are an expert question setter for Bangladeshi schools and exams.
-Generate exactly ${count} multiple choice questions (MCQs) in Bengali language.
+Generate exactly ${count} multiple choice questions (MCQs) in Bengali.
 - Class: ${className}
 - Subject: ${subject}
 - Chapter/Topic: ${chapter || "সম্পূর্ণ সিলেবাস"}
@@ -38,37 +38,54 @@ JSON Format:
 Note: "correctAnswer" must be integer index (0, 1, 2, or 3).
 `;
 
-    // ⚡ Google-এর সবচেয়ে স্টেবল ও ফ্রি gemini-1.5-flash মডেল
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            responseMimeType: "application/json",
-          },
-        }),
+    // গুগলের বর্তমান অ্যাক্টিভ মডেলগুলোর তালিকা (অটো-ফলব্যাক)
+    const candidateModels = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-001"
+    ];
+
+    let rawText = "";
+    let lastError = "";
+
+    // যে মডেলটি পাওয়া যাবে সেটি দিয়ে সরাসরি প্রশ্ন তৈরি করবে
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.7,
+                responseMimeType: "application/json",
+              },
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.error) {
+          lastError = data.error.message;
+          continue; // এই মডেল না পেলে পরের মডেলে ট্রাই করবে
+        }
+
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          rawText = text;
+          break; // সফলভাবে উত্তর পাওয়া গেছে
+        }
+      } catch (err: any) {
+        lastError = err.message;
       }
-    );
-
-    const data = await response.json();
-
-    // গুগলের নিজস্ব এরর থাকলে তা ধরা
-    if (data.error) {
-      console.error("Google API Error:", data.error);
-      return NextResponse.json(
-        { success: false, error: `Google API Error: ${data.error.message}` },
-        { status: 500 }
-      );
     }
 
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
       return NextResponse.json(
-        { success: false, error: "Gemini থেকে কোনো প্রশ্ন পাওয়া যায়নি।" },
+        { success: false, error: lastError || "Gemini থেকে প্রশ্ন পাওয়া যায়নি।" },
         { status: 500 }
       );
     }
