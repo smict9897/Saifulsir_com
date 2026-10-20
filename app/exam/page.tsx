@@ -24,7 +24,7 @@ export default function ExamPage() {
   const [count, setCount] = useState("20");
   const [language, setLanguage] = useState("বাংলা");
 
-  // পরীক্ষার্থীর তথ্য স্টেট ও মোডাল
+  // পরীক্ষার্থীর তথ্য স্টেট ও পপ-আপ মোডাল
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [rollNumber, setRollNumber] = useState("");
@@ -48,7 +48,7 @@ export default function ExamPage() {
     return foundSubject && foundSubject.chapters ? foundSubject.chapters : [];
   }, [selectedSubject, availableSubjects]);
 
-  // ১. ফর্ম ভ্যালিডেশন শেষে পরীক্ষার্থীর তথ্য মোডাল ওপেন করা
+  // ১. ক্লাস ও বিষয় চেক করে পরীক্ষার্থীর তথ্য মোডাল ওপেন করা
   const handleOpenStudentModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClass || !selectedSubject) {
@@ -56,10 +56,10 @@ export default function ExamPage() {
       return;
     }
     setErrorMsg("");
-    setShowStudentModal(true); // পরীক্ষার্থীর তথ্য নেওয়ার ফর্মটি দেখাবে
+    setShowStudentModal(true); // নাম ও রোল নম্বর নেওয়ার ফর্ম আসবে
   };
 
-  // ২. শিক্ষার্থীর তথ্য জমা হলে পরীক্ষা চালু করা
+  // ২. শিক্ষার্থীর তথ্য পাওয়ার পর পরীক্ষা শুরু করা
   const handleConfirmStartExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim() || !rollNumber.trim()) {
@@ -112,8 +112,8 @@ export default function ExamPage() {
     }
   };
 
-  // পরীক্ষা চালু হলে
-  if (examReady && questions.length > 0 && studentInfo) {
+  // পরীক্ষা চালু হলে (studentInfo পাস করা নিশ্চিত করা হয়েছে)
+  if (examReady && questions.length > 0) {
     const finalChapterText = selectedChapter === "custom" ? customChapter : selectedChapter;
     return (
       <LiveExamPlayer
@@ -121,7 +121,7 @@ export default function ExamPage() {
         questions={questions}
         timeInMinutes={parseInt(count)}
         negativeMark={0.5}
-        studentInfo={studentInfo}
+        studentInfo={studentInfo || { name: "পরীক্ষার্থী", className: selectedClass, roll: "১" }}
       />
     );
   }
@@ -130,7 +130,7 @@ export default function ExamPage() {
     <div className="min-h-screen bg-slate-50/70 py-6 px-4 sm:px-6">
       <div className="mx-auto max-w-xl">
         
-        {/* মোড সিলেকশন ট্যাব */}
+        {/* মোড সিলেকশন ট্যাব (ডাটাবেজ বনাম AI) */}
         <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-slate-200/80 p-1.5 shadow-inner">
           <button
             type="button"
@@ -309,7 +309,7 @@ export default function ExamPage() {
           </form>
         </div>
 
-        {/* 📝 পরীক্ষার্থীর তথ্য নেওয়ার পপ-আপ ফর্ম (Student Modal) */}
+        {/* 📝 পরীক্ষার্থীর তথ্য নেওয়ার পপ-আপ ফর্ম */}
         {showStudentModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
             <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
