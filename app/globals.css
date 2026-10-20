@@ -1,3 +1,13 @@
+/* 🎯 শুধুমাত্র বাংলা ইউনিকোড অক্ষরের জন্য আদর্শলিপি ফন্ট */
+@font-face {
+  font-family: 'AdorshoLipi';
+  src: url('/fonts/AdorshoLipi.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* ম্যাজিক লাইন: এটি নিশ্চিত করে ফন্টটি শুধু বাংলা অক্ষরের উপর কাজ করবে, ইংরেজির উপর নয় */
+  unicode-range: U+0980-09FF, U+200C-200D;
+}
 @tailwind base;@tailwind components;@tailwind utilities;
 body{@apply bg-paper text-navy-900 antialiased}
 :focus-visible{outline:2px solid #2563eb;outline-offset:2px}
