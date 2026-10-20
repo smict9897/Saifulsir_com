@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
-    icons: { apple: "/photo-apple-touch-icon.png" },
+    icons: { apple: "/ceo-apple-touch-icon.png" },
   };
 }
 
