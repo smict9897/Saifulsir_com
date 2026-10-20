@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
-    icons: { apple: "/pwa-icon?size=180" }, // ← নতুন (iPhone আইকন)
+    icons: { apple: "/photo-apple-touch-icon.png" },
   };
 }
 
