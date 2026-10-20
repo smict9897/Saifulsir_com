@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { 
+  ArrowLeft, CheckCircle2, Trophy, Medal, 
+  Clock, User, School, Hash, RefreshCcw, Eye
+} from "lucide-react";
 
 export const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
@@ -14,11 +17,19 @@ export interface ExamQuestion {
   explanation?: string;
 }
 
+export interface StudentInfo {
+  name: string;
+  className: string;
+  roll: string;
+  institution?: string;
+}
+
 interface LiveExamProps {
   examTitle?: string;
   questions: ExamQuestion[];
   timeInMinutes?: number;
   negativeMark?: number;
+  studentInfo: StudentInfo;
 }
 
 export default function LiveExamPlayer({
@@ -26,14 +37,21 @@ export default function LiveExamPlayer({
   questions = [],
   timeInMinutes = 20,
   negativeMark = 0.5,
+  studentInfo,
 }: LiveExamProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(timeInMinutes * 60);
   const [showWarningModal, setShowWarningModal] = useState(false);
-  const [viewState, setViewState] = useState<"EXAM" | "RESULT" | "REVIEW">("EXAM");
+  const [viewState, setViewState] = useState<"EXAM" | "RESULT" | "REVIEW" | "LEADERBOARD">("EXAM");
   const [expandedExplanation, setExpandedExplanation] = useState<Record<number, boolean>>({});
 
+  // লিডারবোর্ড স্টেট
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
   const banglaOptions = ["ক", "খ", "গ", "ঘ"];
+  const totalSeconds = timeInMinutes * 60;
+  const timeSpent = totalSeconds - timeLeft;
 
   useEffect(() => {
     if (viewState !== "EXAM") return;
@@ -46,10 +64,9 @@ export default function LiveExamPlayer({
   }, [timeLeft, viewState]);
 
   const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
+    const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${h > 0 ? `${h}:` : ""}${m < 10 ? `0${m}` : m}:${s < 10 ? `0${s}` : s}`;
+    return `${m < 10 ? `0${m}` : m}:${s < 10 ? `0${s}` : s}`;
   };
 
   const handleSelectOption = (qIndex: number, optIndex: number) => {
@@ -57,9 +74,58 @@ export default function LiveExamPlayer({
     setSelectedAnswers((prev) => ({ ...prev, [qIndex]: optIndex }));
   };
 
-  const handleFinalSubmit = () => {
+  // সাবমিট এবং লিডারবোর্ডে মার্কস সেভ
+  const handleFinalSubmit = async () => {
     setShowWarningModal(false);
     setViewState("RESULT");
+
+    let correct = 0;
+    let wrong = 0;
+    questions.forEach((q, idx) => {
+      const ans = selectedAnswers[idx];
+      if (ans !== undefined) {
+        if (ans === q.correctAnswer) correct++;
+        else wrong++;
+      }
+    });
+
+    const finalScore = Number((correct * 1 - wrong * negativeMark).toFixed(2));
+
+    try {
+      await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examTitle,
+          studentName: studentInfo.name,
+          studentClass: studentInfo.className,
+          rollNumber: studentInfo.roll,
+          institution: studentInfo.institution || "",
+          score: finalScore,
+          totalMarks: questions.length,
+          timeSpent: Math.max(1, timeSpent),
+        }),
+      });
+    } catch (e) {
+      console.error("Leaderboard save failed:", e);
+    }
+  };
+
+  // লিডারবোর্ড ফেচ করা
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    setViewState("LEADERBOARD");
+    try {
+      const res = await fetch(`/api/leaderboard?examTitle=${encodeURIComponent(examTitle)}`);
+      const data = await res.json();
+      if (data.success) {
+        setLeaderboard(data.leaderboard || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
   };
 
   let correct = 0;
@@ -77,27 +143,35 @@ export default function LiveExamPlayer({
 
   return (
     <div className="min-h-screen bg-slate-100/70 pb-20 font-sans text-slate-800">
-      {/* ১. পরীক্ষা চলাকালীন স্ক্রিন */}
+      
+      {/* ================= ১. পরীক্ষা চলাকালীন স্ক্রিন ================= */}
       {viewState === "EXAM" && (
         <>
           <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <div className="text-sm font-semibold text-slate-700">≡ সকল প্রশ্ন</div>
+            <div className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">
+              {studentInfo.name} (রোল: {toBn(studentInfo.roll)})
+            </div>
+
             <button
               onClick={() => setShowWarningModal(true)}
-              className="rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-1.5 text-sm font-bold text-white shadow-md shadow-indigo-500/20 active:scale-95 transition"
+              className="rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-1.5 text-sm font-bold text-white shadow-md active:scale-95 transition"
             >
               Submit
             </button>
+
             <div className="text-right">
-              <div className="text-xs font-bold text-slate-800">{toBn(formatTime(timeLeft))}</div>
-              <div className="text-[11px] font-bold text-emerald-600">
-                {toBn(answeredCount)} of {toBn(questions.length)}
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                <Clock size={13} className="text-indigo-600" />
+                {toBn(formatTime(timeLeft))}
+              </div>
+              <div className="text-[10px] font-bold text-emerald-600">
+                {toBn(answeredCount)} / {toBn(questions.length)} উত্তর
               </div>
             </div>
           </div>
 
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-xs font-medium text-amber-900">
-            <span>প্রতি প্রশ্নের মান ১ ও ভুল উত্তরের জন্য ০.৫০ কাটা যাবে।</span>
+          <div className="mx-4 mt-3 rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2 text-xs font-medium text-amber-900">
+            প্রতি সঠিক উত্তরের মান ১ ও ভুলের জন্য ০.৫০ কাটা যাবে।
           </div>
 
           <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
@@ -117,8 +191,8 @@ export default function LiveExamPlayer({
                           onClick={() => handleSelectOption(qIndex, optIndex)}
                           className={`flex items-center gap-3 rounded-xl p-2.5 cursor-pointer transition ${
                             isSelected
-                              ? "bg-indigo-50/80 border border-indigo-200"
-                              : "hover:bg-slate-50 border border-transparent"
+                              ? "bg-indigo-50/90 border border-indigo-300 font-semibold text-indigo-950"
+                              : "hover:bg-slate-50 border border-transparent text-slate-800"
                           }`}
                         >
                           <span
@@ -128,9 +202,7 @@ export default function LiveExamPlayer({
                           >
                             {banglaOptions[optIndex]}
                           </span>
-                          <span className={`text-sm ${isSelected ? "font-bold text-indigo-950" : "text-slate-800"}`}>
-                            {opt}
-                          </span>
+                          <span className="text-sm">{opt}</span>
                         </div>
                       );
                     })}
@@ -142,44 +214,42 @@ export default function LiveExamPlayer({
         </>
       )}
 
-      {/* ২. সাবমিট সতর্কতা মোডাল */}
+      {/* ================= ২. সাবমিট ওয়ার্নিং মোডাল ================= */}
       {showWarningModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">Warning!</h2>
+            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">সতর্কবার্তা</h2>
             <div className="my-5 space-y-1.5 text-sm text-slate-600">
-              <p>মোট প্রশ্ন সংখ্যা: <span className="font-bold text-slate-800">{toBn(questions.length)}টি</span></p>
-              <p>আপনি উত্তর করেছেন: <span className="font-bold text-emerald-600">{toBn(answeredCount)}টি</span></p>
-              <p className="text-red-500 font-bold">প্রশ্নের উত্তর বাকী আছে: {toBn(questions.length - answeredCount)}টি</p>
-              <p className="pt-2 text-xs text-slate-500">আপনি কি উত্তরপত্রটি সাবমিট করতে চান?</p>
+              <p>মোট প্রশ্ন: <span className="font-bold text-slate-800">{toBn(questions.length)}টি</span></p>
+              <p>উত্তর দিয়েছেন: <span className="font-bold text-emerald-600">{toBn(answeredCount)}টি</span></p>
+              <p className="text-red-500 font-bold">বাকি আছে: {toBn(questions.length - answeredCount)}টি</p>
+              <p className="pt-2 text-xs text-slate-500">আপনি কি উত্তরপত্রটি জমা দিতে চান?</p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowWarningModal(false)}
-                className="flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 py-3 text-sm font-bold text-slate-700 transition"
+                className="flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 py-3 text-sm font-bold text-slate-700"
               >
-                No
+                না
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-3 text-sm font-bold text-white shadow-md transition"
+                className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-3 text-sm font-bold text-white shadow-md"
               >
-                Yes
+                হ্যাঁ, জমা দিন
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ৩. রেজাল্ট ও মার্কশিট */}
+      {/* ================= ৩. রেজাল্ট পেজ ================= */}
       {viewState === "RESULT" && (
         <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
           <div className="rounded-2xl bg-indigo-600 p-4 text-center text-white font-bold text-lg shadow-md flex items-center justify-between">
-            <button onClick={() => setViewState("EXAM")} className="p-1 rounded-lg hover:bg-white/10">
-              <ArrowLeft size={20} />
-            </button>
-            <span>Result</span>
-            <div className="w-5" />
+            <span className="text-sm font-normal">পরীক্ষার্থী: {studentInfo.name}</span>
+            <span>ফলাফল</span>
+            <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">রোল: {toBn(studentInfo.roll)}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -192,63 +262,143 @@ export default function LiveExamPlayer({
               <div className="text-2xl font-bold text-rose-600 mt-1">{toBn(wrong)}</div>
             </div>
             <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 text-center">
-              <div className="text-xs text-slate-600 font-medium">মোট প্রশ্ন</div>
-              <div className="text-2xl font-bold text-blue-600 mt-1">{toBn(questions.length)}</div>
+              <div className="text-xs text-slate-600 font-medium">সময় লেগেছে</div>
+              <div className="text-xl font-bold text-blue-600 mt-1">{toBn(formatTime(timeSpent))} মিনিট</div>
             </div>
             <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-center">
-              <div className="text-xs text-slate-600 font-medium">আপনার মার্কস</div>
+              <div className="text-xs text-slate-600 font-medium">আপনার প্রাপ্ত মার্কস</div>
               <div className={`text-2xl font-bold mt-1 ${obtainedMarks >= 0 ? "text-indigo-600" : "text-red-500"}`}>
                 {toBn(obtainedMarks)}
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-sm text-slate-700 flex items-center gap-1.5">
-              <CheckCircle2 size={16} className="text-indigo-600" /> Mark Sheet
-            </div>
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/50 text-slate-500 uppercase border-b border-slate-100">
-                <tr>
-                  <th className="py-2.5 px-4 font-semibold">বিষয়</th>
-                  <th className="py-2.5 px-3 text-center font-semibold">সঠিক</th>
-                  <th className="py-2.5 px-3 text-center font-semibold">ভুল</th>
-                  <th className="py-2.5 px-4 text-right font-semibold">মার্ক</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                <tr className="bg-slate-50/80 font-bold text-slate-900">
-                  <td className="py-3 px-4">{examTitle}</td>
-                  <td className="py-3 px-3 text-center text-emerald-600">{toBn(correct)}</td>
-                  <td className="py-3 px-3 text-center text-rose-600">{toBn(wrong)}</td>
-                  <td className="py-3 px-4 text-right text-indigo-600">{toBn(obtainedMarks)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
+          {/* অ্যাকশন বাটনসমূহ */}
           <div className="space-y-2.5 pt-2">
             <button
+              onClick={fetchLeaderboard}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-3.5 text-sm font-bold shadow-md transition active:scale-98"
+            >
+              <Trophy size={18} />
+              <span>মেরিট লিস্ট / লিডারবোর্ড দেখুন</span>
+            </button>
+
+            <button
               onClick={() => setViewState("REVIEW")}
-              className="w-full rounded-2xl bg-indigo-100 hover:bg-indigo-200 py-3.5 text-sm font-bold text-indigo-900 transition"
+              className="w-full rounded-2xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 py-3 text-sm font-bold text-indigo-900 transition"
             >
               উত্তরপত্র দেখুন
             </button>
+
             <button
-              onClick={() => {
-                setSelectedAnswers({});
-                setTimeLeft(timeInMinutes * 60);
-                setViewState("EXAM");
-              }}
-              className="w-full rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 py-3 text-sm font-bold text-amber-900 transition"
+              onClick={() => window.location.reload()}
+              className="w-full rounded-2xl bg-slate-100 hover:bg-slate-200 py-2.5 text-xs font-bold text-slate-600 transition"
             >
-              আবার পরীক্ষা দিন
+              নতুন পরীক্ষা দিন
             </button>
           </div>
         </div>
       )}
 
-      {/* ৪. উত্তরপত্র ও ব্যাখ্যা রিভিউ */}
+      {/* ================= ৪. লিডারবোর্ড স্ক্রিন (Leaderboard Screen) ================= */}
+      {viewState === "LEADERBOARD" && (
+        <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+          <div className="rounded-2xl bg-gradient-to-r from-indigo-700 to-blue-700 p-4 text-white shadow-md flex items-center justify-between">
+            <button onClick={() => setViewState("RESULT")} className="p-1 rounded-lg hover:bg-white/10">
+              <ArrowLeft size={20} />
+            </button>
+            <div className="text-center">
+              <h2 className="text-base font-bold flex items-center justify-center gap-1.5">
+                <Trophy size={18} className="text-amber-300" /> মেরিট লিস্ট
+              </h2>
+              <p className="text-[11px] text-blue-200 truncate max-w-[200px]">{examTitle}</p>
+            </div>
+            <button onClick={fetchLeaderboard} className="p-1.5 rounded-lg hover:bg-white/10 text-xs">
+              <RefreshCcw size={16} />
+            </button>
+          </div>
+
+          {loadingLeaderboard ? (
+            <div className="text-center py-12 text-sm text-slate-500">লিডারবোর্ড লোড হচ্ছে...</div>
+          ) : leaderboard.length === 0 ? (
+            <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 text-sm text-slate-500">
+              এখনো কোনো রেজাল্ট জমা পড়েনি।
+            </div>
+          ) : (
+            <>
+              {/* টপ ৩ মেডেল উইনার্স */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {leaderboard.slice(0, 3).map((u, i) => {
+                  const medals = ["🥇 ১ম স্থান", "🥈 ২য় স্থান", "🥉 ৩য় স্থান"];
+                  const colors = ["border-amber-300 bg-amber-50/70", "border-slate-300 bg-slate-50/70", "border-orange-300 bg-orange-50/70"];
+                  return (
+                    <div key={i} className={`rounded-2xl border p-2.5 text-center shadow-xs flex flex-col justify-between ${colors[i]}`}>
+                      <span className="text-[11px] font-bold text-slate-700">{medals[i]}</span>
+                      <div className="my-1.5">
+                        <div className="text-xs font-bold text-slate-900 truncate">{u.studentName}</div>
+                        <div className="text-[10px] text-slate-500">রোল: {toBn(u.rollNumber)}</div>
+                      </div>
+                      <div className="text-sm font-extrabold text-indigo-700">{toBn(u.score)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* পুরো র‍্যাঙ্কিং তালিকা */}
+              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-xs font-bold text-slate-600 flex justify-between">
+                  <span>র‍্যাংক ও নাম</span>
+                  <span>মার্কস ও সময়</span>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {leaderboard.map((item, idx) => {
+                    const isMe = item.studentName === studentInfo.name && String(item.rollNumber) === String(studentInfo.roll);
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between p-3 text-xs transition ${
+                          isMe ? "bg-indigo-50/80 font-semibold border-l-4 border-indigo-600" : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                            idx === 0 ? "bg-amber-400 text-white" : idx === 1 ? "bg-slate-400 text-white" : idx === 2 ? "bg-orange-400 text-white" : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-800 truncate flex items-center gap-1">
+                              {item.studentName} {isMe && <span className="text-[10px] text-indigo-600 font-bold">(আপনি)</span>}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate">
+                              রোল: {toBn(item.rollNumber)} {item.institution ? `• ${item.institution}` : ""}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <div className="font-bold text-indigo-600 text-sm">{toBn(item.score)}</div>
+                          <div className="text-[10px] text-slate-400">{toBn(formatTime(item.timeSpent))} মি.</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          <button
+            onClick={() => setViewState("RESULT")}
+            className="w-full rounded-2xl bg-slate-100 hover:bg-slate-200 py-3 text-xs font-bold text-slate-700 transition"
+          >
+            ফলাফলে ফিরে যান
+          </button>
+        </div>
+      )}
+
+      {/* ================= ৫. উত্তরপত্র ও ব্যাখ্যা রিভিউ ================= */}
       {viewState === "REVIEW" && (
         <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
           <div className="rounded-2xl bg-indigo-600 p-4 text-center text-white font-bold text-lg shadow-md flex items-center justify-between">
@@ -329,4 +479,4 @@ export default function LiveExamPlayer({
       )}
     </div>
   );
-                           }
+}
