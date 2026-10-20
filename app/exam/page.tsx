@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Sparkles, Database, ArrowRight, Loader2, AlertCircle } from "lucide-react";
-import LiveExamPlayer, { ExamQuestion } from "@/components/LiveExamPlayer";
+import { Sparkles, Database, Loader2, AlertCircle, UserCheck } from "lucide-react";
+import LiveExamPlayer, { ExamQuestion, StudentInfo } from "@/components/LiveExamPlayer";
 import rawCurriculum from "@/nctb-curriculum.json";
 
 const classLabelMap: Record<string, string> = {
@@ -14,7 +14,6 @@ const classLabelMap: Record<string, string> = {
 };
 
 export default function ExamPage() {
-  // মোড নির্বাচন: "DB" (ডাটাবেজ) অথবা "AI" (জেমিনি)
   const [examMode, setExamMode] = useState<"DB" | "AI">("DB");
 
   const [selectedClass, setSelectedClass] = useState("");
@@ -24,6 +23,13 @@ export default function ExamPage() {
   const [difficulty, setDifficulty] = useState("মাঝারি");
   const [count, setCount] = useState("20");
   const [language, setLanguage] = useState("বাংলা");
+
+  // পরীক্ষার্থীর তথ্য স্টেট ও মোডাল
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [examReady, setExamReady] = useState(false);
@@ -42,26 +48,46 @@ export default function ExamPage() {
     return foundSubject && foundSubject.chapters ? foundSubject.chapters : [];
   }, [selectedSubject, availableSubjects]);
 
-  const handleStartExam = async (e: React.FormEvent) => {
+  // ১. ফর্ম ভ্যালিডেশন শেষে পরীক্ষার্থীর তথ্য মোডাল ওপেন করা
+  const handleOpenStudentModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClass || !selectedSubject) {
       setErrorMsg("দয়া করে ক্লাস এবং বিষয় নির্বাচন করুন।");
       return;
     }
+    setErrorMsg("");
+    setShowStudentModal(true); // পরীক্ষার্থীর তথ্য নেওয়ার ফর্মটি দেখাবে
+  };
+
+  // ২. শিক্ষার্থীর তথ্য জমা হলে পরীক্ষা চালু করা
+  const handleConfirmStartExam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentName.trim() || !rollNumber.trim()) {
+      alert("দয়া করে আপনার নাম এবং রোল নম্বর লিখুন।");
+      return;
+    }
+
+    setShowStudentModal(false);
+    setLoading(true);
+
+    const info: StudentInfo = {
+      name: studentName.trim(),
+      className: classLabelMap[selectedClass] || selectedClass,
+      roll: rollNumber.trim(),
+      institution: institution.trim(),
+    };
+    setStudentInfo(info);
 
     const finalChapter = selectedChapter === "custom" 
       ? customChapter 
       : (selectedChapter || "সম্পূর্ণ বই / সিলেবাস");
-
-    setErrorMsg("");
-    setLoading(true);
 
     try {
       const res = await fetch("/api/generate-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: examMode, // "DB" অথবা "AI"
+          mode: examMode,
           className: selectedClass,
           subject: selectedSubject,
           chapter: finalChapter,
@@ -86,7 +112,8 @@ export default function ExamPage() {
     }
   };
 
-  if (examReady && questions.length > 0) {
+  // পরীক্ষা চালু হলে
+  if (examReady && questions.length > 0 && studentInfo) {
     const finalChapterText = selectedChapter === "custom" ? customChapter : selectedChapter;
     return (
       <LiveExamPlayer
@@ -94,6 +121,7 @@ export default function ExamPage() {
         questions={questions}
         timeInMinutes={parseInt(count)}
         negativeMark={0.5}
+        studentInfo={studentInfo}
       />
     );
   }
@@ -102,15 +130,13 @@ export default function ExamPage() {
     <div className="min-h-screen bg-slate-50/70 py-6 px-4 sm:px-6">
       <div className="mx-auto max-w-xl">
         
-        {/* মোড সিলেকশন ট্যাব (ডাটাবেজ বনাম AI) */}
+        {/* মোড সিলেকশন ট্যাব */}
         <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-slate-200/80 p-1.5 shadow-inner">
           <button
             type="button"
             onClick={() => { setExamMode("DB"); setErrorMsg(""); }}
             className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-bold transition-all ${
-              examMode === "DB"
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+              examMode === "DB" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Database size={16} />
@@ -121,9 +147,7 @@ export default function ExamPage() {
             type="button"
             onClick={() => { setExamMode("AI"); setErrorMsg(""); }}
             className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-bold transition-all ${
-              examMode === "AI"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+              examMode === "AI" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Sparkles size={16} />
@@ -131,11 +155,11 @@ export default function ExamPage() {
           </button>
         </div>
 
-        {/* ফর্ম কার্ড */}
+        {/* প্রধান সিলেকশন ফর্ম */}
         <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-              {examMode === "DB" ? "ডাটাবেজ প্রশ্নব্যাংক" : "এক ক্লিকে প্রশ্ন তৈরি"}
+              {examMode === "DB" ? "অনলাইন পরীক্ষা" : "এক ক্লিকে প্রশ্ন তৈরি"}
               <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-blue-50 text-blue-600 border border-blue-100">
                 {examMode === "DB" ? "Fast & Live" : "AI Mode"}
               </span>
@@ -149,8 +173,7 @@ export default function ExamPage() {
             </div>
           )}
 
-          <form onSubmit={handleStartExam} className="space-y-4">
-            {/* ক্লাস সিলেক্ট */}
+          <form onSubmit={handleOpenStudentModal} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">ক্লাস</label>
               <select
@@ -172,7 +195,6 @@ export default function ExamPage() {
               </select>
             </div>
 
-            {/* বিষয় সিলেক্ট */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">বিষয়</label>
               <select
@@ -189,18 +211,13 @@ export default function ExamPage() {
                     : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
                 }`}
               >
-                <option value="">
-                  {selectedClass ? "বিষয় নির্বাচন করুন" : "আগে ক্লাস বাছুন"}
-                </option>
+                <option value="">{selectedClass ? "বিষয় নির্বাচন করুন" : "আগে ক্লাস বাছুন"}</option>
                 {availableSubjects.map((sub) => (
-                  <option key={sub.name} value={sub.name}>
-                    {sub.name}
-                  </option>
+                  <option key={sub.name} value={sub.name}>{sub.name}</option>
                 ))}
               </select>
             </div>
 
-            {/* অধ্যায় সিলেক্ট */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">অধ্যায়</label>
               {availableChapters.length > 0 ? (
@@ -209,16 +226,12 @@ export default function ExamPage() {
                   value={selectedChapter}
                   onChange={(e) => setSelectedChapter(e.target.value)}
                   className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none shadow-xs transition ${
-                    !selectedSubject 
-                      ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" 
-                      : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
+                    !selectedSubject ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed" : "bg-white text-slate-800 border-slate-200 focus:border-blue-500"
                   }`}
                 >
                   <option value="">সম্পূর্ণ বই / সকল অধ্যায়</option>
                   {availableChapters.map((chap) => (
-                    <option key={chap} value={chap}>
-                      {chap}
-                    </option>
+                    <option key={chap} value={chap}>{chap}</option>
                   ))}
                   <option value="custom">✏️ নিজের মতো টপিক লিখুন...</option>
                 </select>
@@ -245,7 +258,6 @@ export default function ExamPage() {
               )}
             </div>
 
-            {/* প্রশ্ন সংখ্যা ও কঠিনতা */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">প্রশ্ন সংখ্যা</label>
@@ -276,7 +288,6 @@ export default function ExamPage() {
               </div>
             </div>
 
-            {/* বাটন */}
             <button
               type="submit"
               disabled={loading}
@@ -289,17 +300,92 @@ export default function ExamPage() {
               {loading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  <span>{examMode === "DB" ? "ডাটাবেজ থেকে প্রশ্ন আনা হচ্ছে..." : "AI দিয়ে প্রশ্ন তৈরি হচ্ছে..."}</span>
+                  <span>প্রশ্ন প্রস্তুত হচ্ছে...</span>
                 </>
               ) : (
-                <>
-                  {examMode === "DB" ? <Database size={18} /> : <Sparkles size={18} />}
-                  <span>{examMode === "DB" ? "পরীক্ষা শুরু করুন (ডাটাবেজ)" : "প্রশ্ন তৈরি ও পরীক্ষা শুরু (AI)"}</span>
-                </>
+                <span>পরীক্ষা শুরু করুন</span>
               )}
             </button>
           </form>
         </div>
+
+        {/* 📝 পরীক্ষার্থীর তথ্য নেওয়ার পপ-আপ ফর্ম (Student Modal) */}
+        {showStudentModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+            <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <UserCheck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">পরীক্ষার্থীর তথ্য</h3>
+                  <p className="text-[11px] text-slate-500">লিডারবোর্ডে এই নাম ও রোল দেখানো হবে</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleConfirmStartExam} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    আপনার নাম <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="যেমন: সাইফুল ইসলাম"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-indigo-500"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    রোল নম্বর <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="যেমন: 101"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    শিক্ষা প্রতিষ্ঠান <span className="text-[10px] text-slate-400 font-normal">(ঐচ্ছিক)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="যেমন: ঢাকা কলেজ"
+                    value={institution}
+                    onChange={(e) => setInstitution(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentModal(false)}
+                    className="flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 py-3 text-xs font-bold text-slate-700 transition"
+                  >
+                    বাতিল
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 py-3 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition"
+                  >
+                    শুরু করুন 🚀
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
