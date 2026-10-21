@@ -85,13 +85,25 @@ const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function Home() {
   const [posts, trending, quotes, cats, site] = await Promise.all([
-    // take: 8 দেওয়া হয়েছে যাতে ২টি করে কার্ড ৪টি পেজ পর্যন্ত দেখা যায়
-    db.post.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 8 }).catch(() => []),
+    // 🎯 এখানে পরিবর্তন করা হলো
+    db.post.findMany({
+      where: {
+        published: true,
+        NOT: {
+          category: { slug: "news" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+    }).catch(() => []),
+
     db.resource.findMany({ orderBy: [{ downloads: "desc" }, { createdAt: "desc" }], take: 7 }).catch(() => []),
     db.testimonial.findMany({ orderBy: { createdAt: "desc" }, take: 3 }).catch(() => []),
     db.category.findMany({ select: { slug: true } }).catch(() => []),
     getSite(),
   ]);
+
+  // ... বাকি কোড যেমন ছিল তেমনই থাকবে
 
   const slugSet = new Set(cats.map((c) => c.slug));
   const resolve = (items: Item[]) => items.map((it) => (it.slug && slugSet.has(it.slug) ? { ...it, href: `/category/${it.slug}` } : it));
