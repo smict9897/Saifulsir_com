@@ -1,19 +1,19 @@
 import sanitizeHtml from "sanitize-html";
 
-// ১. টেক্সটটি HTML কি না তা যাচাই করার ফাংশন (post-body.tsx এর জন্য)
+// ১. টেক্সটটি HTML কি না তা যাচাই করার ফাংশন
 export function isHtml(str: string): boolean {
   if (!str) return false;
   const t = str.trim();
   return t.startsWith("<") || /<[a-z][\s\S]*>/i.test(t);
 }
 
-// ২. ব্লগের জন্য নিরাপদ HTML রেন্ডার করার ফাংশন (post-body.tsx এর জন্য)
+// ২. ব্লগের জন্য নিরাপদ HTML রেন্ডার করার ফাংশন
 export function renderHtml(html: string): string {
   if (!html) return "";
   return cleanHtml(html);
 }
 
-// ৩. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার (admin/blog/[id] এর জন্য)
+// ৩. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার
 export function bodyToEditorHtml(body: string): string {
   if (!body) return "";
   const trimmed = body.trim();
@@ -39,7 +39,7 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-// ৫. সার্ভার সাইডে কঠোর ও নিরাপদ স্যানিটাইজেশন
+// ৫. 🎯 কম্পাইলার মোড স্যানিটাইজার: সমস্ত রং, আউটলাইন ও সিএসএস অক্ষুণ্ণ রাখবে
 export function cleanHtml(dirty: string): string {
   if (!dirty) return "";
 
@@ -54,19 +54,24 @@ export function cleanHtml(dirty: string): string {
       "a", "img",
       "figure", "figcaption",
       "div", "span",
+      "section", "article", "main", "header", "footer", "nav", "aside",
+      "style" // 👈 <style> ট্যাগ সম্পূর্ণ এলাউড
     ],
+    nonTextTags: ["script", "textarea", "option", "noscript"],
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
       img: ["src", "alt", "width", "height", "loading"],
       th: ["colspan", "rowspan", "align"],
       td: ["colspan", "rowspan", "align"],
-      div: ["class"],
-      span: ["class"],
-      p: ["class"],
-      table: ["class"],
-      "*": ["class"],
+      "*": ["class", "style", "id", "data-*"], // 👈 'style' ও 'id' এলাউড
     },
-    allowedSchemes: ["http", "https", "mailto"],
+    allowedStyles: {
+      "*": {
+        // সমস্ত প্রকার CSS প্রপার্টি (outline, color, background, shadow ইত্যাদি) এলাউড
+        "*": [/.*/],
+      },
+    },
+    allowedSchemes: ["http", "https", "mailto", "data"],
     transformTags: {
       a: (tagName, attribs) => {
         const href = attribs.href || "";
@@ -80,6 +85,5 @@ export function cleanHtml(dirty: string): string {
         };
       },
     },
-    disallowedTagsMode: "discard",
   });
 }
