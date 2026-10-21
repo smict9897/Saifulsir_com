@@ -35,7 +35,16 @@ function isRecent(date: Date) {
 
 export default async function NewsPage({
   searchParams,
-}: {
+}: 
+     // ⚡ ডাটাবেজে 'news' ক্যাটাগরি না থাকলে অটোমেটিক তৈরি করে নেবে
+  await db.category.upsert({
+    where: { slug: "news" },
+    update: {},
+    create: {
+      name: "শিক্ষা সংবাদ",
+      slug: "news",
+    },
+  }).catch(() => null);                                  {
   searchParams: Promise<{ q?: string; tag?: string }>;
 }) {
   const params = await searchParams;
