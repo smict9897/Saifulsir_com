@@ -1,12 +1,13 @@
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export async function staff() {
-  const r = (await auth())?.user?.role;
-  if (r !== "ADMIN" && r !== "TEACHER") throw new Error("Not allowed");
-}
+  const session = await auth();
 
-export async function admin() {
-  const u = (await auth())?.user;
-  if (u?.role !== "ADMIN") throw new Error("Only an admin can do this.");
-  return u;
+  // শুধুমাত্র ADMIN অনুমতি পাবে
+  if (!session?.user || session.user.role !== "ADMIN") {
+    throw new Error("অননুমোদিত এক্সেস: শুধুমাত্র অ্যাডমিন এই কাজটি করতে পারবেন।");
+  }
+
+  return session.user;
 }
