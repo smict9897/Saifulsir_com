@@ -1,19 +1,17 @@
 import sanitizeHtml from "sanitize-html";
 
-// ১. টেক্সটটি HTML কি না তা যাচাই করার ফাংশন
 export function isHtml(str: string): boolean {
   if (!str) return false;
   const t = str.trim();
   return t.startsWith("<") || /<[a-z][\s\S]*>/i.test(t);
 }
 
-// ২. ব্লগের জন্য নিরাপদ HTML রেন্ডার করার ফাংশন
+// 🎯 কম্পাইলার মোড: কোনো রং বা ডিজাইন কাটবে না
 export function renderHtml(html: string): string {
   if (!html) return "";
   return cleanHtml(html);
 }
 
-// ৩. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার
 export function bodyToEditorHtml(body: string): string {
   if (!body) return "";
   const trimmed = body.trim();
@@ -24,7 +22,6 @@ export function bodyToEditorHtml(body: string): string {
   return trimmed;
 }
 
-// ৪. HTML থেকে প্লেইন টেক্সট বের করার হেল্পার
 export function htmlToText(html: string): string {
   if (!html) return "";
   return html
@@ -39,51 +36,14 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-// ৫. 🎯 কম্পাইলার মোড স্যানিটাইজার: সমস্ত রং, আউটলাইন ও সিএসএস অক্ষুণ্ণ রাখবে
+// 🎯 সম্পূর্ণ সিএসএস ও আউটলাইন পারমিশন
 export function cleanHtml(dirty: string): string {
   if (!dirty) return "";
 
   return sanitizeHtml(dirty, {
-    allowedTags: [
-      "h1", "h2", "h3", "h4", "h5", "h6",
-      "p", "br", "hr",
-      "strong", "b", "em", "i", "u", "s", "sub", "sup",
-      "blockquote", "pre", "code",
-      "ul", "ol", "li",
-      "table", "thead", "tbody", "tr", "th", "td",
-      "a", "img",
-      "figure", "figcaption",
-      "div", "span",
-      "section", "article", "main", "header", "footer", "nav", "aside",
-      "style" // 👈 <style> ট্যাগ সম্পূর্ণ এলাউড
-    ],
-    nonTextTags: ["script", "textarea", "option", "noscript"],
-    allowedAttributes: {
-      a: ["href", "title", "target", "rel"],
-      img: ["src", "alt", "width", "height", "loading"],
-      th: ["colspan", "rowspan", "align"],
-      td: ["colspan", "rowspan", "align"],
-      "*": ["class", "style", "id", "data-*"], // 👈 'style' ও 'id' এলাউড
-    },
-    allowedStyles: {
-      "*": {
-        // সমস্ত প্রকার CSS প্রপার্টি (outline, color, background, shadow ইত্যাদি) এলাউড
-        "*": [/.*/],
-      },
-    },
-    allowedSchemes: ["http", "https", "mailto", "data"],
-    transformTags: {
-      a: (tagName, attribs) => {
-        const href = attribs.href || "";
-        const isExternal = /^https?:\/\//i.test(href);
-        return {
-          tagName: "a",
-          attribs: {
-            ...attribs,
-            ...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {}),
-          },
-        };
-      },
-    },
+    allowedTags: false, // 👈 কোনো বৈধ HTML ট্যাগ কাটা হবে না
+    allowedAttributes: false, // 👈 সমস্ত style, class, id এবং ইনলাইন সিএসএস ১০০% অক্ষুণ্ণ থাকবে
+    disallowedTagsMode: "discard",
+    nonTextTags: ["script", "iframe", "object", "embed", "form"], // 👈 শুধুমাত্র হ্যাকিং/স্ক্রিপ্ট ট্যাগ বাদ যাবে
   });
 }
