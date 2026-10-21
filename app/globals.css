@@ -79,3 +79,29 @@ body{@apply bg-paper text-navy-900 antialiased}
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='160'%3E%3Ctext x='20' y='90' transform='rotate(-25 130 80)' font-size='20' font-family='sans-serif' fill='rgba(100,116,139,0.18)'%3Esaifulsir.com%3C/text%3E%3C/svg%3E");
 }
 @media print { .no-copy { display: none !important; } }
+/* রেসপনসিভ টেবিল ও আর্টিকেলের সিএসএস */
+.raw-html table,
+.post-html table {
+  width: 100% !important;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.raw-html th,
+.raw-html td,
+.post-html th,
+.post-html td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.raw-html th,
+.post-html th {
+  background-color: #f1f5f9;
+  font-weight: 700;
+}
