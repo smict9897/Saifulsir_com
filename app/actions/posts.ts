@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
 import { parseTags } from "@/lib/tags";
 import { cleanHtml, htmlToText } from "@/lib/html";
+import { broadcastToSocial } from "@/lib/social-share"; // 👈 অটোমেশন ফাংশন ইমপোর্ট
 
 export type PostState = { msg: string };
 export type MediaState = { msg: string; snippet?: string };
@@ -41,7 +42,7 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
     await staff();
     const d = PostSchema.parse(Object.fromEntries(fd));
     
-    // টাস্ক D: সার্ভার সাইড স্যানিটাইজেশন
+    // সার্ভার সাইড স্যানিটাইজেশন
     const html = cleanHtml(d.body);
     const text = htmlToText(html);
     if (text.length < 20) return { msg: "Post text is too short. Write at least 20 characters." };
@@ -60,23 +61,62 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
     else if (fd.get("removeCover") === "on") coverUrl = null;
     if (coverUrl && !d.coverAlt) return { msg: "Add alt text that describes the cover image." };
     
+    const isPublished = fd.get("published") === "on";
+
     const data = {
-      title: d.title, body: html, excerpt: text.slice(0, 300), focusKeyword: d.focusKeyword || null, keywords, slug: d.slug || null, categoryId: d.categoryId || null,
-      tags: parseTags(d.tags, text), published: fd.get("published") === "on",
-      metaTitle: d.metaTitle || null, metaDescription: d.metaDescription || null,
-      downloadUrl: d.downloadUrl || null, coverUrl, coverAlt: coverUrl ? d.coverAlt : null,
+      title: d.title, 
+      body: html, 
+      excerpt: text.slice(0, 300), 
+      focusKeyword: d.focusKeyword || null, 
+      keywords, 
+      slug: d.slug || null, 
+      categoryId: d.categoryId || null,
+      tags: parseTags(d.tags, text), 
+      published: isPublished,
+      metaTitle: d.metaTitle || null, 
+      metaDescription: d.metaDescription || null,
+      downloadUrl: d.downloadUrl || null, 
+      coverUrl, 
+      coverAlt: coverUrl ? d.coverAlt : null,
     };
     
+    let savedPost;
     if (old) {
-      await db.post.update({ where: { id: old.id }, data });
+      savedPost = await db.post.update({ where: { id: old.id }, data });
       if (old.coverUrl && old.coverUrl !== coverUrl) await del(old.coverUrl).catch(() => {});
     } else {
-      await db.post.create({ data });
+      savedPost = await db.post.create({ data });
     }
+
+    // 🚀 অটোমেশন: পোস্টটি Published হলে স্বয়ংক্রিয়ভাবে Telegram, Facebook ও WhatsApp-এ চলে যাবে
+    if (isPublished) {
+      try {
+        let isNews = false;
+        if (d.categoryId) {
+          const cat = await db.category.findUnique({ where: { id: d.categoryId } }).catch(() => null);
+          if (cat?.slug === "news") isNews = true;
+        }
+
+        const siteUrl = process.env.SITE_URL || "https://saifulsir.com";
+        const postUrl = `${siteUrl}/${isNews ? "news" : "blog"}/${savedPost.slug || savedPost.id}`;
+
+        // সোশ্যাল মিডিয়ায় অটো-পোস্ট পাঠানো
+        await broadcastToSocial({
+          title: d.title,
+          url: postUrl,
+          excerpt: text.slice(0, 180),
+          coverUrl: coverUrl,
+        });
+      } catch (socialErr) {
+        console.error("Social broadcast failed:", socialErr);
+      }
+    }
+
   } catch (e) {
     if (e instanceof z.ZodError) return { msg: `${e.issues[0].path.join(".") || "Form"}: ${e.issues[0].message}` };
     return { msg: e instanceof Error ? e.message : "Could not save the post." };
   }
+  
   revalidatePath("/", "layout");
   redirect("/admin/posts");
 }
@@ -133,4 +173,4 @@ export async function uploadInline(fd: FormData): Promise<{ url?: string; error?
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Upload failed." };
   }
-}
+      }
