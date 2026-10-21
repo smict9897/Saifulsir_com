@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { 
   CalendarDays, Clock, ArrowRight, Flame, 
-  Search, Newspaper, Share2, Tag 
+  Search, Newspaper, Tag 
 } from "lucide-react";
 import { db } from "@/lib/db";
 
@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   description: "স্কুল, কলেজ, বিশ্ববিদ্যালয় ভর্তি, এইচএসসি, এসএসসি, NTRCA ও শিক্ষা মন্ত্রণালয়ের সর্বশেষ নোটিশ ও সংবাদ।",
 };
 
-// ইংরেজি তারিখকে বাংলায় রূপান্তর
 function formatBanglaDate(date: Date) {
   const months = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
   const toBn = (n: number) => n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
@@ -27,7 +26,6 @@ function formatBanglaDate(date: Date) {
   return `${toBn(d)} ${m}, ${toBn(y)}`;
 }
 
-// ৪৮ ঘণ্টার মধ্যে হলে "নতুন" ব্যাজ দেখানো
 function isRecent(date: Date) {
   const diffInHours = (new Date().getTime() - new Date(date).getTime()) / (1000 * 60 * 60);
   return diffInHours <= 48;
@@ -35,8 +33,10 @@ function isRecent(date: Date) {
 
 export default async function NewsPage({
   searchParams,
-}: 
-     // ⚡ ডাটাবেজে 'news' ক্যাটাগরি না থাকলে অটোমেটিক তৈরি করে নেবে
+}: {
+  searchParams: Promise<{ q?: string; tag?: string }>;
+}) {
+  // ⚡ ডাটাবেজে 'news' ক্যাটাগরি না থাকলে নিজে থেকেই তৈরি হয়ে যাবে
   await db.category.upsert({
     where: { slug: "news" },
     update: {},
@@ -44,14 +44,13 @@ export default async function NewsPage({
       name: "শিক্ষা সংবাদ",
       slug: "news",
     },
-  }).catch(() => null);                                  {
-  searchParams: Promise<{ q?: string; tag?: string }>;
-}) {
+  }).catch(() => null);
+
   const params = await searchParams;
   const query = params?.q || "";
   const tagFilter = params?.tag || "";
 
-  // 'news' ক্যাটাগরির সমস্ত পোস্ট ফেচ করা
+  // 'news' ক্যাটাগরির সমস্ত সংবাদ ফেচ করা
   const allNews = await db.post.findMany({
     where: {
       published: true,
@@ -71,7 +70,7 @@ export default async function NewsPage({
   return (
     <main className="min-h-screen bg-slate-50/60 pb-16">
       
-      {/* 🔴 ব্রেকিং / টপ নিউজ বার */}
+      {/* 🔴 আপডেট বার */}
       <div className="border-b border-rose-100 bg-rose-50/70 px-4 py-2">
         <div className="mx-auto flex max-w-7xl items-center gap-2 text-xs text-rose-900">
           <span className="flex items-center gap-1 rounded-md bg-rose-600 px-2 py-0.5 font-bold text-white uppercase text-[10px] tracking-wide animate-pulse">
@@ -85,7 +84,7 @@ export default async function NewsPage({
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6">
         
-        {/* হেডার ও সার্চ */}
+        {/* হেডার ও সার্চ বার */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
@@ -108,7 +107,7 @@ export default async function NewsPage({
           </form>
         </div>
 
-        {/* ফিল্টার ট্যাগস */}
+        {/* ফিল্টার ট্যাগ */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-4 mb-6 no-scrollbar text-xs">
           <span className="text-slate-400 font-medium mr-1 flex items-center gap-1 shrink-0">
             <Tag size={13} /> টপিক:
@@ -244,5 +243,3 @@ export default async function NewsPage({
     </main>
   );
 }
-
-
