@@ -1,6 +1,17 @@
 import sanitizeHtml from "sanitize-html";
 
-// HTML থেকে প্লেইন টেক্সট বের করার হেল্পার
+// ১. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার
+export function bodyToEditorHtml(body: string): string {
+  if (!body) return "";
+  const trimmed = body.trim();
+  const OPEN = '<div class="raw-html not-prose">';
+  if (trimmed.startsWith(OPEN)) {
+    return trimmed.slice(OPEN.length).replace(/<\/div>\s*$/, "").trim();
+  }
+  return trimmed;
+}
+
+// ২. HTML থেকে প্লেইন টেক্সট বের করার হেল্পার
 export function htmlToText(html: string): string {
   if (!html) return "";
   return html
@@ -15,7 +26,7 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-// টাস্ক D: সার্ভার সাইডে কঠোর স্যানিটাইজেশন
+// ৩. সার্ভার সাইডে কঠোর ও নিরাপদ স্যানিটাইজেশন
 export function cleanHtml(dirty: string): string {
   if (!dirty) return "";
 
