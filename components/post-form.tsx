@@ -175,7 +175,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      // mammoth browser bundle
+      // @ts-ignore
       const mammoth = await import("mammoth/mammoth.browser");
 
       const options = {
