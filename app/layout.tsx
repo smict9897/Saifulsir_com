@@ -11,6 +11,26 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
+// app/layout.tsx এর <head> এর ভেতরে এটি যোগ করুন:
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SaifulSir",
+      "alternateName": ["SaifulSir.com", "Saiful Sir", "সাইফুল স্যার"],
+      "url": "https://saifulsir.com",
+      "description": "বাংলাদেশের স্মার্ট এডুকেশন প্ল্যাটফর্ম - নোট, সাজেশন ও অনলাইন পরীক্ষা",
+      "publisher": {
+        "@type": "Organization",
+        "name": "SaifulSir.com",
+        "url": "https://saifulsir.com",
+        "logo": "https://saifulsir.com/logo.png"
+      }
+    }),
+  }}
+/>
 
 // 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ সীমাবদ্ধ করা হলো
 const bn = localFont({
