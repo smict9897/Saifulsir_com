@@ -8,7 +8,6 @@ import SeoPanel from "@/components/seo-panel";
 import AdminKeywordTool from "@/components/admin-keyword-tool";
 import { Code, Eye, Pencil, Wrench, FileText, UploadCloud, Loader2, AlertCircle } from "lucide-react";
 
-// HTML ট্যাবে লেখা পোস্ট চেনার জন্য একটি র‍্যাপার ব্যবহার হয়।
 const OPEN = '<div class="raw-html not-prose">';
 const isRawBody = (b: string) => b.trim().startsWith(OPEN);
 const wrapRaw = (h: string) => (isRawBody(h) ? h.trim() : `${OPEN}${h.trim()}</div>`);
@@ -91,7 +90,6 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
   const [info, setInfo] = useState({ text: "", headings: [] as string[], words: 0 });
   const [coverMsg, setCoverMsg] = useState("");
 
-  // আপলোড প্রসেসিং স্টেট
   const [uploadingDocx, setUploadingDocx] = useState(false);
   const [uploadingHtml, setUploadingHtml] = useState(false);
   const [docxWarning, setDocxWarning] = useState<string | null>(null);
@@ -148,14 +146,14 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       dt.items.add(small);
       input.files = dt.files;
     } catch {
-      // old browser fallback
+      // fallback
     }
     setCoverMsg(small.size > 3_000_000
       ? "ছবিটি এখনও ৩ MB-এর বেশি, ছোট ছবি বাছুন।"
       : `ছবি তৈরি (${Math.round(small.size / 1024)} KB)।`);
   };
 
-  // টাস্ক B: Word (.docx) ফাইল কনভার্টার
+  // Word (.docx) ফাইল কনভার্টার
   const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -176,7 +174,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     try {
       const arrayBuffer = await file.arrayBuffer();
       // @ts-ignore
-      const mammoth = await import("mammoth/mammoth.browser");
+      const mammoth: any = await import("mammoth/mammoth.browser");
 
       const options = {
         convertImage: mammoth.images.imgElement(async (image: any) => {
@@ -190,12 +188,10 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           fd.set("image", imgFile);
           fd.set("alt", "Document illustration");
           
-          // বিদ্যমান আপলোড হেল্পার ব্যবহার
           const res = await uploadInline(fd);
           if (res.url) {
             return { src: res.url };
           }
-          // ফলব্যাক যদি নেটওয়ার্ক ফেইল করে
           return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve({ src: reader.result as string });
@@ -208,8 +204,8 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
       const convertedHtml = result.value;
 
       setHtml(convertedHtml);
-      setRaw(true); // টেবিল অক্ষুণ্ণ রাখতে HTML মোডে রাখা
-      setTab("html"); // প্রিভিউ বা এইচটিএমএলে নিয়ে যাওয়া
+      setRaw(true);
+      setTab("html");
 
       if (result.messages && result.messages.length > 0) {
         const msgs = result.messages.map((m: any) => m.message).slice(0, 3).join("; ");
@@ -227,7 +223,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     }
   };
 
-  // টাস্ক B: HTML (.html / .htm) ফাইল প্রসেসর (Article Mode)
+  // 🎯 HTML ফাইল প্রসেসর (সিএসএস ও <style> অক্ষুণ্ণ রেখে কম্পাইলার মোড)
   const handleHtmlUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -251,11 +247,10 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawContent, "text/html");
 
-        // ক্ষতিকর ট্যাগ রিমুভ
-        const dangerous = doc.querySelectorAll("script, iframe, object, embed, form, style");
+        // ক্ষতিকর স্ক্রিপ্ট ও অবজেক্ট বাদ দেওয়া হবে (style অক্ষুণ্ণ থাকবে)
+        const dangerous = doc.querySelectorAll("script, iframe, object, embed, form");
         dangerous.forEach((el) => el.remove());
 
-        // ইনলাইন অন-ক্লিক ও জাভাস্ক্রিপ্ট লিংক রিমুভ
         doc.querySelectorAll("*").forEach((el) => {
           Array.from(el.attributes).forEach((attr) => {
             if (attr.name.toLowerCase().startsWith("on") || attr.value.toLowerCase().startsWith("javascript:")) {
@@ -264,8 +259,14 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           });
         });
 
-        const cleanBody = doc.body ? doc.body.innerHTML : rawContent;
-        setHtml(cleanBody);
+        // <head>-এর সব <style> ট্যাগ সংগ্রহ করে বডির শুরুতে যুক্ত করা
+        const allStyles = Array.from(doc.querySelectorAll("style"))
+          .map((s) => s.outerHTML)
+          .join("\n");
+
+        const bodyContent = (allStyles ? allStyles + "\n" : "") + (doc.body ? doc.body.innerHTML : rawContent);
+
+        setHtml(bodyContent);
         setRaw(true);
         setTab("html");
 
@@ -283,7 +284,6 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     reader.readAsText(file, "UTF-8");
   };
 
-  // টাস্ক C & E: লাইভ সাইটের হুবহু প্রিভিউ
   const previewDoc =
     `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<style>` +
@@ -318,7 +318,6 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           <L t="Post text" hint={`${info.words} শব্দ`} />
         </div>
 
-        {/* আপলোড বাটনসমূহ ও ট্যাব বার */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
           <div className="flex flex-wrap gap-1.5">
             {tabBtn("compose", "Compose", <Pencil size={14} />)}
@@ -326,7 +325,6 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
             {tabBtn("preview", "Preview", <Eye size={14} />)}
           </div>
 
-          {/* টাস্ক B: Word ও HTML আপলোড বাটন */}
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="file"
@@ -364,7 +362,6 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           </div>
         </div>
 
-        {/* ইউনিকোড নোটিশ */}
         <div className="mb-2 rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-900 flex items-start gap-2">
           <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-600" />
           <span><strong>সতর্কতা:</strong> ফাইল অবশ্যই ইউনিকোড ফন্টে (Nirmala UI, Kalpurush) লেখা হতে হবে। বিজয়/SutonnyMJ হলে অক্ষর ভাঙবে।</span>
@@ -439,7 +436,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
         </select>
       </label>
 
-      {post.coverUrl && (
+           {post.coverUrl && (
         <div>
           <L t="Current cover image" />
           <Image src={post.coverUrl} alt={post.coverAlt || post.title} width={400} height={210} className="h-auto w-full max-w-sm rounded-xl" />
