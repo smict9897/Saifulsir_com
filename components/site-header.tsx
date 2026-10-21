@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowRight, Bookmark, BookOpen, Briefcase, Home,
-  LayoutDashboard, LogOut, Menu, X, ChevronDown,
+  LayoutDashboard, LogOut, Menu, Search, X, ChevronDown,
   Sparkles
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
@@ -111,7 +111,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:bg-slate-950/95 dark:border-slate-800">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-4">
           
-          {/* 🎯 লোগো ও ব্র্যান্ড নাম */}
+          {/* লোগো ও ব্র্যান্ড নাম */}
           <div className="flex items-center gap-2.5 shrink-0">
             <button 
               onClick={() => setOpen(true)} 
@@ -122,7 +122,6 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
             </button>
             
             <Link href="/" aria-label="SaifulSir.com home" className="flex items-center gap-2.5 group shrink-0">
-              {/* মূল লোগো ইমেজ */}
               <Image 
                 src="/logo.png" 
                 alt="SaifulSir.com Logo" 
@@ -133,7 +132,6 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
                 className="h-8 sm:h-10 w-auto object-contain shrink-0 group-hover:scale-105 transition-transform" 
               />
 
-              {/* 🎨 তিন রঙের ব্র্যান্ড টেক্সট */}
               <div className="flex flex-col justify-center">
                 <span className="font-black text-base sm:text-2xl tracking-tight leading-none select-none">
                   <span className="text-slate-950 dark:text-white">SAIFUL</span>
@@ -147,7 +145,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
             </Link>
           </div>
 
-          {/* Desktop Navigation (সেন্টারে পরিষ্কার নেভিগেশন) */}
+          {/* Desktop Navigation */}
           <nav aria-label="Main" className="hidden flex-1 items-center justify-center gap-1 whitespace-nowrap xl:flex px-4">
             {navTree.map((item) => (
               <div key={item.href} className="relative group">
@@ -179,7 +177,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
             ))}
           </nav>
 
-          {/* ডানপাশের কন্ট্রোল (সার্চ বার বাদ দিয়ে হালকা ও ক্লিন) */}
+          {/* ডানপাশের কন্ট্রোল */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <SavedLink />
             <ThemeToggle />
