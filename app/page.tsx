@@ -113,7 +113,8 @@ export default async function Home() {
       {/* 🚀 Hero Section */}
       <section className="bg-gradient-to-b from-blue-50 to-paper px-4 pb-6 pt-10 text-center">
         <div className="mx-auto max-w-4xl">
-          <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">{site.heroBadge}</p>
+          <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">
+  SaifulSir.com | শিক্ষার সবকিছু একসাথে </p>
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">{site.heroTitle}</h1>
           <p className="mt-3 text-slate-600 text-sm sm:text-base">{site.heroSubtitle}</p>
           
