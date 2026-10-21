@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowRight, Bookmark, BookOpen, Briefcase, Home,
   LayoutDashboard, LogOut, Menu, Search, X, ChevronDown,
-  Sparkles // ✨ পরীক্ষা দাও আইকনের জন্য
+  Sparkles
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import SavedLink from "@/components/saved-link";
@@ -20,9 +20,9 @@ type NavItem = {
   children?: { label: string; href: string }[];
 };
 
-// 📌 ১. ডেস্কটপ মেনুতে "পরীক্ষা দাও" যুক্ত করা হলো
 const navTree: NavItem[] = [
-  { label: "পরীক্ষা দাও (AI)", href: "/exam" }, // <-- নতুন যুক্ত
+  { label: "পরীক্ষা দাও (AI)", href: "/exam" },
+  { label: "সংবাদ", href: "/news" }, // 📰 শিক্ষা সংবাদ পেজের লিংক
   { label: "নোট", href: "/academic" },
   { label: "ভর্তি", href: "/admission" },
   {
@@ -45,10 +45,9 @@ const navTree: NavItem[] = [
   { label: "ব্লগ", href: "/blog" },
 ];
 
-// 📌 ২. মোবাইলের নিচের বারে সহজে প্রবেশের জন্য পরীক্ষা দাও যুক্ত করা হয়েছে
 const tabs = [
   ["Home", "/", Home],
-  ["Exam", "/exam", Sparkles], // <-- মোবাইলে সরাসরি পরীক্ষা পেজে যাওয়ার জন্য
+  ["Exam", "/exam", Sparkles],
   ["Classes", "/academic", BookOpen],
   ["Save", "/saved", Bookmark],
   ["Search", "/search", Search]
@@ -76,7 +75,8 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
   const path = usePathname();
   const [open, setOpen] = useState(false);
 
-  const staff = user?.role === "ADMIN" || user?.role === "TEACHER";
+  // 🔒 শুধুমাত্র ADMIN হলে true হবে (Teacher বা Student দেখতে পাবে না)
+  const isAdmin = user?.role === "ADMIN";
   const on = (h: string) => (h === "/" ? path === "/" : path === h || path.startsWith(h + "/"));
 
   useEffect(() => {
@@ -97,7 +97,8 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
   const actions = (
     <>
       <Link href="/hire" className={`${btn} bg-hire text-white hover:bg-orange-600`}><Briefcase size={16} />Hire Me</Link>
-      {staff && <Link href="/admin" className={outline}><LayoutDashboard size={16} />Dashboard</Link>}
+      {/* 🔒 শুধুমাত্র ADMIN লগইন করলেই এই বাটনটি আসবে */}
+      {isAdmin && <Link href="/admin" className={outline}><LayoutDashboard size={16} />Dashboard</Link>}
       {user ? (
         <form action={logout}><button className={`${outline} w-full`}><LogOut size={16} />Log out</button></form>
       ) : (
@@ -114,8 +115,18 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
           <button onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="shrink-0 rounded-lg p-2 text-navy-900 hover:bg-slate-100 xl:hidden">
             <Menu size={24} />
           </button>
+          
+          {/* 🖼️ লোগো ফিক্স (unoptimized যুক্ত করা হলো) */}
           <Link href="/" aria-label="SaifulSir.com home" className="shrink-0">
-            <Image src="/logo.png" alt="SaifulSir.com" width={689} height={245} priority className="h-8 w-auto sm:h-11" />
+            <Image 
+              src="/logo.png" 
+              alt="SaifulSir.com" 
+              width={689} 
+              height={245} 
+              priority 
+              unoptimized
+              className="h-8 w-auto sm:h-11" 
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -126,59 +137,4 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
                   href={item.href}
                   aria-current={on(item.href) ? "page" : undefined}
                   className={`flex items-center gap-1 rounded-md px-2 py-2 text-sm font-medium transition-colors ${
-                    on(item.href) ? "bg-blue-50 text-royal font-bold" : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {item.label}
-                  {item.children && <ChevronDown size={14} className="text-slate-500 transition-transform group-hover:rotate-180" />}
-                </Link>
-
-                {item.children && (
-                  <div className="absolute left-0 top-full hidden w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-lg group-hover:block">
-                    {item.children.map((sub) => (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-royal"
-                      >
-                        {sub.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-
-          <form action="/search" role="search" className="flex min-w-0 flex-1 items-center rounded-full border border-slate-300 bg-white px-3 xl:max-w-[14rem] xl:flex-none">
-            <Search size={18} className="shrink-0 text-slate-500" aria-hidden="true" />
-            <input name="q" aria-label="Search" placeholder="Search anything" className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none" />
-          </form>
-          <SavedLink />
-          <ThemeToggle />
-          <div className="hidden items-center gap-2 xl:flex">{actions}</div>
-        </div>
-      </header>
-
-      {/* Mobile Drawer Menu */}
-      <MobileHeaderDrawer
-        open={open}
-        onClose={() => setOpen(false)}
-        userName={user?.name}
-        actions={actions}
-      />
-
-      {/* Bottom Bar Navigation for Mobile */}
-      <nav aria-label="Bottom" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-        {tabs.map(([l, h, Icon]) => (
-          <Link key={h} href={h} className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${on(h) ? "text-royal font-bold" : "text-slate-500"}`}>
-            <Icon size={20} />{l}
-          </Link>
-        ))}
-        <button onClick={() => setOpen(true)} aria-label="Open menu" className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium text-slate-500">
-          <Menu size={20} />Menu
-        </button>
-      </nav>
-    </>
-  );
-}
+                    on(item.href) ? "bg-blue-50 text-ro
