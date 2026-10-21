@@ -57,7 +57,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
   return {
     metadataBase: new URL(process.env.SITE_URL ?? "https://saifulsir.com"),
-    title: { default: "SaifulSir.com", template: "%s | SaifulSir.com" },
+    // 🎯 এখানে ব্র্যান্ড নাম সহ টাইটেল আপডেট হলো:
+    title: {
+      default: "SaifulSir.com | Saifulsir - শিক্ষা ও পরীক্ষার পূর্ণাঙ্গ প্রস্তুতি",
+      template: "%s | SaifulSir.com",
+    },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
     icons: { apple: "/ceo-apple-touch-icon.png" },
