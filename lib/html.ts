@@ -1,6 +1,19 @@
 import sanitizeHtml from "sanitize-html";
 
-// ১. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার
+// ১. টেক্সটটি HTML কি না তা যাচাই করার ফাংশন (post-body.tsx এর জন্য)
+export function isHtml(str: string): boolean {
+  if (!str) return false;
+  const t = str.trim();
+  return t.startsWith("<") || /<[a-z][\s\S]*>/i.test(t);
+}
+
+// ২. ব্লগের জন্য নিরাপদ HTML রেন্ডার করার ফাংশন (post-body.tsx এর জন্য)
+export function renderHtml(html: string): string {
+  if (!html) return "";
+  return cleanHtml(html);
+}
+
+// ৩. ডাটাবেজ থেকে পাওয়া পোস্টের বডিকে এডিটরে লোড করার হেল্পার (admin/blog/[id] এর জন্য)
 export function bodyToEditorHtml(body: string): string {
   if (!body) return "";
   const trimmed = body.trim();
@@ -11,7 +24,7 @@ export function bodyToEditorHtml(body: string): string {
   return trimmed;
 }
 
-// ২. HTML থেকে প্লেইন টেক্সট বের করার হেল্পার
+// ৪. HTML থেকে প্লেইন টেক্সট বের করার হেল্পার
 export function htmlToText(html: string): string {
   if (!html) return "";
   return html
@@ -26,7 +39,7 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-// ৩. সার্ভার সাইডে কঠোর ও নিরাপদ স্যানিটাইজেশন
+// ৫. সার্ভার সাইডে কঠোর ও নিরাপদ স্যানিটাইজেশন
 export function cleanHtml(dirty: string): string {
   if (!dirty) return "";
 
