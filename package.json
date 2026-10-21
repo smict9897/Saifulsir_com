@@ -19,7 +19,8 @@
     "@vercel/blob": "^0.27.0",
     "next-auth": "5.0.0-beta.25",
     "bcryptjs": "^2.4.3",
-    "sanitize-html": "^2.13.0"
+    "sanitize-html": "^2.14.0",
+    "mammoth": "^1.9.0"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -32,11 +33,4 @@
     "autoprefixer": "^10",
     "prisma": "^6"
   }
-}
-"dependencies": {
-  "mammoth": "^1.9.0",
-  "sanitize-html": "^2.14.0"
-},
-"devDependencies": {
-  "@types/sanitize-html": "^2.13.0"
 }
