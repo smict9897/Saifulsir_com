@@ -11,7 +11,9 @@ import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 import { catPath } from "@/lib/cat-paths";
 import RecentArticles from "@/components/RecentArticles"; // <-- নতুন কম্পোনেন্ট ইমপোর্ট
-
+// ফাইলের অন্যান্য import-এর নিচে এটি যোগ করুন:
+import PromoBookPopup from "@/components/PromoBookPopup";
+import { getPromoSettings } from "@/app/actions/promo";
 export const dynamic = "force-dynamic";
 
 type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
