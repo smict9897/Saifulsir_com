@@ -10,6 +10,10 @@ import {
   CheckCircle2, AlertCircle, X, Eye, FileText, ArrowLeft 
 } from "lucide-react";
 
+// বাংলা সংখ্যা কনভার্টার
+const toBn = (n: number | string) =>
+  n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
+
 async function compressImage(file: File, maxSide = 1200, quality = 0.85): Promise<File> {
   try {
     if (!file.type.startsWith("image/")) return file;
@@ -74,7 +78,7 @@ export default function AdminBooksManager() {
     fetchBooks();
   }, []);
 
-  // কভার ছবি আপলোড
+  // 🎯 কভার ছবি আপলোড হ্যান্ডলার (res.url এর টাইপ ফিক্স সহ)
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,8 +90,8 @@ export default function AdminBooksManager() {
       fd.set("image", small);
       fd.set("alt", "Book Flat Cover");
       const res = await uploadInline(fd);
-      if (res.url) {
-        setFormData((prev) => ({ ...prev, coverUrl: res.url }));
+      if (res && res.url) {
+        setFormData((prev) => ({ ...prev, coverUrl: res.url as string }));
       }
     } catch (err: any) {
       alert("ছবি আপলোড ব্যর্থ: " + err.message);
@@ -109,10 +113,10 @@ export default function AdminBooksManager() {
       fd.set("image", small);
       fd.set("alt", "Sample Page");
       const res = await uploadInline(fd);
-      if (res.url) {
+      if (res && res.url) {
         setFormData((prev) => ({
           ...prev,
-          samplePages: [...(prev.samplePages || []), res.url!],
+          samplePages: [...(prev.samplePages || []), res.url as string],
         }));
       }
     } catch (err: any) {
@@ -390,4 +394,4 @@ export default function AdminBooksManager() {
       )}
     </div>
   );
-            }
+          }
