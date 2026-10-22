@@ -53,9 +53,11 @@ export interface BookItem {
   pageCount?: number;
   publisher?: string;
   edition?: string;
+  isRecent?: boolean;
+  published?: boolean;
 }
 
-// সকল বই আনা (সার্চ ও ফিল্টার সহ)
+// ১. ক্যাটালগ পেজের জন্য বই আনা (সার্চ ও ফিল্টার সহ)
 export async function getBooksCatalog(category?: string, search?: string): Promise<BookItem[]> {
   try {
     await ensureBookTable();
@@ -85,7 +87,12 @@ export async function getBooksCatalog(category?: string, search?: string): Promi
   }
 }
 
-// একক বই আনা
+// 🎯 ২. অ্যাডমিন প্যানেলের জন্য সকল বই আনা (getAllBooks এক্সপোর্ট করা হলো)
+export async function getAllBooks(): Promise<BookItem[]> {
+  return getBooksCatalog();
+}
+
+// ৩. একক বইয়ের বিস্তারিত আনা (উভয় নামে এক্সপোর্ট)
 export async function getBookDetails(id: string): Promise<BookItem | null> {
   try {
     await ensureBookTable();
@@ -101,7 +108,11 @@ export async function getBookDetails(id: string): Promise<BookItem | null> {
   }
 }
 
-// অ্যাডমিনের বই সেভ করা
+export async function getBookById(id: string): Promise<BookItem | null> {
+  return getBookDetails(id);
+}
+
+// ৪. অ্যাডমিন থেকে বই সংরক্ষণ করা
 export async function saveBookToStore(data: Omit<BookItem, "id"> & { id?: string }) {
   try {
     await staff();
