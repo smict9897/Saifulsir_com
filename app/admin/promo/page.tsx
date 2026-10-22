@@ -9,7 +9,6 @@ import {
   PromoSettings, 
   defaultPromo 
 } from "@/app/actions/promo";
-import { uploadInline } from "@/app/actions/posts";
 import { 
   Save, 
   BookOpen, 
@@ -21,31 +20,34 @@ import {
   PhoneCall, 
   Eye,
   UploadCloud,
-  ImageIcon,
   X
 } from "lucide-react";
 
-// মোবাইলের বড় ছবি স্বয়ংক্রিয়ভাবে কম্প্রেস করার হেল্পার
-async function compressImage(file: File, maxSide = 1200, quality = 0.85): Promise<File> {
-  try {
-    if (!file.type.startsWith("image/")) return file;
-    if (file.size <= 500_000 && ["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file;
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    const w = Math.max(1, Math.round(bmp.width * scale));
-    const h = Math.max(1, Math.round(bmp.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(bmp, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", quality));
-    if (!blob) return file;
-    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
-  } catch {
-    return file;
-  }
+// মোবাইলে ছবি অটোমেটিক হালকা (২৫-৩৫ KB) বানিয়ে নেওয়ার ব্রাউজার কম্প্রেসর
+async function compressToWebPBase64(file: File, maxSide = 800, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(e.target?.result as string);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/webp", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function AdminPromoPage() {
@@ -77,7 +79,7 @@ export default function AdminPromoPage() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  // 📱 মোবাইল গ্যালারি থেকে ছবি আপলোড হ্যান্ডলার
+  // 📸 সম্পূর্ণ লোকাল ও ফ্রি ছবি আপলোড (কোনো ক্লাউড এরর হবে না)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,27 +88,18 @@ export default function AdminPromoPage() {
     setMsg(null);
 
     try {
-      const smallFile = await compressImage(file);
-      const fd = new FormData();
-      fd.set("image", smallFile);
-      fd.set("alt", "Book Cover Image");
-
-      const res = await uploadInline(fd);
-      if (res.url) {
-        handleChange("coverUrl", res.url);
-        setMsg({ type: "success", text: "কভার ছবি সফলভাবে আপলোড হয়েছে!" });
-      } else {
-        setMsg({ type: "error", text: res.error || "ছবি আপলোড ব্যর্থ হয়েছে।" });
-      }
+      const base64Url = await compressToWebPBase64(file);
+      handleChange("coverUrl", base64Url);
+      setMsg({ type: "success", text: "কভার ছবি যুক্ত হয়েছে! নিচে 'সেভ' বাটনে চাপ দিন।" });
     } catch (err: any) {
-      setMsg({ type: "error", text: "ছবি আপলোড ত্রুটি: " + err.message });
+      setMsg({ type: "error", text: "ছবি প্রসেস করতে ব্যর্থ: " + err.message });
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  // 🎯 সেটিংস সাবমিট হ্যান্ডলার (try...finally দিয়ে ফিক্সড যাতে বাটন কখনো না আটকে)
+  // 🎯 সেভ বাটন হ্যান্ডলার
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -114,15 +107,16 @@ export default function AdminPromoPage() {
 
     try {
       const res = await savePromoSettings(settings);
-      if (res.success) {
-        setMsg({ type: "success", text: "সফলভাবে সেটিংস সেভ হয়েছে! হোমপেজে আপডেট দেখতে পাবেন।" });
+      if (res && res.success) {
+        setMsg({ type: "success", text: "সফলভাবে সেটিংস সেভ হয়েছে! হোমপেজে পপ-আপ চালু হয়েছে।" });
+        alert("✅ সেটিংস সফলভাবে সেভ হয়েছে! হোমপেজে আপডেট দেখতে পাবেন।");
       } else {
-        setMsg({ type: "error", text: res.error || "সেভ ব্যর্থ হয়েছে।" });
+        setMsg({ type: "error", text: res?.error || "সেভ ব্যর্থ হয়েছে।" });
       }
     } catch (err: any) {
       setMsg({ type: "error", text: err.message || "সার্ভার এরর হয়েছে। আবার চেষ্টা করুন।" });
     } finally {
-      setSaving(false); // বাটন ঘোরা গ্যারান্টিড বন্ধ হবে
+      setSaving(false);
     }
   };
 
@@ -201,12 +195,12 @@ export default function AdminPromoPage() {
                 type="text"
                 value={settings.badge}
                 onChange={(e) => handleChange("badge", e.target.value)}
-                placeholder="যেমন: 50% Discount"
+                placeholder="50% Discount"
                 className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm outline-none focus:border-blue-600"
               />
             </div>
 
-            {/* 📸 মোবাইল থেকে ছবি আপলোড অপশন */}
+            {/* 📸 গ্যালারি থেকে ছবি আপলোড */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">বইয়ের কভার ছবি (মোবাইল থেকে আপলোড)</label>
               <input
@@ -225,7 +219,7 @@ export default function AdminPromoPage() {
                   className="flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 px-4 py-2.5 text-xs font-bold text-slate-800 transition disabled:opacity-50"
                 >
                   {uploadingImage ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <UploadCloud size={16} className="text-blue-600" />}
-                  <span>{uploadingImage ? "ছবি আপলোড হচ্ছে..." : "গ্যালারি থেকে ছবি বাছুন"}</span>
+                  <span>{uploadingImage ? "ছবি প্রসেস হচ্ছে..." : "গ্যালারি থেকে ছবি বাছুন"}</span>
                 </button>
 
                 {settings.coverUrl && (
@@ -243,10 +237,10 @@ export default function AdminPromoPage() {
               {/* ছবির প্রিভিউ */}
               {settings.coverUrl && (
                 <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 w-fit">
-                  <div className="relative h-12 w-10 rounded overflow-hidden bg-white border border-slate-200">
+                  <div className="relative h-14 w-10 rounded overflow-hidden bg-white border border-slate-300">
                     <Image src={settings.coverUrl} alt="Cover Preview" fill unoptimized className="object-cover" />
                   </div>
-                  <span className="text-[11px] text-slate-500 font-mono truncate max-w-[180px]">ছবি সিলেক্টেড ✓</span>
+                  <span className="text-[11px] text-emerald-600 font-bold">ছবি সিলেক্টেড ✓</span>
                 </div>
               )}
             </div>
@@ -339,47 +333,6 @@ export default function AdminPromoPage() {
               />
             </div>
           </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-bold text-slate-800">
-                📦 প্রিন্টেড হ্যান্ডনোট শিট (কুরিয়ার কপি)
-              </span>
-              <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.allowPrint}
-                  onChange={(e) => handleChange("allowPrint", e.target.checked)}
-                  className="rounded text-blue-600"
-                />
-                প্রিন্ট অর্ডার চালু রাখুন
-              </label>
-            </div>
-
-            {settings.allowPrint && (
-              <div className="grid gap-3 grid-cols-2 pt-1">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">প্রিন্ট অফার মূল্য (৳)</label>
-                  <input
-                    type="number"
-                    value={settings.printPrice}
-                    onChange={(e) => handleChange("printPrice", Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">রেগুলার মূল্য (৳)</label>
-                  <input
-                    type="number"
-                    value={settings.printRegularPrice}
-                    onChange={(e) => handleChange("printRegularPrice", Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-slate-500 outline-none"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* ৪. পেমেন্ট নম্বর */}
@@ -416,4 +369,4 @@ export default function AdminPromoPage() {
       </form>
     </div>
   );
-                    }
+}
