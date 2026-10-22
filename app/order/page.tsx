@@ -4,8 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { 
   getPromoSettings, 
-  PromoSettings, 
-  defaultPromo 
+  type PromoSettings 
 } from "@/app/actions/promo";
 import { createBookOrder } from "@/app/actions/order";
 import { 
@@ -17,11 +16,30 @@ import Link from "next/link";
 const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
 
+// 🎯 ডিফল্ট স্টেট পেজের ভেতরে ডিফাইন করা হলো
+const fallbackPromoState: PromoSettings = {
+  active: true,
+  title: "Writing part",
+  subtitle: "Paragraph writing",
+  description: "Full hand Note",
+  badge: "50% Discount",
+  coverUrl: "",
+  pdfPrice: 50,
+  pdfRegularPrice: 100,
+  printPrice: 350,
+  printRegularPrice: 500,
+  pdfDriveUrl: "",
+  bkashNumber: "01773729897",
+  nagadNumber: "01773729897",
+  rocketNumber: "01773729897",
+  allowPrint: false,
+};
+
 export default function OrderCheckoutPage() {
   const searchParams = useSearchParams();
   const initialType = searchParams.get("type") === "print" ? "PRINT" : "PDF";
 
-  const [promo, setPromo] = useState<PromoSettings>(defaultPromo);
+  const [promo, setPromo] = useState<PromoSettings>(fallbackPromoState);
   const [loading, setLoading] = useState(true);
   const [itemType, setItemType] = useState<"PDF" | "PRINT">(initialType);
 
@@ -44,22 +62,27 @@ export default function OrderCheckoutPage() {
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
 
   useEffect(() => {
-    getPromoSettings().then((data) => {
-      setPromo(data);
-      setLoading(false);
-    });
+    let mounted = true;
+    getPromoSettings()
+      .then((data) => {
+        if (mounted) setPromo(data || fallbackPromoState);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // ক্যালকুলেশন
   const itemPrice = itemType === "PDF" ? promo.pdfPrice : promo.printPrice;
   const deliveryFee = itemType === "PDF" ? 0 : district === "ঢাকা" ? 60 : 120;
   const totalAmount = itemPrice + deliveryFee;
 
-  // পেমেন্ট নম্বর নির্বাচন
-  const currentPaymentNumber =
-    paymentMethod === "bKash"
-      ? promo.bkashNumber || "017XXXXXXXX"
-      : promo.nagadNumber || "018XXXXXXXX";
+  // আপনার একই একক পেমেন্ট নম্বর
+  const currentPaymentNumber = promo.bkashNumber || promo.nagadNumber || "01773729897";
 
   const handleCopyNumber = () => {
     navigator.clipboard.writeText(currentPaymentNumber);
@@ -114,14 +137,14 @@ export default function OrderCheckoutPage() {
     );
   }
 
-  // 🌟 অর্ডার সফল হলে কনফার্মেশন স্লিপ
+  // অর্ডার সফল হলে কনফার্মেশন স্লিপ
   if (completedOrder) {
     const waText = encodeURIComponent(
       `হ্যালো সাইফুল স্যার, আমি "${completedOrder.itemTitle}" (${completedOrder.itemType}) এর জন্য ${completedOrder.paymentMethod}-এ ৳${completedOrder.amount} পাঠিয়েছি।\nআমার TrxID: ${completedOrder.trxId}\nঅর্ডার নম্বর: #${completedOrder.orderNumber}`
     );
 
     return (
-      <div className="min-h-screen bg-slate-50 py-10 px-4">
+      <div className="min-h-screen bg-slate-50 py-10 px-4 font-sans">
         <div className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 text-center shadow-lg">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
             <CheckCircle2 size={36} />
@@ -151,10 +174,9 @@ export default function OrderCheckoutPage() {
             </div>
           </div>
 
-          {/* দ্রুত ডেলিভারি নেওয়ার WhatsApp বাটন */}
           <div className="space-y-3">
             <a
-              href={`https://wa.me/88${promo.bkashNumber?.replace(/\D/g, "") || "017XXXXXXXX"}?text=${waText}`}
+              href={`https://wa.me/8801773729897?text=${waText}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition"
@@ -175,7 +197,6 @@ export default function OrderCheckoutPage() {
     );
   }
 
-  // 📝 মূল চেকআউট ফর্ম
   return (
     <div className="min-h-screen bg-slate-50/70 py-8 px-4 sm:px-6 font-sans">
       <div className="mx-auto max-w-2xl">
@@ -184,14 +205,13 @@ export default function OrderCheckoutPage() {
           <ArrowLeft size={14} /> হোমপেজে ফিরুন
         </Link>
 
-        {/* ১. বই নির্বাচন (PDF বনাম প্রিন্ট কপি) */}
+        {/* ১. ফরম্যাট নির্বাচন */}
         <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
             ১. আপনি কীভাবে নিতে চান? (সিলেক্ট করুন)
           </h2>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {/* PDF অপশন (মেইন টার্গেট) */}
             <div
               onClick={() => setItemType("PDF")}
               className={`cursor-pointer rounded-2xl border p-4 transition-all ${
@@ -214,7 +234,6 @@ export default function OrderCheckoutPage() {
               </p>
             </div>
 
-            {/* প্রিন্ট কপি অপশন */}
             {promo.allowPrint && (
               <div
                 onClick={() => setItemType("PRINT")}
@@ -243,7 +262,7 @@ export default function OrderCheckoutPage() {
 
         <form onSubmit={handleOrderSubmit} className="space-y-6">
           
-          {/* ২. গ্রাহকের তথ্য */}
+          {/* ২. যোগাযোগের তথ্য */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
               ২. আপনার যোগাযোগের তথ্য
@@ -285,14 +304,13 @@ export default function OrderCheckoutPage() {
               </label>
               <input
                 type="tel"
-                placeholder="01XXXXXXXXX (খালি রাখলে মোবাইল নম্বরে যাবে)"
+                placeholder="01XXXXXXXXX"
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm outline-none focus:border-blue-600"
               />
             </div>
 
-            {/* প্রিন্ট কপি সিলেক্ট করলে ঠিকানা দিতে হবে */}
             {itemType === "PRINT" && (
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <div>
@@ -324,7 +342,7 @@ export default function OrderCheckoutPage() {
             )}
           </div>
 
-          {/* ৩. পেমেন্ট ও TrxID কালেকশন বক্স */}
+          {/* ৩. পেমেন্ট তথ্য */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2 flex items-center justify-between">
               <span>৩. সেন্ড মানি ও পেমেন্ট তথ্য</span>
@@ -333,7 +351,6 @@ export default function OrderCheckoutPage() {
               </span>
             </h2>
 
-            {/* মেথড সিলেক্টর */}
             <div className="grid grid-cols-3 gap-2">
               {(["bKash", "Nagad", "Rocket"] as const).map((method) => (
                 <button
@@ -351,7 +368,6 @@ export default function OrderCheckoutPage() {
               ))}
             </div>
 
-            {/* সেন্ড মানি নির্দেশাবলী ও নম্বর */}
             <div className="rounded-2xl bg-amber-50/80 border border-amber-200/90 p-4 space-y-2 text-xs text-amber-950">
               <div className="font-bold text-amber-900">
                 📌 কীভাবে সেন্ড মানি করবেন:
@@ -362,16 +378,15 @@ export default function OrderCheckoutPage() {
                 <li>নিচের নম্বরে মোট <strong>৳{toBn(totalAmount)}</strong> টাকা সেন্ড মানি করুন।</li>
               </ol>
 
-              {/* নম্বর কপি বক্স */}
               <div className="mt-3 flex items-center justify-between rounded-xl bg-white border border-amber-300 p-2.5">
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold">সেন্ড মানি নম্বর ({paymentMethod}):</span>
+                  <span className="text-[10px] text-slate-400 block font-semibold">সেন্ড মানি নম্বর:</span>
                   <span className="font-mono text-sm sm:text-base font-black text-slate-900">{currentPaymentNumber}</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyNumber}
-                  className="flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-xs font-bold transition shadow-xs"
+                  className="flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-xs font-bold transition"
                 >
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   <span>{copied ? "কপি হয়েছে!" : "কপি করুন"}</span>
@@ -379,7 +394,6 @@ export default function OrderCheckoutPage() {
               </div>
             </div>
 
-            {/* TrxID ও প্রেরক নম্বর নেওয়ার ঘর */}
             <div className="grid gap-3 sm:grid-cols-2 pt-2">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -411,7 +425,7 @@ export default function OrderCheckoutPage() {
             </div>
           </div>
 
-          {/* বিল সামারি ও সাবমিট বাটন */}
+          {/* বিল সামারি ও সাবমিট */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
             <div className="flex justify-between text-xs text-slate-600">
               <span>বইয়ের মূল্য ({itemType}):</span>
@@ -438,7 +452,7 @@ export default function OrderCheckoutPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 transition active:scale-98 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-98 disabled:opacity-60"
             >
               {submitting ? (
                 <>
@@ -456,4 +470,4 @@ export default function OrderCheckoutPage() {
       </div>
     </div>
   );
-      }
+}
