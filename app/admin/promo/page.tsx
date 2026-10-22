@@ -27,10 +27,27 @@ export default function AdminPromoPage() {
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
-    getPromoSettings().then((data) => {
-      setSettings(data);
-      setLoading(false);
-    });
+    let mounted = true;
+    
+    getPromoSettings()
+      .then((data) => {
+        if (mounted) {
+          setSettings(data || defaultPromo);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load promo settings:", err);
+      })
+      .finally(() => {
+        // 🎯 গ্যারান্টিড: কোনো অবস্থাতেই লোডার আটকে থাকবে না, সাথে সাথে পেজ চলে আসবে!
+        if (mounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleChange = (key: keyof PromoSettings, value: any) => {
@@ -179,13 +196,13 @@ export default function AdminPromoPage() {
           </div>
         </div>
 
-        {/* ৩. প্রাইসিং ও ডেলিভারি লিংক (PDF vs প্রিন্ট) */}
+        {/* ৩. প্রাইসিং ও ডেলিভারি লিংক */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
             <DollarSign size={18} className="text-emerald-600" /> মূল্য নির্ধারণ (PDF ও প্রিন্ট শিট)
           </h2>
 
-          {/* PDF সেকশন (আপনার মেইন টার্গেট) */}
+          {/* PDF সংস্করণ */}
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-bold text-emerald-900 flex items-center gap-1.5">
@@ -221,7 +238,7 @@ export default function AdminPromoPage() {
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Google Drive / PDF ডাউনলোড লিংক (পেমেন্টের পর স্বয়ংক্রিয়ভাবে পাবে)
+                Google Drive / PDF ডাউনলোড লিংক (পেমেন্টের পর ছাত্র পাবে)
               </label>
               <input
                 type="url"
@@ -233,7 +250,7 @@ export default function AdminPromoPage() {
             </div>
           </div>
 
-          {/* প্রিন্টেড হ্যান্ডনোট সেকশন */}
+          {/* প্রিন্ট কপি সংস্করণ */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-bold text-slate-800">
@@ -284,24 +301,13 @@ export default function AdminPromoPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">বিকাশ পার্সোনাল / সেন্ড মানি নম্বর</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">বিকাশ / নগদ / রকেট সেন্ড মানি নম্বর</label>
               <input
                 type="text"
                 value={settings.bkashNumber}
                 onChange={(e) => handleChange("bkashNumber", e.target.value)}
                 placeholder="017XXXXXXXX"
                 className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm outline-none focus:border-pink-600"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">নগদ নম্বর</label>
-              <input
-                type="text"
-                value={settings.nagadNumber}
-                onChange={(e) => handleChange("nagadNumber", e.target.value)}
-                placeholder="018XXXXXXXX"
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs sm:text-sm outline-none focus:border-orange-600"
               />
             </div>
           </div>
@@ -319,4 +325,4 @@ export default function AdminPromoPage() {
       </form>
     </div>
   );
-          }
+}
