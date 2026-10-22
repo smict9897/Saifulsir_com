@@ -15,10 +15,11 @@ export interface PromoSettings {
   pdfRegularPrice: number;
   printPrice: number;
   printRegularPrice: number;
-  pdfDriveUrl: string; // পেমেন্ট কনফার্মের পর ছাত্র যে ড্রাইভ লিংক পাবে
+  pdfDriveUrl: string;
   bkashNumber: string;
   nagadNumber: string;
-  allowPrint: boolean; // প্রিন্ট কপি চালু বা বন্ধ রাখার টগল
+  rocketNumber?: string;
+  allowPrint: boolean;
 }
 
 export const defaultPromo: PromoSettings = {
@@ -35,16 +36,28 @@ export const defaultPromo: PromoSettings = {
   pdfDriveUrl: "",
   bkashNumber: "017XXXXXXXX",
   nagadNumber: "018XXXXXXXX",
+  rocketNumber: "019XXXXXXXX",
   allowPrint: true,
 };
+
+// 🎯 ডাটাবেজে টেবিল না থাকলে অটোমেটিক তৈরি করার সেফ ফাংশন
+async function ensureSettingTable() {
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Setting" (
+      "key" TEXT PRIMARY KEY,
+      "value" TEXT NOT NULL
+    );
+  `).catch(() => null);
+}
 
 // ১. সেটিংস ফেচ করা
 export async function getPromoSettings(): Promise<PromoSettings> {
   try {
+    await ensureSettingTable();
     const setting = await db.setting.findUnique({
       where: { key: "promo_book" },
     });
-    if (!setting) return defaultPromo;
+    if (!setting || !setting.value) return defaultPromo;
     return { ...defaultPromo, ...JSON.parse(setting.value) };
   } catch (err) {
     console.error("Error fetching promo settings:", err);
@@ -52,10 +65,11 @@ export async function getPromoSettings(): Promise<PromoSettings> {
   }
 }
 
-// ২. সেটিংস সেভ করা (শুধুমাত্র অ্যাডমিন পারবে)
+// ২. সেটিংস সেভ করা
 export async function savePromoSettings(data: PromoSettings) {
   try {
     await staff();
+    await ensureSettingTable();
 
     await db.setting.upsert({
       where: { key: "promo_book" },
