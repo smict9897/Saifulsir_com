@@ -10,10 +10,10 @@ import {
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 import { catPath } from "@/lib/cat-paths";
-import RecentArticles from "@/components/RecentArticles"; // <-- নতুন কম্পোনেন্ট ইমপোর্ট
-// ফাইলের অন্যান্য import-এর নিচে এটি যোগ করুন:
+import RecentArticles from "@/components/RecentArticles";
 import PromoBookPopup from "@/components/PromoBookPopup";
 import { getPromoSettings } from "@/app/actions/promo";
+
 export const dynamic = "force-dynamic";
 
 type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
@@ -86,8 +86,8 @@ const Grid = ({ items }: { items: Item[] }) => <div className="grid grid-cols-2 
 const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
 
 export default async function Home() {
-  const [posts, trending, quotes, cats, site] = await Promise.all([
-    // 🎯 এখানে পরিবর্তন করা হলো
+  // 🎯 ১. এখানে 'promo' এবং 'getPromoSettings()' যুক্ত হলো
+  const [posts, trending, quotes, cats, site, promo] = await Promise.all([
     db.post.findMany({
       where: {
         published: true,
@@ -103,9 +103,8 @@ export default async function Home() {
     db.testimonial.findMany({ orderBy: { createdAt: "desc" }, take: 3 }).catch(() => []),
     db.category.findMany({ select: { slug: true } }).catch(() => []),
     getSite(),
+    getPromoSettings(), // 👈 সেটিংস ফেচ করা হচ্ছে
   ]);
-
-  // ... বাকি কোড যেমন ছিল তেমনই থাকবে
 
   const slugSet = new Set(cats.map((c) => c.slug));
   const resolve = (items: Item[]) => items.map((it) => (it.slug && slugSet.has(it.slug) ? { ...it, href: `/category/${it.slug}` } : it));
@@ -116,7 +115,8 @@ export default async function Home() {
       <section className="bg-gradient-to-b from-blue-50 to-paper px-4 pb-6 pt-10 text-center">
         <div className="mx-auto max-w-4xl">
           <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">
-  SaifulSir.com | শিক্ষার সবকিছু একসাথে </p>
+            SaifulSir.com | শিক্ষার সবকিছু একসাথে
+          </p>
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">{site.heroTitle}</h1>
           <p className="mt-3 text-slate-600 text-sm sm:text-base">{site.heroSubtitle}</p>
           
@@ -126,7 +126,7 @@ export default async function Home() {
             <button className="flex items-center gap-2 rounded-full bg-royal px-5 py-2.5 font-semibold text-white"><Search size={18} />খুঁজুন</button>
           </form>
 
-          {/* 🎯 ঠিক সার্চ বারের নিচে: সম্পূর্ণ ২টি কার্ড + ১, ২, ৩ নাম্বারিং পেজিনেশন */}
+          {/* 🎯 ঠিক সার্চ বারের নিচে আপনার রিসেন্ট আর্টিকেল */}
           <RecentArticles posts={posts} />
         </div>
       </section>
@@ -216,6 +216,10 @@ export default async function Home() {
           </div>
         </section>
       </div>
+
+      {/* 🎯 ২. হোমপেজে স্বয়ংক্রিয় প্রমোশনাল পপ-আপ মডাল */}
+      <PromoBookPopup promo={promo} />
+
     </main>
   );
-              }
+}
