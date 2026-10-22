@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
-export interface PromoSettings {
+export type PromoSettings = {
   active: boolean;
   title: string;
   subtitle: string;
@@ -20,9 +20,10 @@ export interface PromoSettings {
   nagadNumber: string;
   rocketNumber?: string;
   allowPrint: boolean;
-}
+};
 
-export const defaultPromo: PromoSettings = {
+// 🎯 export বাদ দিয়ে ইন্টারনাল কনস্ট্যান্ট করা হলো যাতে Next.js এরর না দেয়
+const defaultPromoData: PromoSettings = {
   active: true,
   title: "Writing part",
   subtitle: "Paragraph writing",
@@ -49,6 +50,7 @@ async function ensureSettingTable() {
   `).catch(() => null);
 }
 
+// ১. সেটিংস ফেচ করা
 export async function getPromoSettings(): Promise<PromoSettings> {
   try {
     await ensureSettingTable();
@@ -56,15 +58,15 @@ export async function getPromoSettings(): Promise<PromoSettings> {
       where: { key: "promo_book" },
     }).catch(() => null);
 
-    if (!setting || !setting.value) return defaultPromo;
-    return { ...defaultPromo, ...JSON.parse(setting.value) };
+    if (!setting || !setting.value) return defaultPromoData;
+    return { ...defaultPromoData, ...JSON.parse(setting.value) };
   } catch (err) {
     console.error("Error fetching promo settings:", err);
-    return defaultPromo;
+    return defaultPromoData;
   }
 }
 
-// 🎯 ১০০% সেফ সেভ অ্যাকশন (কোনো এরর রেড্যাক্ট হবে না)
+// ২. সেটিংস সেভ করা
 export async function savePromoSettings(data: PromoSettings) {
   try {
     const session = await auth();
