@@ -6,8 +6,7 @@ import Link from "next/link";
 import { 
   getPromoSettings, 
   savePromoSettings, 
-  PromoSettings, 
-  defaultPromo 
+  type PromoSettings 
 } from "@/app/actions/promo";
 import { 
   Save, 
@@ -23,7 +22,24 @@ import {
   X
 } from "lucide-react";
 
-// মোবাইলে ছবি অটোমেটিক হালকা (২৫-৩৫ KB) বানিয়ে নেওয়ার ব্রাউজার কম্প্রেসর
+const initialPromoState: PromoSettings = {
+  active: true,
+  title: "Writing part",
+  subtitle: "Paragraph writing",
+  description: "Full hand Note",
+  badge: "50% Discount",
+  coverUrl: "",
+  pdfPrice: 50,
+  pdfRegularPrice: 100,
+  printPrice: 350,
+  printRegularPrice: 500,
+  pdfDriveUrl: "",
+  bkashNumber: "01773729897",
+  nagadNumber: "01773729897",
+  rocketNumber: "01773729897",
+  allowPrint: false,
+};
+
 async function compressToWebPBase64(file: File, maxSide = 800, quality = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -51,7 +67,7 @@ async function compressToWebPBase64(file: File, maxSide = 800, quality = 0.8): P
 }
 
 export default function AdminPromoPage() {
-  const [settings, setSettings] = useState<PromoSettings>(defaultPromo);
+  const [settings, setSettings] = useState<PromoSettings>(initialPromoState);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -63,7 +79,7 @@ export default function AdminPromoPage() {
     let mounted = true;
     getPromoSettings()
       .then((data) => {
-        if (mounted) setSettings(data || defaultPromo);
+        if (mounted) setSettings(data || initialPromoState);
       })
       .catch((err) => console.error(err))
       .finally(() => {
@@ -79,7 +95,6 @@ export default function AdminPromoPage() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  // 📸 সম্পূর্ণ লোকাল ও ফ্রি ছবি আপলোড (কোনো ক্লাউড এরর হবে না)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,7 +105,7 @@ export default function AdminPromoPage() {
     try {
       const base64Url = await compressToWebPBase64(file);
       handleChange("coverUrl", base64Url);
-      setMsg({ type: "success", text: "কভার ছবি যুক্ত হয়েছে! নিচে 'সেভ' বাটনে চাপ দিন।" });
+      setMsg({ type: "success", text: "কভার ছবি প্রস্তুত হয়েছে! নিচে 'সেভ' বাটনে চাপ দিন।" });
     } catch (err: any) {
       setMsg({ type: "error", text: "ছবি প্রসেস করতে ব্যর্থ: " + err.message });
     } finally {
@@ -99,7 +114,6 @@ export default function AdminPromoPage() {
     }
   };
 
-  // 🎯 সেভ বাটন হ্যান্ডলার
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -182,7 +196,7 @@ export default function AdminPromoPage() {
           </label>
         </div>
 
-        {/* ২. বই ও কভার ছবি আপলোড */}
+        {/* ২. বই ও কভার ছবি */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
           <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
             <FileText size={18} className="text-blue-600" /> বই ও অফারের তথ্য
@@ -234,7 +248,6 @@ export default function AdminPromoPage() {
                 )}
               </div>
 
-              {/* ছবির প্রিভিউ */}
               {settings.coverUrl && (
                 <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 w-fit">
                   <div className="relative h-14 w-10 rounded overflow-hidden bg-white border border-slate-300">
@@ -369,4 +382,4 @@ export default function AdminPromoPage() {
       </form>
     </div>
   );
-}
+                    }
