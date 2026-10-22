@@ -6,15 +6,14 @@ import {
   Package, 
   CheckCircle2, 
   Clock, 
-  XCircle, 
   MessageCircle, 
   Loader2, 
   RefreshCcw, 
-  User, 
   Phone 
 } from "lucide-react";
 
-export const toBn = (n: number | string) =>
+// 🎯 export বাদ দিয়ে সাধারণ ফাংশন করা হলো যাতে Next.js এরর না দেয়
+const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
 
 export default function AdminOrdersPage() {
@@ -101,7 +100,7 @@ export default function AdminOrdersPage() {
 
                   <td className="py-3.5 px-4 font-black text-slate-900">৳{toBn(o.amount)}</td>
 
-                  {/* 🎯 আপনার বিকাশ এসএমএসের সাথে মেলানোর TrxID বক্স */}
+                  {/* বিকাশ/নগদ এসএমএস মেলানোর TrxID */}
                   <td className="py-3.5 px-4">
                     <div className="font-bold text-slate-800">{o.paymentMethod}</div>
                     <div className="font-mono text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-0.5">
@@ -123,16 +122,16 @@ export default function AdminOrdersPage() {
                     </span>
                   </td>
 
-                  {/* এক ক্লিকে WhatsApp-এ মেসেজ বা ভেরিফাই করার অ্যাকশন */}
+                  {/* এক ক্লিকে WhatsApp বাটন */}
                   <td className="py-3.5 px-4 text-right space-x-1">
                     <a
                       href={`https://wa.me/88${o.whatsapp?.replace(/\D/g, "") || o.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                        `হ্যালো ${o.customerName}, SaifulSir.com থেকে আপনার অর্ডার #${o.orderNumber} এর TrxID (${o.trxId}) ভেরিফাই হয়েছে। এই যে আপনার PDF লিংক: ...`
+                        `হ্যালো ${o.customerName}, SaifulSir.com থেকে আপনার অর্ডার #${o.orderNumber} এর TrxID (${o.trxId}) ভেরিফাই হয়েছে। ধন্যবাদ!`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-bold text-[11px]"
-                      title="WhatsApp এ PDF পাঠান"
+                      title="WhatsApp এ মেসেজ দিন"
                     >
                       <MessageCircle size={12} /> WhatsApp
                     </a>
@@ -154,4 +153,4 @@ export default function AdminOrdersPage() {
       )}
     </div>
   );
-              }
+}
