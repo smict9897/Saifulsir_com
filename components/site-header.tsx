@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowRight, Bookmark, BookOpen, Briefcase, Home,
   LayoutDashboard, LogOut, Menu, Search, X, ChevronDown,
-  Sparkles
+  Sparkles, BookMarked
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import SavedLink from "@/components/saved-link";
@@ -22,6 +22,7 @@ type NavItem = {
 
 const navTree: NavItem[] = [
   { label: "পরীক্ষা দাও (AI)", href: "/exam" },
+  { label: "বইঘর", href: "/books" },
   { label: "সংবাদ", href: "/news" },
   { label: "নোট", href: "/academic" },
   { label: "ভর্তি", href: "/admission" },
@@ -47,10 +48,10 @@ const navTree: NavItem[] = [
 
 const tabs = [
   ["Home", "/", Home],
+  ["বইঘর", "/books", BookMarked],
   ["Exam", "/exam", Sparkles],
   ["Classes", "/academic", BookOpen],
   ["Save", "/saved", Bookmark],
-  ["Search", "/search", Search]
 ] as const;
 
 function Announcement({ text }: { text: string }) {
@@ -111,8 +112,8 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:bg-slate-950/95 dark:border-slate-800">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-4">
           
-          {/* লোগো ও ব্র্যান্ড নাম */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* বামপাশে মেনু + ব্র্যান্ড লোগো */}
+          <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={() => setOpen(true)} 
               aria-label="Open menu" 
@@ -121,24 +122,23 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
               <Menu size={22} />
             </button>
             
-            <Link href="/" aria-label="SaifulSir.com home" className="flex items-center gap-2.5 group shrink-0">
+            <Link href="/" aria-label="SaifulSir.com home" className="flex items-center gap-2 group shrink-0">
               <Image 
                 src="/logo.png" 
                 alt="SaifulSir.com Logo" 
-                width={48} 
-                height={48} 
+                width={44} 
+                height={44} 
                 priority 
                 unoptimized
-                className="h-8 sm:h-10 w-auto object-contain shrink-0 group-hover:scale-105 transition-transform" 
+                className="h-8 sm:h-9 w-auto object-contain shrink-0 group-hover:scale-105 transition-transform" 
               />
-
               <div className="flex flex-col justify-center">
-                <span className="font-black text-base sm:text-2xl tracking-tight leading-none select-none">
+                <span className="font-black text-sm sm:text-lg tracking-tight leading-none select-none">
                   <span className="text-slate-950 dark:text-white">SAIFUL</span>
                   <span className="text-blue-600 dark:text-blue-400">SIR</span>
                   <span className="text-orange-500 dark:text-orange-400">.COM</span>
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wide mt-1">
+                <span className="text-[8px] sm:text-[9px] font-bold text-slate-500 dark:text-slate-400 tracking-tight mt-0.5">
                   শিক্ষার সবকিছু একসাথে
                 </span>
               </div>
@@ -177,8 +177,21 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
             ))}
           </nav>
 
-          {/* ডানপাশের কন্ট্রোল */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* 🎯 ঠিক চিহ্নিত স্থানে আকর্ষণীয় 'বইঘর' বাটন ও ডানপাশের কন্ট্রোল */}
+          <div className="flex items-center gap-2 shrink-0">
+            
+            {/* 📚 আপনার চিহ্নিত স্থানের 'বইঘর' বাটন */}
+            <Link
+              href="/books"
+              className="flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 text-white px-2.5 sm:px-3 py-1.5 text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition-all border border-emerald-400/40"
+            >
+              <BookMarked size={14} className="animate-pulse text-emerald-200" />
+              <span>বইঘর</span>
+              <span className="text-[9px] bg-white/20 px-1 py-0.2 rounded-full font-bold">
+                PDF
+              </span>
+            </Link>
+
             <SavedLink />
             <ThemeToggle />
             <div className="hidden items-center gap-2 xl:flex">{actions}</div>
