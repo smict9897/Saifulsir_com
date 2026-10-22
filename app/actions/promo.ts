@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { staff } from "@/lib/guard";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
 export interface PromoSettings {
@@ -40,7 +40,6 @@ export const defaultPromo: PromoSettings = {
   allowPrint: false,
 };
 
-// ডাটাবেজে টেবিল তৈরি নিশ্চিত করা
 async function ensureSettingTable() {
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "Setting" (
@@ -50,7 +49,6 @@ async function ensureSettingTable() {
   `).catch(() => null);
 }
 
-// ১. সেটিংস আনা
 export async function getPromoSettings(): Promise<PromoSettings> {
   try {
     await ensureSettingTable();
@@ -66,15 +64,17 @@ export async function getPromoSettings(): Promise<PromoSettings> {
   }
 }
 
-// ২. সেটিংস সেভ করা (কোনো অবস্থাতেই আটকাবে না)
+// 🎯 ১০০% সেফ সেভ অ্যাকশন (কোনো এরর রেড্যাক্ট হবে না)
 export async function savePromoSettings(data: PromoSettings) {
   try {
-    await staff();
-    await ensureSettingTable();
+    const session = await auth();
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return { success: false, error: "অননুমোদিত: আপনি অ্যাডমিন হিসেবে লগইন নেই।" };
+    }
 
+    await ensureSettingTable();
     const jsonValue = JSON.stringify(data);
 
-    // ১. Prisma দিয়ে সেভ করার চেষ্টা
     try {
       await db.setting.upsert({
         where: { key: "promo_book" },
@@ -82,7 +82,6 @@ export async function savePromoSettings(data: PromoSettings) {
         create: { key: "promo_book", value: jsonValue },
       });
     } catch {
-      // ২. ফলব্যাক: সরাসরি Raw SQL কুয়েরি দিয়ে সেভ (যদি প্রিজমায় মিসম্যাচ হয়)
       await db.$executeRawUnsafe(
         `INSERT INTO "Setting" ("key", "value") VALUES ('promo_book', $1)
          ON CONFLICT ("key") DO UPDATE SET "value" = $1;`,
@@ -90,11 +89,14 @@ export async function savePromoSettings(data: PromoSettings) {
       );
     }
 
-    revalidatePath("/", "layout");
-    revalidatePath("/admin/promo");
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/admin/promo");
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error("Save promo error:", err);
-    return { success: false, error: err.message || "সেভ করা সম্ভব হয়নি" };
+    return { success: false, error: err?.message || "ডাটাবেজে সেভ হতে ব্যর্থ হয়েছে।" };
   }
 }
