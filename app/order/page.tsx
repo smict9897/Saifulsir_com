@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export const toBn = (n: number | string) =>
+const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
 
 export default function OrderCheckoutPage() {
