@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
 import { revalidatePath } from "next/cache";
 
-// ডাটাবেজে রকমারি স্টাইল বইয়ের টেবিল তৈরি
+// ডাটাবেজে টেবিল ও নতুন কলাম স্বয়ংক্রিয়ভাবে তৈরি নিশ্চিত করা
 async function ensureBookTable() {
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "BookStore" (
@@ -27,10 +27,18 @@ async function ensureBookTable() {
       "pageCount" INTEGER DEFAULT 120,
       "publisher" TEXT DEFAULT 'সাইফুল স্যার পাবলিকেশন্স',
       "edition" TEXT DEFAULT '২০২৬-২০২৭ নতুন সংস্করণ',
+      "isFree" BOOLEAN DEFAULT false,
+      "isAffiliate" BOOLEAN DEFAULT false,
+      "affiliateUrl" TEXT DEFAULT '',
       "published" BOOLEAN DEFAULT true,
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `).catch(() => null);
+
+  // পুরোনো টেবিলে কলামগুলো না থাকলে স্বয়ংক্রিয়ভাবে যোগ করা
+  await db.$executeRawUnsafe(`ALTER TABLE "BookStore" ADD COLUMN IF NOT EXISTS "isFree" BOOLEAN DEFAULT false;`).catch(() => null);
+  await db.$executeRawUnsafe(`ALTER TABLE "BookStore" ADD COLUMN IF NOT EXISTS "isAffiliate" BOOLEAN DEFAULT false;`).catch(() => null);
+  await db.$executeRawUnsafe(`ALTER TABLE "BookStore" ADD COLUMN IF NOT EXISTS "affiliateUrl" TEXT DEFAULT '';`).catch(() => null);
 }
 
 export interface BookItem {
@@ -53,11 +61,13 @@ export interface BookItem {
   pageCount?: number;
   publisher?: string;
   edition?: string;
+  isFree?: boolean; // 👈 ফ্রি বইয়ের ফ্ল্যাগ
+  isAffiliate?: boolean; // 👈 অ্যাফিলিয়েট ফ্ল্যাগ
+  affiliateUrl?: string; // 👈 রকমারি/বাহিরের লিংক
   isRecent?: boolean;
   published?: boolean;
 }
 
-// ১. ক্যাটালগ পেজের জন্য বই আনা (সার্চ ও ফিল্টার সহ)
 export async function getBooksCatalog(category?: string, search?: string): Promise<BookItem[]> {
   try {
     await ensureBookTable();
@@ -87,12 +97,10 @@ export async function getBooksCatalog(category?: string, search?: string): Promi
   }
 }
 
-// 🎯 ২. অ্যাডমিন প্যানেলের জন্য সকল বই আনা (getAllBooks এক্সপোর্ট করা হলো)
 export async function getAllBooks(): Promise<BookItem[]> {
   return getBooksCatalog();
 }
 
-// ৩. একক বইয়ের বিস্তারিত আনা (উভয় নামে এক্সপোর্ট)
 export async function getBookDetails(id: string): Promise<BookItem | null> {
   try {
     await ensureBookTable();
@@ -112,7 +120,7 @@ export async function getBookById(id: string): Promise<BookItem | null> {
   return getBookDetails(id);
 }
 
-// ৪. অ্যাডমিন থেকে বই সংরক্ষণ করা
+// ৪. বই সেভ ও এডিট করার অ্যাকশন
 export async function saveBookToStore(data: Omit<BookItem, "id"> & { id?: string }) {
   try {
     await staff();
@@ -126,28 +134,31 @@ export async function saveBookToStore(data: Omit<BookItem, "id"> & { id?: string
           "title" = $1, "author" = $2, "category" = $3, "coverUrl" = $4,
           "pdfPrice" = $5, "pdfRegularPrice" = $6, "printPrice" = $7, "printRegularPrice" = $8,
           "pdfDriveUrl" = $9, "samplePages" = $10, "description" = $11, "pageCount" = $12,
-          "publisher" = $13, "edition" = $14
-         WHERE "id" = $15;`,
+          "publisher" = $13, "edition" = $14, "isFree" = $15, "isAffiliate" = $16, "affiliateUrl" = $17
+         WHERE "id" = $18;`,
         data.title, data.author, data.category, data.coverUrl,
-        Number(data.pdfPrice), Number(data.pdfRegularPrice || 0),
+        Number(data.pdfPrice || 0), Number(data.pdfRegularPrice || 0),
         Number(data.printPrice || 0), Number(data.printRegularPrice || 0),
-        data.pdfDriveUrl, samplePagesJson, data.description || "",
+        data.pdfDriveUrl || "", samplePagesJson, data.description || "",
         Number(data.pageCount || 120), data.publisher || "সাইফুল স্যার পাবলিকেশন্স",
-        data.edition || "২০২৬-২০২৭ সংস্করণ", data.id
+        data.edition || "২০২৬-২০২৭ সংস্করণ", data.isFree ?? false,
+        data.isAffiliate ?? false, data.affiliateUrl || "", data.id
       );
     } else {
       await db.$executeRawUnsafe(
         `INSERT INTO "BookStore" (
           "id", "title", "author", "category", "coverUrl", "pdfPrice", 
           "pdfRegularPrice", "printPrice", "printRegularPrice", "pdfDriveUrl", 
-          "samplePages", "description", "pageCount", "publisher", "edition"
-        ) VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`,
+          "samplePages", "description", "pageCount", "publisher", "edition",
+          "isFree", "isAffiliate", "affiliateUrl"
+        ) VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);`,
         data.title, data.author, data.category, data.coverUrl,
-        Number(data.pdfPrice), Number(data.pdfRegularPrice || 0),
+        Number(data.pdfPrice || 0), Number(data.pdfRegularPrice || 0),
         Number(data.printPrice || 0), Number(data.printRegularPrice || 0),
-        data.pdfDriveUrl, samplePagesJson, data.description || "",
+        data.pdfDriveUrl || "", samplePagesJson, data.description || "",
         Number(data.pageCount || 120), data.publisher || "সাইফুল স্যার পাবলিকেশন্স",
-        data.edition || "২০২৬-২০২৭ সংস্করণ"
+        data.edition || "২০২৬-২০২৭ সংস্করণ", data.isFree ?? false,
+        data.isAffiliate ?? false, data.affiliateUrl || ""
       );
     }
 
@@ -156,5 +167,19 @@ export async function saveBookToStore(data: Omit<BookItem, "id"> & { id?: string
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "সংরক্ষণ ব্যর্থ হয়েছে" };
+  }
+}
+
+// 🗑️ ৫. বই ডিলিট করার অ্যাকশন
+export async function deleteBookAction(id: string) {
+  try {
+    await staff();
+    await ensureBookTable();
+    await db.$executeRawUnsafe(`DELETE FROM "BookStore" WHERE "id" = $1;`, id);
+    revalidatePath("/books");
+    revalidatePath("/admin/books");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "ডিলিট ব্যর্থ হয়েছে" };
   }
 }
