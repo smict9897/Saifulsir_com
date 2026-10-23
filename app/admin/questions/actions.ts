@@ -27,32 +27,35 @@ export async function saveExtracted(fd: FormData): Promise<void> {
     const difficulty = z.enum(["EASY", "MEDIUM", "HARD"]).parse(difficultyRaw);
 
     if (!subject) {
-      redirectErr("বিষয়ের নাম পূরণ করা বাধ্যতামূলক।");
+      redirectErr("বিষয়ের নাম পূরণ করা বাধ্যতামূলক।");
     }
 
     const items = JSON.parse(itemsRaw);
     if (!Array.isArray(items) || items.length === 0) {
-      redirectErr("সংরক্ষণ করার মতো কোনো প্রশ্ন নির্বাচন করা হয়নি।");
+      redirectErr("সংরক্ষণ করার মতো কোনো প্রশ্ন পাওয়া যায়নি।");
     }
 
-    const records = items.map((it: any) => ({
-      category,
-      subject,
-      topic,
-      difficulty,
-      lang,
-      source,
-      approved,
-      text: String(it.text || "").trim(),
-      options: {
-        A: String(it.options?.A || "").trim(),
-        B: String(it.options?.B || "").trim(),
-        C: String(it.options?.C || "").trim(),
-        D: String(it.options?.D || "").trim(),
-      },
-      correct: it.correct && ["A", "B", "C", "D"].includes(it.correct) ? it.correct : "",
-      explanation: String(it.explanation || "").trim(),
-    })).filter((r) => r.text.length > 0);
+    // 🎯 টাইপ ফিক্স সহ রেকর্ডস তৈরি
+    const records = items
+      .map((it: any) => ({
+        category,
+        subject,
+        topic,
+        difficulty,
+        lang,
+        source,
+        approved,
+        text: String(it.text || "").trim(),
+        options: {
+          A: String(it.options?.A || "").trim(),
+          B: String(it.options?.B || "").trim(),
+          C: String(it.options?.C || "").trim(),
+          D: String(it.options?.D || "").trim(),
+        },
+        correct: it.correct && ["A", "B", "C", "D"].includes(it.correct) ? (it.correct as string) : "",
+        explanation: String(it.explanation || "").trim(),
+      }))
+      .filter((r: { text: string }) => r.text.length > 0);
 
     const res = await db.question.createMany({
       data: records,
@@ -64,10 +67,10 @@ export async function saveExtracted(fd: FormData): Promise<void> {
     revalidatePath("/question-builder");
   } catch (e: any) {
     if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
-    redirectErr(e?.message || "প্রশ্ন সংরক্ষণে ত্রুটি হয়েছে।");
+    redirectErr(e?.message || "প্রশ্ন সংরক্ষণে ত্রুটি হয়েছে।");
   }
 
-  redirectOk(`সফলভাবে ${count}টি প্রশ্ন ডাটাবেজে যুক্ত হয়েছে।`);
+  redirectOk(`সফলভাবে ${count}টি প্রশ্ন ডাটাবেজে যুক্ত হয়েছে।`);
 }
 
 // ২. একক প্রশ্ন যোগ করা
@@ -91,7 +94,7 @@ export async function addQuestion(fd: FormData): Promise<void> {
     };
 
     if (!category || !subject || !text) {
-      redirectErr("শ্রেণি, বিষয় এবং প্রশ্ন দেওয়া বাধ্যতামূলক।");
+      redirectErr("শ্রেণি, বিষয় এবং প্রশ্ন দেওয়া বাধ্যতামূলক।");
     }
 
     await db.question.create({
@@ -114,10 +117,10 @@ export async function addQuestion(fd: FormData): Promise<void> {
     revalidatePath("/question-builder");
   } catch (e: any) {
     if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
-    redirectErr(e?.message || "প্রশ্ন যোগ করা যায়নি।");
+    redirectErr(e?.message || "প্রশ্ন যোগ করা যায়নি।");
   }
 
-  redirectOk("প্রশ্নটি সফলভাবে ডাটাবেজে যুক্ত হয়েছে।");
+  redirectOk("প্রশ্নটি সফলভাবে ডাটাবেজে যুক্ত হয়েছে।");
 }
 
 // ৩. অনুমোদন টগল
@@ -132,10 +135,10 @@ export async function toggleApprove(id: string, current: boolean): Promise<void>
     revalidatePath("/question-builder");
   } catch (e: any) {
     if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
-    redirectErr(e?.message || "অনুমোদন স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।");
+    redirectErr(e?.message || "অনুমোদন স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।");
   }
 
-  redirectOk("প্রশ্নের অনুমোদন স্ট্যাটাস আপডেট হয়েছে।");
+  redirectOk("প্রশ্নের অনুমোদন স্ট্যাটাস আপডেট হয়েছে।");
 }
 
 // ৪. প্রশ্ন মোছা
@@ -147,10 +150,10 @@ export async function deleteQuestion(id: string): Promise<void> {
     revalidatePath("/question-builder");
   } catch (e: any) {
     if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
-    redirectErr(e?.message || "প্রশ্ন মোছা যায়নি।");
+    redirectErr(e?.message || "প্রশ্ন মোছা যায়নি।");
   }
 
-  redirectOk("প্রশ্নটি মুছে ফেলা হয়েছে।");
+  redirectOk("প্রশ্নটি মুছে ফেলা হয়েছে।");
 }
 
 // ৫. একসাথে সব অপেক্ষমাণ প্রশ্ন অনুমোদন
@@ -167,8 +170,8 @@ export async function approveAllPending(): Promise<void> {
     revalidatePath("/question-builder");
   } catch (e: any) {
     if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
-    redirectErr(e?.message || "অনুমোদন ব্যর্থ হয়েছে।");
+    redirectErr(e?.message || "অনুমোদন ব্যর্থ হয়েছে।");
   }
 
-  redirectOk(`মোট ${count}টি প্রশ্ন সফলভাবে অনুমোদন করা হয়েছে।`);
+  redirectOk(`মোট ${count}টি প্রশ্ন সফলভাবে অনুমোদন করা হয়েছে।`);
 }
