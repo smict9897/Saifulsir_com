@@ -18,13 +18,9 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
 
-    // 🚨 ১. API Key না থাকলে লাল এরর দেখাবে
     if (!apiKey) {
       return NextResponse.json(
-        { 
-          ok: false, 
-          error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি! আপনার Vercel-এর Environment Variables এ DEEPSEEK_API_KEY সেট করুন এবং Redeploy করুন।" 
-        }, 
+        { ok: false, error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি! Vercel-এ সেট করুন।" }, 
         { status: 400 }
       );
     }
@@ -37,14 +33,12 @@ This PDF has severe font encoding issues, resulting in broken Bengali ligatures,
 It may also contain multiple columns (2 or 3) mixed together, and image placeholders.
 
 YOUR TASKS:
-1. **Restore Bengali Text**: Use your deep knowledge of the Bengali language and context to fix ALL broken words. 
-   Examples of common errors:
+1. **Restore Bengali Text**: Fix ALL broken words. Examples:
    - 'বরুিনবাঁচিন অশ্ব' -> 'বহুনির্বাচনি অংশ'
    - 'প্রচিতি প্রশ্নের' -> 'সৃজনশীল প্রশ্নের'
    - 'ুকোজ' -> 'গ্লুকোজ', 'মাবাইল ফান' -> 'মোবাইল ফোন', 'পদাথ' -> 'পদার্থ'
-   - 'ই-লানি◌্ং' -> 'ই-লার্নিং', 'সঠক?' -> 'সঠিক?'
 
-2. **Extract Questions**: Based on the requested mode "${mode}":
+2. **Extract Questions**: Based on mode "${mode}":
    - "AUTO": Detect and separate MCQ, Short Questions, and CQ (Creative Questions).
    - "MCQ": Extract only multiple choice questions.
    - "SHORT": Extract only short questions (no options).
@@ -53,15 +47,13 @@ YOUR TASKS:
 3. **Separate Sections**: 
    - MCQ has options (ক, খ, গ, ঘ). It should go to "mcqs".
    - Short questions are standalone. It should go to "shortQuestions".
-   - CQ has a stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ). DO NOT confuse sub-questions with MCQ options. It should go to "cqs".
+   - CQ has a stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ). DO NOT put these in "mcqs". It should go to "cqs".
 
-4. **🚨 AUTO-ANSWER GENERATION 🚨**: 
-   If an MCQ does not have an answer marked in the text, you MUST determine the correct answer using your subject knowledge. 
-   Set the "correct" field to "A", "B", "C", or "D". NEVER leave "correct" blank.
+4. **AUTO-ANSWER GENERATION**: If an MCQ does not have an answer marked, solve it using your knowledge. Set "correct" to "A", "B", "C", or "D". NEVER leave it blank.
 
-5. **LaTeX Formatting**: For chemical formulas (e.g., CO2, H2SO4, NH4Cl) and math fractions, wrap them in LaTeX math (e.g., $CO_2$, $\\frac{1}{3}$).
+5. **LaTeX Formatting**: For chemical formulas and math, wrap in LaTeX (e.g., $CO_2$).
 
-CRITICAL: Return a valid JSON object ONLY (no markdown, no backticks, no extra text). Follow this exact schema:
+CRITICAL: Return a valid JSON object ONLY. Follow this exact schema:
 {
   "mcqs": [
     { "number": 1, "text": "শুদ্ধ প্রশ্ন", "options": { "A": "অপশন ক", "B": "অপশন খ", "C": "অপশন গ", "D": "অপশন ঘ" }, "correct": "A", "flags": [] }
@@ -75,9 +67,10 @@ CRITICAL: Return a valid JSON object ONLY (no markdown, no backticks, no extra t
 }
 
 Raw Text to Process:
-${rawText.slice(0, 40000)}
+${rawText.slice(0, 30000)}
 `;
 
+      // 🎯 মডেল পরিবর্তন করে deepseek-reasoner করা হলো (এটি অনেক বেশি বুদ্ধিমান)
       const deepseekRes = await fetch("https://api.deepseek.com/chat/completions", {
         method: "POST",
         headers: {
@@ -85,11 +78,11 @@ ${rawText.slice(0, 40000)}
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: "deepseek-reasoner", // 👈 এখানে পরিবর্তন করা হয়েছে
           messages: [
             {
               role: "system",
-              content: "You are a professional Bengali exam digitizer. You always output valid, clean JSON with 100% correct Bengali spelling. You NEVER leave MCQ answers blank; if missing, you solve them yourself.",
+              content: "You are a professional Bengali exam digitizer. Output ONLY valid JSON.",
             },
             { role: "user", content: prompt },
           ],
@@ -98,7 +91,6 @@ ${rawText.slice(0, 40000)}
         }),
       });
 
-      // 🚨 ২. এপিআই কোনো কারণে ফেইল করলে (যেমন- ব্যালেন্স শেষ, ভুল কী) লাল এরর দেখাবে
       if (!deepseekRes.ok) {
         const errorData = await deepseekRes.text();
         throw new Error(`DeepSeek API Error: ${deepseekRes.status} - ${errorData}`);
@@ -127,15 +119,13 @@ ${rawText.slice(0, 40000)}
 
     } catch (aiErr: any) {
       console.error("DeepSeek API Error:", aiErr);
-      // 🚨 ৩. লাল রঙে এরর দেখাবে, লোকাল পার্সারে যাবে না
       return NextResponse.json({ 
         ok: false, 
-        error: `AI Error: ${aiErr?.message || "এপিআই কল করতে ব্যর্থ হয়েছে।"}` 
+        error: `AI Error: ${aiErr?.message}` 
       }, { status: 500 });
     }
 
   } catch (err: any) {
-    console.error("Server Error:", err);
-    return NextResponse.json({ ok: false, error: err?.message ?? "সার্ভার এরর হয়েছে।" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err?.message ?? "সার্ভার এরর" }, { status: 500 });
   }
 }
