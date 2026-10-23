@@ -131,6 +131,18 @@ export async function toggleApproved(id: string) {
   back("আপডেট হয়েছে", true);
 }
 
+// সব অপেক্ষমাণ প্রশ্ন একসাথে অনুমোদন
+export async function approveAllPending() {
+  await staff();
+  try {
+    await db.question.updateMany({ where: { approved: false }, data: { approved: true } });
+  } catch (e) {
+    console.error("approveAllPending failed:", e);
+  }
+  revalidatePath(BACK);
+  back("সব অপেক্ষমাণ প্রশ্ন অনুমোদিত হয়েছে", true);
+}
+
 // PDF থেকে আনা প্রশ্ন একসাথে সংরক্ষণ
 type IncomingItem = {
   text?: unknown;
