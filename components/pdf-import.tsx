@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import type { OptionKey, ParsedMcq } from "@/lib/pdf-mcq/parse";
 import { saveExtracted } from "@/app/admin/questions/actions";
-import curriculum from "@/app/admin/questions/nctb-curriculum.json";
+import { NCTB_CLASSES, type NctbClass } from "@/lib/nctb-data";
 
 interface PdfImportProps {
   categories: string[];
@@ -16,7 +16,7 @@ interface PdfImportProps {
 const BN_LABEL: Record<OptionKey, string> = { A: "ক", B: "খ", C: "গ", D: "ঘ" };
 const OPTION_KEYS: OptionKey[] = ["A", "B", "C", "D"];
 
-// শ্রেণি (প্রদর্শন) থেকে curriculum-এর ক্লাসের নাম
+// শ্রেণি (প্রদর্শন) থেকে nctb-data-এর ক্লাসের নাম
 const CLASS_MAP: Record<string, string> = {
   "1": "Class 1", "2": "Class 2", "3": "Class 3", "4": "Class 4", "5": "Class 5",
   "6": "Class 6", "7": "Class 7", "8": "Class 8",
@@ -24,12 +24,11 @@ const CLASS_MAP: Record<string, string> = {
   HSC: "Class 11-12",
 };
 
-type Sub = { name: string; chapters: string[] };
-type Cls = { class: string; subjects: Sub[] };
+const OTHER = "__other__";
 
-function subjectsFor(cat: string): Sub[] {
+function subjectsFor(cat: string) {
   const key = CLASS_MAP[cat];
-  const cls = (curriculum.classes as Cls[]).find((c) => c.class === key);
+  const cls = (NCTB_CLASSES as NctbClass[]).find((c) => c.class === key);
   return cls ? cls.subjects : [];
 }
 
@@ -60,9 +59,8 @@ export default function PdfImport({ categories }: PdfImportProps) {
     [subjectList, subject]
   );
 
-  const finalSubject = subject === "__other__" ? customSubject.trim() : subject.trim();
-  const finalTopic =
-    topic === "__other__" ? customTopic.trim() : topic.trim();
+  const finalSubject = subject === OTHER ? customSubject.trim() : subject.trim();
+  const finalTopic = topic === OTHER ? customTopic.trim() : topic.trim();
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,9 +226,9 @@ export default function PdfImport({ categories }: PdfImportProps) {
                 {subjectList.map((s) => (
                   <option key={s.name} value={s.name}>{s.name}</option>
                 ))}
-                <option value="__other__">অন্য (নিজে লিখুন)</option>
+                <option value={OTHER}>অন্য (নিজে লিখুন)</option>
               </select>
-              {subject === "__other__" && (
+              {subject === OTHER && (
                 <input
                   type="text"
                   placeholder="বিষয়ের নাম লিখুন"
@@ -243,19 +241,31 @@ export default function PdfImport({ categories }: PdfImportProps) {
 
             <div>
               <label className={labelCls}>অধ্যায় / টপিক</label>
-              <select
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                className={inputCls}
-                disabled={!subject}
-              >
-                <option value="">অধ্যায় বাছুন</option>
-                {chapterList.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-                <option value="__other__">অন্য (নিজে লিখুন)</option>
-              </select>
-              {topic === "__other__" && (
+              {chapterList.length > 0 ? (
+                <select
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">অধ্যায় বাছুন</option>
+                  {chapterList.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                  <option value={OTHER}>অন্য (নিজে লিখুন)</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="যেমন: অধ্যায় ১"
+                  value={topic === OTHER ? customTopic : topic}
+                  onChange={(e) => {
+                    setTopic(OTHER);
+                    setCustomTopic(e.target.value);
+                  }}
+                  className={inputCls}
+                />
+              )}
+              {chapterList.length > 0 && topic === OTHER && (
                 <input
                   type="text"
                   placeholder="অধ্যায়ের নাম লিখুন"
@@ -484,3 +494,4 @@ export default function PdfImport({ categories }: PdfImportProps) {
     </div>
   );
 }
+  
