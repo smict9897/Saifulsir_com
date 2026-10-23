@@ -47,7 +47,7 @@ YOUR TASKS:
    - CQ has a stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ). DO NOT confuse sub-questions with MCQ options. It should go to "cqs".
 
 4. **🚨 AUTO-ANSWER GENERATION 🚨**: 
-   If an MCQ does not have an answer marked in the text (like bold or [Ans: ক]), you MUST determine the correct answer using your subject knowledge. 
+   If an MCQ does not have an answer marked in the text, you MUST determine the correct answer using your subject knowledge. 
    Set the "correct" field to "A", "B", "C", or "D". NEVER leave "correct" blank.
 
 5. **LaTeX Formatting**: For chemical formulas (e.g., CO2, H2SO4, NH4Cl) and math fractions, wrap them in LaTeX math (e.g., $CO_2$, $\\frac{1}{3}$).
@@ -99,22 +99,37 @@ ${rawText.slice(0, 40000)}
           }
 
           const parsed = JSON.parse(cleaned);
+          
+          // 🎯 যদি এখানে পৌঁছায়, তার মানে DeepSeek API সফলভাবে কাজ করেছে!
           return NextResponse.json({
             ok: true,
+            isAiGenerated: true, // ক্লায়েন্ট সাইডে মেসেজ দেখানোর জন্য
             mcqs: parsed.mcqs || [],
             shortQuestions: parsed.shortQuestions || [],
             cqs: parsed.cqs || [],
           });
         }
-      } catch (aiErr) {
-        console.error("DeepSeek API call failed, falling back to local parser:", aiErr);
+      } catch (aiErr: any) {
+        console.error("DeepSeek API call failed:", aiErr);
+        // এরর হলে ক্লায়েন্টকে জানানোর জন্য
+        return NextResponse.json({ 
+          ok: false, 
+          error: `AI API Error: ${aiErr.message}. আপনার DEEPSEEK_API_KEY ঠিক আছে কি না চেক করুন।` 
+        }, { status: 500 });
       }
+    } else {
+      // যদি .env ফাইলে API Key না থাকে
+      return NextResponse.json({ 
+        ok: false, 
+        error: "DEEPSEEK_API_KEY সেট করা নেই! আপনার Vercel বা .env.local ফাইলে এটি যোগ করুন।" 
+      }, { status: 400 });
     }
 
-    // Fallback: লোকাল রেজেক্স পার্সার
+    // ফলব্যাক (এখন এখানে আসবে না, যদি এপিআই ছাড়া অন্য কোনো কারণে এরর হয়)
     const fallbackData = parseAllQuestionsFromText(rawText, mode);
     return NextResponse.json({
       ok: true,
+      isAiGenerated: false,
       mcqs: fallbackData.mcqs || [],
       shortQuestions: fallbackData.shortQuestions || [],
       cqs: fallbackData.cqs || [],
