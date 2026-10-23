@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import {
-  FileUp, Loader2, CheckCircle2, AlertTriangle,
-  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save, HelpCircle,
+import React, { useState } from "react";
+import { 
+  FileUp, Loader2, CheckCircle2, AlertTriangle, 
+  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save, HelpCircle 
 } from "lucide-react";
 import type { OptionKey, ParsedMcq } from "@/lib/pdf-mcq/parse";
 import { saveExtracted } from "@/app/admin/questions/actions";
-import { NCTB_CLASSES, type NctbClass } from "@/lib/nctb-data";
 
 interface PdfImportProps {
   categories: string[];
@@ -16,78 +15,141 @@ interface PdfImportProps {
 const BN_LABEL: Record<OptionKey, string> = { A: "ক", B: "খ", C: "গ", D: "ঘ" };
 const OPTION_KEYS: OptionKey[] = ["A", "B", "C", "D"];
 
-// শ্রেণি (প্রদর্শন) থেকে nctb-data-এর ক্লাসের নাম
-const CLASS_MAP: Record<string, string> = {
-  "1": "Class 1", "2": "Class 2", "3": "Class 3", "4": "Class 4", "5": "Class 5",
-  "6": "Class 6", "7": "Class 7", "8": "Class 8",
-  SSC: "Class 9-10",
-  HSC: "Class 11-12",
-};
+// 🎯 ব্রাউজার-সাইড ২-কলাম এক্সট্রাক্টর (সার্ভারে কোনো worker.js এরর হবে না)
+async function extractTextFromPdfInBrowser(file: File): Promise<string> {
+  if (typeof window === "undefined") return "";
 
-const OTHER = "__other__";
+  const pdfjsLib: any = await new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) return resolve((window as any).pdfjsLib);
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    script.onload = () => {
+      const lib = (window as any).pdfjsLib;
+      lib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      resolve(lib);
+    };
+    script.onerror = () => reject(new Error("PDF.js লোড করতে ব্যর্থ"));
+    document.head.appendChild(script);
+  });
 
-function subjectsFor(cat: string) {
-  const key = CLASS_MAP[cat];
-  const cls = (NCTB_CLASSES as NctbClass[]).find((c) => c.class === key);
-  return cls ? cls.subjects : [];
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullDocumentText = "";
+
+  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1.0 });
+    const textContent = await page.getTextContent();
+    const midX = viewport.width / 2;
+
+    const col1Items: any[] = [];
+    const col2Items: any[] = [];
+
+    textContent.items.forEach((item: any) => {
+      const x = item.transform[4];
+      if (x < midX - 5) {
+        col1Items.push(item);
+      } else {
+        col2Items.push(item);
+      }
+    });
+
+    const buildColumn = (items: any[]) => {
+      if (!items.length) return "";
+      items.sort((a, b) => b.transform[5] - a.transform[5]);
+
+      let res = "";
+      let currentY = items[0].transform[5];
+      let lastXEnd = items[0].transform[4] + items[0].width;
+      res += items[0].str;
+
+      for (let i = 1; i < items.length; i++) {
+        const it = items[i];
+        const y = it.transform[5];
+        const x = it.transform[4];
+
+        if (Math.abs(y - currentY) > 5) {
+          res += "\n" + it.str;
+          currentY = y;
+          lastXEnd = x + it.width;
+        } else {
+          const gap = x - lastXEnd;
+          if (gap > 4) res += " " + it.str;
+          else res += it.str;
+          lastXEnd = Math.max(lastXEnd, x + it.width);
+        }
+      }
+      return res;
+    };
+
+    fullDocumentText += `\n${buildColumn(col1Items)}\n\n${buildColumn(col2Items)}\n`;
+  }
+
+  return fullDocumentText;
 }
 
 export default function PdfImport({ categories }: PdfImportProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [pastedText, setPastedText] = useState("");
+  const [inputMode, setInputMode] = useState<"file" | "text">("file");
+
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
+  // মেটাডাটা
   const [category, setCategory] = useState(categories[0] ?? "SSC");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
-  const [customSubject, setCustomSubject] = useState("");
-  const [customTopic, setCustomTopic] = useState("");
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [lang, setLang] = useState("Bangla");
-  const [source, setSource] = useState("PDF_IMPORT");
+  const [source, setSource] = useState("বোর্ড বই");
   const [approved, setApproved] = useState(false);
 
   const [questions, setQuestions] = useState<ParsedMcq[]>([]);
   const [selectedNums, setSelectedNums] = useState<number[]>([]);
 
-  const subjectList = useMemo(() => subjectsFor(category), [category]);
-  const chapterList = useMemo(
-    () => subjectList.find((s) => s.name === subject)?.chapters ?? [],
-    [subjectList, subject]
-  );
-
-  const finalSubject = subject === OTHER ? customSubject.trim() : subject.trim();
-  const finalTopic = topic === OTHER ? customTopic.trim() : topic.trim();
-
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
+    if (inputMode === "file" && !file) {
       setError("দয়া করে একটি PDF ফাইল নির্বাচন করুন।");
       return;
     }
+    if (inputMode === "text" && !pastedText.trim()) {
+      setError("দয়া করে টেক্সট পেস্ট করুন।");
+      return;
+    }
+
     setBusy(true);
     setError(null);
-    setNotice(null);
-
-    const fd = new FormData();
-    fd.set("file", file);
 
     try {
-      const res = await fetch("/api/admin/pdf-import", { method: "POST", body: fd });
+      let textToSend = "";
+
+      if (inputMode === "file" && file) {
+        // ১. ব্রাউজারেই ২-কলাম টেক্সট এক্সট্রাকশন (০% ক্র্যাশ)
+        textToSend = await extractTextFromPdfInBrowser(file);
+      } else {
+        textToSend = pastedText;
+      }
+
+      // ২. টেক্সট পাঠানো এপিআই-তে
+      const res = await fetch("/api/admin/pdf-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textToSend }),
+      });
+
       const data = await res.json();
       if (data.ok) {
-        const list: ParsedMcq[] = data.questions ?? [];
-        setQuestions(list);
-        setSelectedNums(list.map((q) => q.number));
-        if (list.length === 0) setNotice("কোনো প্রশ্ন পাওয়া যায়নি।");
+        setQuestions(data.questions || []);
+        setSelectedNums((data.questions || []).map((q: ParsedMcq) => q.number));
       } else {
-        setError(data.error || "পিডিএফ পড়তে ব্যর্থ হয়েছে।");
+        setError(data.error || "পিডিএফ পড়তে ব্যর্থ হয়েছে।");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "নেটওয়ার্ক ত্রুটি।");
+    } catch (err: any) {
+      setError(err?.message || "নেটওয়ার্ক ত্রুটি। আবার চেষ্টা করুন।");
     } finally {
       setBusy(false);
     }
@@ -125,62 +187,40 @@ export default function PdfImport({ categories }: PdfImportProps) {
   };
 
   const handleBulkSave = async () => {
-    if (!finalSubject) {
-      setError("দয়া করে বিষয় নির্বাচন করুন।");
+    if (!subject.trim()) {
+      alert("দয়া করে বিষয়ের নাম লিখুন।");
       return;
     }
+
     const itemsToSave = questions.filter((q) => selectedNums.includes(q.number));
     if (itemsToSave.length === 0) {
-      setError("কোনো প্রশ্ন নির্বাচন করা হয়নি।");
+      alert("কোনো প্রশ্ন নির্বাচন করা হয়নি।");
       return;
     }
 
     setSaving(true);
-    setError(null);
-    setNotice(null);
 
-    try {
-      const result = await saveExtracted(
-        {
-          subject: finalSubject,
-          category,
-          topic: finalTopic || "সাধারণ",
-          difficulty,
-          lang,
-          source: source.trim() || "PDF_IMPORT",
-          approved,
-        },
-        itemsToSave.map((q) => ({
-          text: q.text,
-          options: q.options,
-          correct: q.correct,
-          explanation: "",
-        }))
-      );
+    const fd = new FormData();
+    fd.set("category", category);
+    fd.set("subject", subject.trim());
+    fd.set("topic", topic.trim() || "অধ্যায় ১");
+    fd.set("difficulty", difficulty);
+    fd.set("lang", lang);
+    fd.set("source", source.trim() || "PDF_IMPORT");
+    fd.set("approved", approved ? "true" : "false");
+    fd.set("items", JSON.stringify(itemsToSave));
 
-      if (result.ok) {
-        setNotice(`🎉 ${result.count}টি প্রশ্ন ডাটাবেজে সংরক্ষিত হয়েছে।`);
-        setQuestions([]);
-        setSelectedNums([]);
-        setFile(null);
-      } else {
-        setError(result.error ?? "সংরক্ষণ হয়নি।");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "সংরক্ষণে সমস্যা।");
-    } finally {
-      setSaving(false);
-    }
+    await saveExtracted(fd);
+    setSaving(false);
   };
 
-  const inputCls =
-    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none dark:bg-slate-950";
+  const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none dark:bg-slate-950 dark:border-slate-800";
   const labelCls = "mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300";
 
   return (
     <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-      <div
-        onClick={() => setOpen(!open)}
+      <div 
+        onClick={() => setOpen(!open)} 
         className="flex cursor-pointer select-none items-center justify-between text-base font-bold text-slate-900 dark:text-slate-100"
       >
         <span className="flex items-center gap-2">
@@ -199,11 +239,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
               <label className={labelCls}>শ্রেণি / ক্যাটাগরি</label>
               <select
                 value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setSubject("");
-                  setTopic("");
-                }}
+                onChange={(e) => setCategory(e.target.value)}
                 className={inputCls}
               >
                 {categories.map((c) => (
@@ -214,66 +250,25 @@ export default function PdfImport({ categories }: PdfImportProps) {
 
             <div>
               <label className={labelCls}>বিষয় *</label>
-              <select
+              <input
+                type="text"
+                required
+                placeholder="যেমন: রসায়ন"
                 value={subject}
-                onChange={(e) => {
-                  setSubject(e.target.value);
-                  setTopic("");
-                }}
+                onChange={(e) => setSubject(e.target.value)}
                 className={inputCls}
-              >
-                <option value="">বিষয় বাছুন</option>
-                {subjectList.map((s) => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
-                ))}
-                <option value={OTHER}>অন্য (নিজে লিখুন)</option>
-              </select>
-              {subject === OTHER && (
-                <input
-                  type="text"
-                  placeholder="বিষয়ের নাম লিখুন"
-                  value={customSubject}
-                  onChange={(e) => setCustomSubject(e.target.value)}
-                  className={inputCls + " mt-2"}
-                />
-              )}
+              />
             </div>
 
             <div>
               <label className={labelCls}>অধ্যায় / টপিক</label>
-              {chapterList.length > 0 ? (
-                <select
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="">অধ্যায় বাছুন</option>
-                  {chapterList.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value={OTHER}>অন্য (নিজে লিখুন)</option>
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="যেমন: অধ্যায় ১"
-                  value={topic === OTHER ? customTopic : topic}
-                  onChange={(e) => {
-                    setTopic(OTHER);
-                    setCustomTopic(e.target.value);
-                  }}
-                  className={inputCls}
-                />
-              )}
-              {chapterList.length > 0 && topic === OTHER && (
-                <input
-                  type="text"
-                  placeholder="অধ্যায়ের নাম লিখুন"
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                  className={inputCls + " mt-2"}
-                />
-              )}
+              <input
+                type="text"
+                placeholder="অধ্যায় ১ - রসায়নের ধারণা"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className={inputCls}
+              />
             </div>
 
             <div>
@@ -308,18 +303,47 @@ export default function PdfImport({ categories }: PdfImportProps) {
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className={labelCls}>PDF ফাইল নির্বাচন করুন *</label>
-              <input
-                type="file"
-                required
-                accept=".pdf,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className={inputCls + " file:mr-2 file:rounded-lg file:border-0 file:bg-blue-50 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-blue-700"}
-              />
+            {/* ইনপুট মোড */}
+            <div className="sm:col-span-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setInputMode("file")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${inputMode === "file" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+                >
+                  PDF ফাইল আপলোড
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode("text")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${inputMode === "text" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}`}
+                >
+                  সরাসরি টেক্সট পেস্ট
+                </button>
+              </div>
+
+              {inputMode === "file" ? (
+                <div>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    className={inputCls + " file:mr-2 file:rounded-lg file:border-0 file:bg-blue-50 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-blue-700"}
+                  />
+                  <p className="mt-1 text-xs text-slate-500">ডিজিটাল ও ক্লিয়ার ২-কলাম টেক্সট PDF নির্বাচন করুন।</p>
+                </div>
+              ) : (
+                <textarea
+                  rows={6}
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  placeholder="পিডিএফ থেকে টেক্সট কপি করে এখানে পেস্ট করুন..."
+                  className={inputCls + " font-mono text-xs"}
+                />
+              )}
             </div>
 
-            <div className="flex items-center sm:mt-5">
+            <div className="flex items-center sm:col-span-3">
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
@@ -338,7 +362,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50 sm:text-sm"
               >
                 {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "PDF বিশ্লেষণ করুন"}</span>
+                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "PDF বিশ্লেষণ করুন"}</span>
               </button>
             </div>
           </form>
@@ -349,12 +373,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
             </div>
           )}
 
-          {notice && (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-bold text-green-700">
-              {notice}
-            </div>
-          )}
-
+          {/* 🎯 এক্সট্র্যাক্ট করা প্রশ্নের প্রিভিউ তালিকা */}
           {questions.length > 0 && (
             <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
               <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60 sm:flex-row sm:items-center">
@@ -435,7 +454,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
                               className={`flex items-center gap-2 rounded-xl border p-1.5 transition ${
                                 isCorrect
                                   ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30"
-                                  : "border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900"
+                                  : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900"
                               }`}
                             >
                               <button
@@ -494,4 +513,3 @@ export default function PdfImport({ categories }: PdfImportProps) {
     </div>
   );
 }
-  
