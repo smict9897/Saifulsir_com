@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { staff } from "@/lib/guard";
-import { parseAllQuestionsFromText } from "@/lib/pdf-mcq/parse";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -19,9 +18,19 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
 
-    if (apiKey) {
-      try {
-        const prompt = `
+    // 🚨 ১. API Key না থাকলে লাল এরর দেখাবে
+    if (!apiKey) {
+      return NextResponse.json(
+        { 
+          ok: false, 
+          error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি! আপনার Vercel-এর Environment Variables এ DEEPSEEK_API_KEY সেট করুন এবং Redeploy করুন।" 
+        }, 
+        { status: 400 }
+      );
+    }
+
+    try {
+      const prompt = `
 You are an expert Bengali educational digitizer and OCR correction engine. 
 I am providing you with raw text extracted from a Bangladeshi school/board question paper PDF. 
 This PDF has severe font encoding issues, resulting in broken Bengali ligatures, missing letters, and reversed matras. 
@@ -43,7 +52,7 @@ YOUR TASKS:
 
 3. **Separate Sections**: 
    - MCQ has options (ক, খ, গ, ঘ). It should go to "mcqs".
-   - Short questions are standalone and end with a question mark or directive. It should go to "shortQuestions".
+   - Short questions are standalone. It should go to "shortQuestions".
    - CQ has a stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ). DO NOT confuse sub-questions with MCQ options. It should go to "cqs".
 
 4. **🚨 AUTO-ANSWER GENERATION 🚨**: 
@@ -69,73 +78,64 @@ Raw Text to Process:
 ${rawText.slice(0, 40000)}
 `;
 
-        const deepseekRes = await fetch("https://api.deepseek.com/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              {
-                role: "system",
-                content: "You are a professional Bengali exam digitizer. You always output valid, clean JSON with 100% correct Bengali spelling. You NEVER leave MCQ answers blank; if missing, you solve them yourself.",
-              },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.1,
-          }),
-        });
+      const deepseekRes = await fetch("https://api.deepseek.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              role: "system",
+              content: "You are a professional Bengali exam digitizer. You always output valid, clean JSON with 100% correct Bengali spelling. You NEVER leave MCQ answers blank; if missing, you solve them yourself.",
+            },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+        }),
+      });
 
-        const data = await deepseekRes.json();
-        const content = data?.choices?.[0]?.message?.content;
-
-        if (content) {
-          let cleaned = content.trim();
-          if (cleaned.startsWith("```")) {
-            cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-          }
-
-          const parsed = JSON.parse(cleaned);
-          
-          // 🎯 যদি এখানে পৌঁছায়, তার মানে DeepSeek API সফলভাবে কাজ করেছে!
-          return NextResponse.json({
-            ok: true,
-            isAiGenerated: true, // ক্লায়েন্ট সাইডে মেসেজ দেখানোর জন্য
-            mcqs: parsed.mcqs || [],
-            shortQuestions: parsed.shortQuestions || [],
-            cqs: parsed.cqs || [],
-          });
-        }
-      } catch (aiErr: any) {
-        console.error("DeepSeek API call failed:", aiErr);
-        // এরর হলে ক্লায়েন্টকে জানানোর জন্য
-        return NextResponse.json({ 
-          ok: false, 
-          error: `AI API Error: ${aiErr.message}. আপনার DEEPSEEK_API_KEY ঠিক আছে কি না চেক করুন।` 
-        }, { status: 500 });
+      // 🚨 ২. এপিআই কোনো কারণে ফেইল করলে (যেমন- ব্যালেন্স শেষ, ভুল কী) লাল এরর দেখাবে
+      if (!deepseekRes.ok) {
+        const errorData = await deepseekRes.text();
+        throw new Error(`DeepSeek API Error: ${deepseekRes.status} - ${errorData}`);
       }
-    } else {
-      // যদি .env ফাইলে API Key না থাকে
+
+      const data = await deepseekRes.json();
+      const content = data?.choices?.[0]?.message?.content;
+
+      if (content) {
+        let cleaned = content.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+        }
+
+        const parsed = JSON.parse(cleaned);
+        
+        return NextResponse.json({
+          ok: true,
+          mcqs: parsed.mcqs || [],
+          shortQuestions: parsed.shortQuestions || [],
+          cqs: parsed.cqs || [],
+        });
+      }
+      
+      throw new Error("DeepSeek API থেকে সঠিক রেসপন্স পাওয়া যায়নি।");
+
+    } catch (aiErr: any) {
+      console.error("DeepSeek API Error:", aiErr);
+      // 🚨 ৩. লাল রঙে এরর দেখাবে, লোকাল পার্সারে যাবে না
       return NextResponse.json({ 
         ok: false, 
-        error: "DEEPSEEK_API_KEY সেট করা নেই! আপনার Vercel বা .env.local ফাইলে এটি যোগ করুন।" 
-      }, { status: 400 });
+        error: `AI Error: ${aiErr?.message || "এপিআই কল করতে ব্যর্থ হয়েছে।"}` 
+      }, { status: 500 });
     }
 
-    // ফলব্যাক (এখন এখানে আসবে না, যদি এপিআই ছাড়া অন্য কোনো কারণে এরর হয়)
-    const fallbackData = parseAllQuestionsFromText(rawText, mode);
-    return NextResponse.json({
-      ok: true,
-      isAiGenerated: false,
-      mcqs: fallbackData.mcqs || [],
-      shortQuestions: fallbackData.shortQuestions || [],
-      cqs: fallbackData.cqs || [],
-    });
   } catch (err: any) {
-    console.error("PDF Import API Route Error:", err);
+    console.error("Server Error:", err);
     return NextResponse.json({ ok: false, error: err?.message ?? "সার্ভার এরর হয়েছে।" }, { status: 500 });
   }
 }
