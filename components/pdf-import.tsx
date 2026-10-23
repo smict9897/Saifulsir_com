@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  FileUp, Loader2, CheckCircle2, AlertTriangle, 
-  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save, HelpCircle 
+import {
+  FileUp, Loader2, CheckCircle2, AlertTriangle,
+  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save, HelpCircle,
 } from "lucide-react";
-import { OptionKey, ParsedMcq } from "@/lib/pdf-mcq/parse";
+import type { OptionKey, ParsedMcq } from "@/lib/pdf-mcq/parse";
 import { saveExtracted } from "@/app/admin/questions/actions";
 
 interface PdfImportProps {
@@ -19,15 +19,17 @@ const BN_LABEL: Record<OptionKey, string> = {
   D: "ঘ",
 };
 
+const OPTION_KEYS: OptionKey[] = ["A", "B", "C", "D"];
+
 export default function PdfImport({ categories }: PdfImportProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // মেটাডাটা স্টেট
-  const [category, setCategory] = useState("SSC");
+  const [category, setCategory] = useState(categories[0] ?? "SSC");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
@@ -35,19 +37,19 @@ export default function PdfImport({ categories }: PdfImportProps) {
   const [source, setSource] = useState("PDF_IMPORT");
   const [approved, setApproved] = useState(false);
 
-  // এক্সট্র্যাক্ট করা ফলাফল
   const [questions, setQuestions] = useState<ParsedMcq[]>([]);
   const [selectedNums, setSelectedNums] = useState<number[]>([]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      setError("দয়া করে একটি PDF ফাইল নির্বাচন করুন।");
+      setError("দয়া করে একটি PDF ফাইল নির্বাচন করুন।");
       return;
     }
 
     setBusy(true);
     setError(null);
+    setNotice(null);
 
     const fd = new FormData();
     fd.set("file", file);
@@ -57,16 +59,19 @@ export default function PdfImport({ categories }: PdfImportProps) {
         method: "POST",
         body: fd,
       });
-
       const data = await res.json();
+
       if (data.ok) {
-        setQuestions(data.questions || []);
-        setSelectedNums((data.questions || []).map((q: ParsedMcq) => q.number));
+        const list: ParsedMcq[] = data.questions ?? [];
+        setQuestions(list);
+        setSelectedNums(list.map((q) => q.number));
+        if (list.length === 0) setNotice("কোনো প্রশ্ন পাওয়া যায়নি।");
       } else {
-        setError(data.error || "পিডিএফ পড়তে ব্যর্থ হয়েছে।");
+        setError(data.error || "পিডিএফ পড়তে ব্যর্থ হয়েছে।");
       }
-    } catch (err: any) {
-      setError(err?.message || "নেটওয়ার্ক ত্রুটি। আবার চেষ্টা করুন।");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "নেটওয়ার্ক ত্রুটি।";
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -87,31 +92,23 @@ export default function PdfImport({ categories }: PdfImportProps) {
   };
 
   const updateQuestionText = (num: number, val: string) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.number === num ? { ...q, text: val } : q))
-    );
+    setQuestions((prev) => prev.map((q) => (q.number === num ? { ...q, text: val } : q)));
   };
 
   const updateOptionText = (num: number, key: OptionKey, val: string) => {
     setQuestions((prev) =>
       prev.map((q) =>
-        q.number === num
-          ? { ...q, options: { ...q.options, [key]: val } }
-          : q
+        q.number === num ? { ...q, options: { ...q.options, [key]: val } } : q
       )
     );
   };
 
   const setCorrectOption = (num: number, key: OptionKey) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.number === num ? { ...q, correct: key } : q))
-    );
+    setQuestions((prev) => prev.map((q) => (q.number === num ? { ...q, correct: key } : q)));
   };
 
   const clearCorrectOption = (num: number) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.number === num ? { ...q, correct: "" } : q))
-    );
+    setQuestions((prev) => prev.map((q) => (q.number === num ? { ...q, correct: "" } : q)));
   };
 
   const removeQuestion = (num: number) => {
@@ -121,58 +118,80 @@ export default function PdfImport({ categories }: PdfImportProps) {
 
   const handleBulkSave = async () => {
     if (!subject.trim()) {
-      alert("দয়া করে বিষয়ের নাম লিখুন।");
+      setError("দয়া করে বিষয়ের নাম লিখুন।");
       return;
     }
 
     const itemsToSave = questions.filter((q) => selectedNums.includes(q.number));
     if (itemsToSave.length === 0) {
-      alert("কোনো প্রশ্ন নির্বাচন করা হয়নি।");
+      setError("কোনো প্রশ্ন নির্বাচন করা হয়নি।");
       return;
     }
 
     setSaving(true);
+    setError(null);
+    setNotice(null);
 
-    const formData = new FormData();
-    formData.set("category", category);
-    formData.set("subject", subject.trim());
-    formData.set("topic", topic.trim() || "সাধারণ");
-    formData.set("difficulty", difficulty);
-    formData.set("lang", lang);
-    formData.set("source", source.trim() || "PDF_IMPORT");
-    formData.set("approved", approved ? "true" : "false");
-    formData.set("items", JSON.stringify(itemsToSave));
+    try {
+      const result = await saveExtracted(
+        {
+          subject: subject.trim(),
+          category,
+          topic: topic.trim() || "সাধারণ",
+          difficulty,
+          lang,
+          source: source.trim() || "PDF_IMPORT",
+          approved,
+        },
+        itemsToSave.map((q) => ({
+          text: q.text,
+          options: q.options,
+          correct: q.correct,
+          explanation: "",
+        }))
+      );
 
-    await saveExtracted(formData);
-    setSaving(false);
+      if (result.ok) {
+        setNotice(`🎉 ${result.count}টি প্রশ্ন ডাটাবেজে সংরক্ষিত হয়েছে।`);
+        setQuestions([]);
+        setSelectedNums([]);
+        setFile(null);
+      } else {
+        setError(result.error ?? "সংরক্ষণ হয়নি।");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "সংরক্ষণে সমস্যা।";
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none";
+  const labelCls = "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1";
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 mb-6">
-      <div 
-        onClick={() => setOpen(!open)} 
-        className="flex cursor-pointer items-center justify-between text-base font-bold text-slate-900 dark:text-slate-100 select-none"
+    <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
+      <div
+        onClick={() => setOpen(!open)}
+        className="flex cursor-pointer select-none items-center justify-between text-base font-bold text-slate-900 dark:text-slate-100"
       >
         <span className="flex items-center gap-2">
           <FileUp size={20} className="text-blue-600" />
           PDF থেকে প্রশ্ন আমদানি করুন (MCQ Parser)
         </span>
-        <button type="button" className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+        <button type="button" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
           {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
       </div>
 
       {open && (
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-          {/* আপলোড ও ফিল্টার ফর্ম */}
+        <div className="mt-4 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
           <form onSubmit={handleUpload} className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">শ্রেণি / ক্যাটাগরি</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
-              >
+              <label className={labelCls}>শ্রেণি / ক্যাটাগরি</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
                 {categories.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -180,34 +199,33 @@ export default function PdfImport({ categories }: PdfImportProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">বিষয় *</label>
+              <label className={labelCls}>বিষয় *</label>
               <input
                 type="text"
-                required
-                placeholder="যেমন: রসায়ন বা পদার্থবিজ্ঞান"
+                placeholder="যেমন: রসায়ন"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
+                className={inputCls}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">অধ্যায় / টপিক</label>
+              <label className={labelCls}>অধ্যায় / টপিক</label>
               <input
                 type="text"
-                placeholder="যেমন: অধ্যায় ১ - রসায়নের ধারণা"
+                placeholder="যেমন: অধ্যায় ১"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
+                className={inputCls}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">কঠিনতা</label>
+              <label className={labelCls}>কঠিনতা</label>
               <select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as any)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
+                onChange={(e) => setDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")}
+                className={inputCls}
               >
                 <option value="EASY">সহজ (EASY)</option>
                 <option value="MEDIUM">মাঝারি (MEDIUM)</option>
@@ -216,41 +234,37 @@ export default function PdfImport({ categories }: PdfImportProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">ভাষা</label>
-              <select
-                value={lang}
-                onChange={(e) => setLang(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
-              >
+              <label className={labelCls}>ভাষা</label>
+              <select value={lang} onChange={(e) => setLang(e.target.value)} className={inputCls}>
                 <option value="Bangla">বাংলা</option>
                 <option value="English">English</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">উৎস / বোর্ড</label>
+              <label className={labelCls}>উৎস / বোর্ড</label>
               <input
                 type="text"
-                placeholder="যেমন: বোর্ড বই বা ঢাকা বোর্ড ২০২৪"
+                placeholder="যেমন: ঢাকা বোর্ড ২০২৪"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-2 text-xs outline-none"
+                className={inputCls}
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">PDF ফাইল নির্বাচন করুন *</label>
+              <label className={labelCls}>PDF ফাইল নির্বাচন করুন *</label>
               <input
                 type="file"
                 required
-                accept=".pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs outline-none file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700"
+                accept=".pdf,application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className={inputCls + " file:mr-2 file:rounded-lg file:border-0 file:bg-blue-50 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-blue-700"}
               />
             </div>
 
             <div className="flex items-center sm:mt-5">
-              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={approved}
@@ -265,24 +279,29 @@ export default function PdfImport({ categories }: PdfImportProps) {
               <button
                 type="submit"
                 disabled={busy}
-                className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs transition disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50 sm:text-sm"
               >
                 {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "PDF বিশ্লেষণ করুন"}</span>
+                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "PDF বিশ্লেষণ করুন"}</span>
               </button>
             </div>
           </form>
 
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold border border-red-200 flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
               <AlertTriangle size={15} /> <span>{error}</span>
             </div>
           )}
 
-          {/* 🎯 এক্সট্র্যাক্ট করা প্রশ্নসমূহের রিভিউ প্যানেল */}
+          {notice && (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-bold text-green-700">
+              {notice}
+            </div>
+          )}
+
           {questions.length > 0 && (
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+              <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -306,28 +325,27 @@ export default function PdfImport({ categories }: PdfImportProps) {
                   type="button"
                   disabled={saving || selectedNums.length === 0}
                   onClick={handleBulkSave}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-bold shadow-md transition disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   <span>নির্বাচিত {selectedNums.length}টি প্রশ্ন সংরক্ষণ করুন</span>
                 </button>
               </div>
 
-              {/* প্রশ্ন তালিকা */}
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+              <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
                 {questions.map((q) => {
                   const isChecked = selectedNums.includes(q.number);
                   return (
                     <div
                       key={q.number}
                       className={`rounded-2xl border p-4 transition ${
-                        isChecked 
-                          ? "border-blue-300 bg-white dark:bg-slate-900 shadow-xs" 
+                        isChecked
+                          ? "border-blue-300 bg-white shadow-xs dark:bg-slate-900"
                           : "border-slate-200 bg-slate-50/50 opacity-60 dark:bg-slate-950"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 flex-1">
+                        <div className="flex flex-1 items-start gap-2">
                           <button
                             type="button"
                             onClick={() => toggleSelect(q.number)}
@@ -337,14 +355,14 @@ export default function PdfImport({ categories }: PdfImportProps) {
                           </button>
 
                           <div className="flex-1">
-                            <span className="text-xs font-bold text-blue-700 dark:text-blue-400 mr-1.5">
+                            <span className="mr-1.5 text-xs font-bold text-blue-700 dark:text-blue-400">
                               প্রশ্ন {q.number}.
                             </span>
                             <input
                               type="text"
                               value={q.text}
                               onChange={(e) => updateQuestionText(q.number, e.target.value)}
-                              className="w-full mt-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-2 text-xs font-semibold outline-none focus:border-blue-600"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs font-semibold outline-none focus:border-blue-600 dark:border-slate-700 dark:bg-slate-950"
                             />
                           </div>
                         </div>
@@ -352,16 +370,15 @@ export default function PdfImport({ categories }: PdfImportProps) {
                         <button
                           type="button"
                           onClick={() => removeQuestion(q.number)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                          className="rounded-lg p-1.5 text-red-500 transition hover:bg-red-50"
                           title="তালিকা থেকে বাদ দিন"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
 
-                      {/* অপশনসমূহ ও উত্তর নির্বাচন */}
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2 pl-6">
-                        {(["A", "B", "C", "D"] as OptionKey[]).map((key) => {
+                      <div className="mt-3 grid gap-2 pl-6 sm:grid-cols-2">
+                        {OPTION_KEYS.map((key) => {
                           const isCorrect = q.correct === key;
                           return (
                             <div
@@ -369,16 +386,18 @@ export default function PdfImport({ categories }: PdfImportProps) {
                               className={`flex items-center gap-2 rounded-xl border p-1.5 transition ${
                                 isCorrect
                                   ? "border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30"
-                                  : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900"
+                                  : "border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900"
                               }`}
                             >
                               <button
                                 type="button"
-                                onClick={() => isCorrect ? clearCorrectOption(q.number) : setCorrectOption(q.number, key)}
+                                onClick={() =>
+                                  isCorrect ? clearCorrectOption(q.number) : setCorrectOption(q.number, key)
+                                }
                                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition ${
                                   isCorrect
                                     ? "bg-emerald-600 text-white shadow-xs"
-                                    : "bg-white border border-slate-300 text-slate-700 hover:border-slate-400"
+                                    : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                                 }`}
                                 title="সঠিক উত্তর হিসেবে চিহ্নিত করুন"
                               >
@@ -390,29 +409,28 @@ export default function PdfImport({ categories }: PdfImportProps) {
                                 value={q.options[key] || ""}
                                 onChange={(e) => updateOptionText(q.number, key, e.target.value)}
                                 placeholder={`অপশন (${BN_LABEL[key]})`}
-                                className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-200 outline-none"
+                                className="w-full bg-transparent text-xs text-slate-800 outline-none dark:text-slate-200"
                               />
                             </div>
                           );
                         })}
                       </div>
 
-                      {/* ওয়ার্নিং ও স্ট্যাটাস ব্যাজ */}
-                      <div className="mt-3 pl-6 flex flex-wrap items-center gap-1.5">
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 pl-6">
                         {!q.correct ? (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+                          <span className="flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
                             <HelpCircle size={11} /> উত্তর চিহ্নিত করা নেই (খালি সেভ হবে)
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
-                            <CheckCircle2 size={11} /> সঠিক উত্তর: {BN_LABEL[q.correct]}
+                          <span className="flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                            <CheckCircle2 size={11} /> সঠিক উত্তর: {BN_LABEL[q.correct as OptionKey]}
                           </span>
                         )}
 
                         {q.flags.map((flag, fi) => (
                           <span
                             key={fi}
-                            className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200"
+                            className="rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
                           >
                             ⚠️ {flag}
                           </span>
