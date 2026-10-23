@@ -10,110 +10,169 @@ export type ParsedMcq = {
   flags: string[];
 };
 
+export type ParsedShort = {
+  number: number;
+  text: string;
+  marks: string;
+};
+
+export type ParsedCQ = {
+  number: number;
+  stimulus: string;
+  subQuestions: {
+    k: string;
+    kh: string;
+    g: string;
+    gh: string;
+  };
+};
+
+export type MultiSectionParseResult = {
+  mcqs: ParsedMcq[];
+  shortQuestions: ParsedShort[];
+  cqs: ParsedCQ[];
+};
+
 const BN_TO_KEY: Record<string, OptionKey> = {
   "ক": "A", "খ": "B", "গ": "C", "ঘ": "D",
   "a": "A", "b": "B", "c": "C", "d": "D",
   "A": "A", "B": "B", "C": "C", "D": "D",
 };
 
-// ১। বা ০১। বা 1. দিয়ে প্রশ্ন শুরুর অবস্থান চিহ্নিত করা
 const QSTART_REGEX = /(?:^|\n|\s{2,})([০-৯\d]{1,3})\s*[।\.\)]\s*/gu;
 
-function findQuestionStarts(text: string) {
-  const out: { num: number; index: number }[] = [];
+function sliceSectionByNumbers(sectionText: string) {
   const re = new RegExp(QSTART_REGEX.source, "gu");
+  const matches: { index: number; num: number }[] = [];
   let m: RegExpExecArray | null;
 
-  while ((m = re.exec(text)) !== null) {
-    const rawNum = m[1];
-    const num = Number(toAsciiDigits(rawNum));
-    if (!isNaN(num) && num > 0) {
-      out.push({ num, index: m.index });
+  while ((m = re.exec(sectionText)) !== null) {
+    const n = Number(toAsciiDigits(m[1]));
+    if (!isNaN(n) && n > 0) {
+      matches.push({ index: m.index, num: n });
     }
   }
 
-  return out.sort((a, b) => a.index - b.index);
+  const chunks: { num: number; text: string }[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const s = matches[i].index;
+    const e = i + 1 < matches.length ? matches[i + 1].index : sectionText.length;
+    chunks.push({ num: matches[i].num, text: sectionText.slice(s, e).trim() });
+  }
+  return chunks;
 }
 
-function findOptionMarkers(block: string) {
-  const found: { key: OptionKey; index: number; len: number }[] = [];
-  const re = /(?:\(|\b)([কখগঘabcdABCD])(?:\)|\.)\s*/gu;
-  let m: RegExpExecArray | null;
-
-  while ((m = re.exec(block)) !== null) {
-    const key = BN_TO_KEY[m[1]];
-    if (!key) continue;
-    if (found.some((f) => f.key === key)) continue;
-    found.push({ key, index: m.index, len: m[0].length });
-  }
-
-  return found.sort((a, b) => a.index - b.index);
-}
-
-function parseBlock(num: number, block: string): ParsedMcq {
-  const flags: string[] = [];
-  const markers = findOptionMarkers(block);
-
-  const stemEnd = markers.length ? markers[0].index : block.length;
-  let text = block
-    .slice(0, stemEnd)
-    .replace(/^\s*[০-৯\d]{1,3}\s*[।\.\)]\s*/, "")
-    .trim();
-
-  // স্কুলের প্রাতিষ্ঠানিক হেডার থাকলে তা প্রশ্ন থেকে কেটে ফেলা
-  if (text.includes("আপনার প্রতিষ্ঠানের নাম") || text.includes("বহুনির্বাচনি অংশ") || text.includes("পূর্ণমান")) {
-    const splitPoint = text.search(/নিচের|কোনটি|কাকে|কত|কী|কোন|একটি|[০-৯\d]{1,3}\s*[।\.\)]/u);
-    if (splitPoint !== -1) {
-      text = text.slice(splitPoint).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "").trim();
-    }
-  }
-
-  const options: Record<OptionKey, string> = { A: "", B: "", C: "", D: "" };
-  markers.forEach((mk, i) => {
-    const s = mk.index + mk.len;
-    const e = i + 1 < markers.length ? markers[i + 1].index : block.length;
-    let optText = block.slice(s, e).trim();
-
-    // অপশনের সাথে উত্তর লেখা থাকলে আলাদা করা
-    const ansMatch = optText.match(/\[?(?:উত্তর|Ans|সঠিক)\s*[:ঃ]?\s*([কখগঘabcdABCD])\]?/i);
-    if (ansMatch) {
-      optText = optText.replace(ansMatch[0], "").trim();
-    }
-
-    options[mk.key] = optText;
-  });
-
-  if (!text) flags.push("প্রশ্নের বক্তব্য খালি");
-  for (const k of ["A", "B", "C", "D"] as OptionKey[]) {
-    if (!options[k]) flags.push(`অপশন ${k} পাওয়া যায়নি`);
-  }
-
-  if (/চিত্র|উদ্দীপক|প্রতীক|চিহ্ন/u.test(text) && !/i\.|ii\./.test(text)) {
-    flags.push("চিত্র সংবলিত প্রশ্ন হতে পারে");
-  }
-
-  return { number: num, text, options, correct: "", flags };
-}
-
-// 🎯 বাউন্ডেড পার্সিং: প্রতিটি প্রশ্নকে পরবর্তী প্রশ্নের আগেই সীমাবদ্ধ রাখা
-export function parseMcqText(raw: string): ParsedMcq[] {
+export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult {
   const body = joinMarks(cleanText(raw));
-  const starts = findQuestionStarts(body);
 
-  if (starts.length === 0) return [];
+  // ৩টি সেকশনের সীমানা খোঁজা
+  const shortIdx = body.search(/সং\s*ক্ষি\s*প্ত\s*উ\s*ত্ত\s*র\s*প্র\s*শ্ন|সং\s*ক্ষি\s*প্ত\s*প্র\s*শ্ন/iu);
+  const cqIdx = body.search(/সৃ\s*জ\s*ন\s*শী\s*ল\s*প্র\s*শ্ন/iu);
 
-  const parsedList: ParsedMcq[] = [];
+  let mcqText = "";
+  let shortText = "";
+  let cqText = "";
 
-  for (let i = 0; i < starts.length; i++) {
-    const currentStart = starts[i].index;
-    // পরবর্তী প্রশ্নের শুরুতেই বর্তমান প্রশ্নের সীমানা শেষ হবে
-    const nextStart = i + 1 < starts.length ? starts[i + 1].index : body.length;
-    const block = body.slice(currentStart, nextStart).trim();
-
-    if (block) {
-      parsedList.push(parseBlock(starts[i].num, block));
+  if (shortIdx !== -1 && cqIdx !== -1) {
+    if (shortIdx < cqIdx) {
+      mcqText = body.slice(0, shortIdx);
+      shortText = body.slice(shortIdx, cqIdx);
+      cqText = body.slice(cqIdx);
+    } else {
+      mcqText = body.slice(0, cqIdx);
+      cqText = body.slice(cqIdx, shortIdx);
+      shortText = body.slice(shortIdx);
     }
+  } else if (shortIdx !== -1) {
+    mcqText = body.slice(0, shortIdx);
+    shortText = body.slice(shortIdx);
+  } else if (cqIdx !== -1) {
+    mcqText = body.slice(0, cqIdx);
+    cqText = body.slice(cqIdx);
+  } else {
+    mcqText = body;
   }
 
-  return parsedList;
+  const result: MultiSectionParseResult = {
+    mcqs: [],
+    shortQuestions: [],
+    cqs: [],
+  };
+
+  // 📝 ১. বহুনির্বাচনি (MCQ) পার্সিং
+  if (mcqText) {
+    const mcqChunks = sliceSectionByNumbers(mcqText);
+    mcqChunks.forEach(({ num, text }) => {
+      // স্কুলের হেডার থাকলে ছাঁটাই
+      let qBlock = text;
+      if (qBlock.includes("প্রতিষ্ঠানের নাম") || qBlock.includes("বহুনির্বাচনি অংশ")) {
+        const p = qBlock.search(/[০-৯\d]{1,3}\s*[।\.]\s*/u);
+        if (p !== -1) qBlock = qBlock.slice(p);
+      }
+
+      // (ক), (খ), (গ), (ঘ) অথবা (a, b, c, d)
+      const k = qBlock.search(/(?:\(|\b)[কaA][\.\)]/u);
+      const kh = qBlock.search(/(?:\(|\b)[খbB][\.\)]/u);
+      const g = qBlock.search(/(?:\(|\b)[গcC][\.\)]/u);
+      const gh = qBlock.search(/(?:\(|\b)[ঘdD][\.\)]/u);
+
+      if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
+        const stem = qBlock.slice(0, k).replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
+        const optA = qBlock.slice(k, kh).replace(/^(?:\(|\b)[কaA][\.\)]\s*/u, "").trim();
+        const optB = qBlock.slice(kh, g).replace(/^(?:\(|\b)[খbB][\.\)]\s*/u, "").trim();
+        const optC = qBlock.slice(g, gh).replace(/^(?:\(|\b)[গcC][\.\)]\s*/u, "").trim();
+        const optD = qBlock.slice(gh).replace(/^(?:\(|\b)[ঘdD][\.\)]\s*/u, "").trim();
+
+        result.mcqs.push({
+          number: num,
+          text: stem,
+          options: { A: optA, B: optB, C: optC, D: optD },
+          correct: "",
+          flags: [],
+        });
+      }
+    });
+  }
+
+  // ✍️ ২. সংক্ষিপ্ত প্রশ্ন পার্সিং (মান ২)
+  if (shortText) {
+    const shortChunks = sliceSectionByNumbers(shortText);
+    shortChunks.forEach(({ num, text }) => {
+      const qClean = text.replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
+      if (qClean.length > 5 && !qClean.includes("সংক্ষিপ্ত উত্তর প্রশ্ন")) {
+        result.shortQuestions.push({
+          number: num,
+          text: qClean,
+          marks: "২",
+        });
+      }
+    });
+  }
+
+  // 🧠 ৩. সৃজনশীল প্রশ্ন (CQ) পার্সিং
+  if (cqText) {
+    const cqChunks = sliceSectionByNumbers(cqText);
+    cqChunks.forEach(({ num, text }) => {
+      const k = text.search(/\(ক\)/);
+      const kh = text.search(/\(খ\)/);
+      const g = text.search(/\(গ\)/);
+      const gh = text.search(/\(ঘ\)/);
+
+      if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
+        const stimulus = text.slice(0, k).replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
+        const subK = text.slice(k, kh).replace(/^\(ক\)\s*/, "").trim();
+        const subKh = text.slice(kh, g).replace(/^\(খ\)\s*/, "").trim();
+        const subG = text.slice(g, gh).replace(/^\(গ\)\s*/, "").trim();
+        const subGh = text.slice(gh).replace(/^\(ঘ\)\s*/, "").trim();
+
+        result.cqs.push({
+          number: num,
+          stimulus: stimulus || "উদ্দীপক",
+          subQuestions: { k: subK, kh: subKh, g: subG, gh: subGh },
+        });
+      }
+    });
+  }
+
+  return result;
 }
