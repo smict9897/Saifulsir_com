@@ -41,34 +41,44 @@ export async function deleteNotice(id: string): Promise<void> {
   done();
 }
 
-// 🎯 ১. রোল ও অ্যাডমিন ড্যাশবোর্ড পারমিশন আপডেট (ফিক্সড)
+// 🎯 ১. রোল পরিবর্তন (smict9897 এর জন্য সম্পূর্ণ লক)
 export async function setRole(id: string, fd: FormData): Promise<void> {
   const me = await admin();
   
-  // আইডি সরাসরি বা ফরম থেকে রিসিভ করা
   const targetId = id || String(fd.get("id") || fd.get("userId") || "");
   const rawRole = String(fd.get("role") || "").trim();
   const role = z.enum(["ADMIN", "TEACHER", "STUDENT"]).parse(rawRole);
 
   if (!targetId) throw new Error("User ID পাওয়া যায়নি।");
+
+  // 🔒 মাস্টার সুপার অ্যাডমিন প্রোটেকশন (smict9897)
+  const targetUser = await db.user.findUnique({ where: { id: targetId } });
+  if (targetUser?.email?.toLowerCase().includes("smict9897")) {
+    throw new Error("নিরাপত্তা সতর্কতা: smict9897 হলো মূল সুপার অ্যাডমিন অ্যাকাউন্ট। এর রোল কখনো পরিবর্তন করা যাবে না।");
+  }
+
   if (me?.id && targetId === me.id) throw new Error("আপনি নিজের রোল পরিবর্তন করতে পারবেন না।");
 
-  // ডাটাবেজে নতুন রোল সেভ
   await db.user.update({
     where: { id: targetId },
     data: { role },
   });
 
-  // 🚀 ফিক্স: /admin পেজ রিভ্যালিডেট করা হলো যাতে সেভ চাপামাত্রই স্ক্রিনে রোল আপডেট দেখায়!
   revalidatePath("/admin");
   revalidatePath("/admin/users");
   revalidatePath("/", "layout");
 }
 
-// 🎯 ২. ইউজার ডিলিট অ্যাকশন (ফিক্সড)
+// 🎯 ২. ইউজার ডিলিট (smict9897 কখনোই ডিলিট করা যাবে না)
 export async function deleteUser(id: string, fd?: FormData): Promise<void> {
   const me = await admin();
   const targetId = id || String(fd?.get("id") || fd?.get("userId") || "");
+
+  // 🔒 মাস্টার সুপার অ্যাডমিন প্রোটেকশন (smict9897)
+  const targetUser = await db.user.findUnique({ where: { id: targetId } });
+  if (targetUser?.email?.toLowerCase().includes("smict9897")) {
+    throw new Error("নিরাপত্তা সতর্কতা: smict9897 হলো মূল সুপার অ্যাডমিন অ্যাকাউন্ট। এটি ডিলিট করা সম্পূর্ণ নিষিদ্ধ।");
+  }
 
   if (me?.id && targetId === me.id) throw new Error("আপনি নিজের অ্যাকাউন্ট মুছতে পারবেন না।");
 
