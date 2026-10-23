@@ -19,65 +19,54 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
 
-    // 🚀 DeepSeek-V3 AI দিয়ে ১০০% নির্ভুল বাংলা বানান ও প্রশ্ন রিস্টোর করা
     if (apiKey) {
       try {
         const prompt = `
-You are an expert Bengali educational digitizer and OCR correction engine.
-The following text was extracted from a Bangladeshi school/board question paper PDF.
-Due to PDF font encoding issues, many Bengali words have broken ligatures, missing conjuncts, and mangled matras.
-Examples of common errors to fix:
-- 'ুকোজ' -> 'গ্লুকোজ'
-- 'ূকোজ' -> 'ফ্রুক্টোজ'
-- 'সলুলোজ' -> 'সেলুলোজ'
-- 'মাবাইল ফান' -> 'মোবাইল ফোন'
-- 'বি ানী' -> 'বিজ্ঞানী'
-- 'কানট সঠক?' -> 'কোনটি সঠিক?'
-- 'ব্যব্ া' -> 'ব্যবস্থা'
-- 'পদাথ' -> 'পদার্থ'
-- 'আন্ত র্জাতিক' -> 'আন্তর্জাতিক'
-- 'থথ্যপ্রযুকিত' -> 'তথ্যপ্রযুক্তি'
-- 'ই-লানিং' -> 'ই-লার্নিং'
-- 'দনন্দিন' -> 'দৈনন্দিন'
+You are an expert Bengali educational digitizer and OCR correction engine. 
+I am providing you with raw text extracted from a Bangladeshi school/board question paper PDF. 
+This PDF has severe font encoding issues, resulting in broken Bengali ligatures, missing letters, and reversed matras. 
+It may also contain multiple columns (2 or 3) mixed together, and image placeholders.
 
-Your instructions:
-1. Fix all spelling mistakes, restore missing letters/conjuncts based on the sentence and subject context.
-2. Structure the questions into JSON based on the requested mode: "${mode}".
-   - "MCQ": Extract multiple choice questions with options A, B, C, D (mapped from ক, খ, গ, ঘ).
-   - "SHORT": Extract 1-mark or 2-mark short questions without options.
-   - "CQ": Extract creative questions with stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ).
-   - "AUTO": Detect and separate all matching sections.
-3. For chemical formulas (like CO2, H2SO4, NH4Cl) and mathematical fractions, format with LaTeX math (e.g., $CO_2$, $\\frac{1}{3}$).
+YOUR TASKS:
+1. **Restore Bengali Text**: Use your deep knowledge of the Bengali language and context to fix ALL broken words. 
+   Examples of common errors:
+   - 'বরুিনবাঁচিন অশ্ব' -> 'বহুনির্বাচনি অংশ'
+   - 'প্রচিতি প্রশ্নের' -> 'সৃজনশীল প্রশ্নের'
+   - 'ুকোজ' -> 'গ্লুকোজ', 'মাবাইল ফান' -> 'মোবাইল ফোন', 'পদাথ' -> 'পদার্থ'
+   - 'ই-লানি◌্ং' -> 'ই-লার্নিং', 'সঠক?' -> 'সঠিক?'
 
-Return a valid JSON object ONLY (no markdown code blocks, no backticks, no comments) with this exact schema:
+2. **Extract Questions**: Based on the requested mode "${mode}":
+   - "AUTO": Detect and separate MCQ, Short Questions, and CQ (Creative Questions).
+   - "MCQ": Extract only multiple choice questions.
+   - "SHORT": Extract only short questions (no options).
+   - "CQ": Extract only creative questions (উদ্দীপক + ক, খ, গ, ঘ).
+
+3. **Separate Sections**: 
+   - MCQ has options (ক, খ, গ, ঘ). It should go to "mcqs".
+   - Short questions are standalone and end with a question mark or directive. It should go to "shortQuestions".
+   - CQ has a stimulus (উদ্দীপক) and sub-questions (ক, খ, গ, ঘ). DO NOT confuse sub-questions with MCQ options. It should go to "cqs".
+
+4. **🚨 AUTO-ANSWER GENERATION 🚨**: 
+   If an MCQ does not have an answer marked in the text (like bold or [Ans: ক]), you MUST determine the correct answer using your subject knowledge. 
+   Set the "correct" field to "A", "B", "C", or "D". NEVER leave "correct" blank.
+
+5. **LaTeX Formatting**: For chemical formulas (e.g., CO2, H2SO4, NH4Cl) and math fractions, wrap them in LaTeX math (e.g., $CO_2$, $\\frac{1}{3}$).
+
+CRITICAL: Return a valid JSON object ONLY (no markdown, no backticks, no extra text). Follow this exact schema:
 {
   "mcqs": [
-    {
-      "number": 1,
-      "text": "শুদ্ধ প্রশ্ন",
-      "options": { "A": "অপশন ক", "B": "অপশন খ", "C": "অপশন গ", "D": "অপশন ঘ" },
-      "correct": "A",
-      "flags": []
-    }
+    { "number": 1, "text": "শুদ্ধ প্রশ্ন", "options": { "A": "অপশন ক", "B": "অপশন খ", "C": "অপশন গ", "D": "অপশন ঘ" }, "correct": "A", "flags": [] }
   ],
   "shortQuestions": [
-    {
-      "number": 1,
-      "text": "সংক্ষিপ্ত প্রশ্ন",
-      "marks": "২"
-    }
+    { "number": 1, "text": "সংক্ষিপ্ত প্রশ্ন", "marks": "২" }
   ],
   "cqs": [
-    {
-      "number": 1,
-      "stimulus": "উদ্দীপক...",
-      "subQuestions": { "k": "প্রশ্ন ক", "kh": "প্রশ্ন খ", "g": "প্রশ্ন গ", "gh": "প্রশ্ন ঘ" }
-    }
+    { "number": 1, "stimulus": "উদ্দীপক...", "subQuestions": { "k": "প্রশ্ন ক", "kh": "প্রশ্ন খ", "g": "প্রশ্ন গ", "gh": "প্রশ্ন ঘ" } }
   ]
 }
 
 Raw Text to Process:
-${rawText.slice(0, 35000)}
+${rawText.slice(0, 40000)}
 `;
 
         const deepseekRes = await fetch("https://api.deepseek.com/chat/completions", {
@@ -91,15 +80,12 @@ ${rawText.slice(0, 35000)}
             messages: [
               {
                 role: "system",
-                content: "You are a professional Bengali exam digitizer. You always output valid, clean JSON with 100% correct Bengali spelling and grammar.",
+                content: "You are a professional Bengali exam digitizer. You always output valid, clean JSON with 100% correct Bengali spelling. You NEVER leave MCQ answers blank; if missing, you solve them yourself.",
               },
-              {
-                role: "user",
-                content: prompt,
-              },
+              { role: "user", content: prompt },
             ],
             response_format: { type: "json_object" },
-            temperature: 0.2,
+            temperature: 0.1,
           }),
         });
 
@@ -125,7 +111,7 @@ ${rawText.slice(0, 35000)}
       }
     }
 
-    // ফলব্যাক: লোকাল রেজেক্স পার্সার (যদি কোনো কারণে এপিআই কাজ না করে)
+    // Fallback: লোকাল রেজেক্স পার্সার
     const fallbackData = parseAllQuestionsFromText(rawText, mode);
     return NextResponse.json({
       ok: true,
