@@ -2,7 +2,7 @@ import type { PageItems, TextItem } from "./types";
 
 // PDF থেকে প্রতিটি পৃষ্ঠার শব্দ ও তাদের অবস্থান (X, Y) বের করা
 export async function extractPages(buffer: ArrayBuffer): Promise<PageItems[]> {
-  const pdfjs: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfjs: any = await import("pdfjs-dist/legacy/build/pdf.js");
 
   const doc = await pdfjs
     .getDocument({ data: new Uint8Array(buffer), useSystemFonts: true, disableFontFace: true })
