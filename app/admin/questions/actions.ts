@@ -4,223 +4,171 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
+import { z } from "zod";
 
-const BACK = "/admin/questions";
+const redirectErr = (msg: string) => redirect(`/admin/questions?err=${encodeURIComponent(msg)}`);
+const redirectOk = (msg: string) => redirect(`/admin/questions?ok=${encodeURIComponent(msg)}`);
 
-const DIFFS = ["EASY", "MEDIUM", "HARD"] as const;
-type Diff = (typeof DIFFS)[number];
+// ১. 🎯 PDF থেকে আসা এক্সট্র্যাক্ট করা প্রশ্ন ডাটাবেজে বাল্ক সেভ
+export async function saveExtracted(fd: FormData): Promise<void> {
+  let count = 0;
+  try {
+    await staff();
 
-const pickDiff = (v: FormDataEntryValue | null): Diff =>
-  DIFFS.includes(v as Diff) ? (v as Diff) : "MEDIUM";
+    const category = String(fd.get("category") || "SSC").trim();
+    const subject = String(fd.get("subject") || "").trim();
+    const topic = String(fd.get("topic") || "সাধারণ").trim();
+    const difficultyRaw = String(fd.get("difficulty") || "MEDIUM").trim();
+    const lang = String(fd.get("lang") || "Bangla").trim();
+    const source = String(fd.get("source") || "PDF_IMPORT").trim();
+    const approved = fd.get("approved") === "true";
+    const itemsRaw = String(fd.get("items") || "[]");
 
-const s = (v: FormDataEntryValue | null) => String(v ?? "").trim();
+    const difficulty = z.enum(["EASY", "MEDIUM", "HARD"]).parse(difficultyRaw);
 
-const back = (msg: string, ok = false): never =>
-  redirect(`${BACK}?${ok ? "ok" : "err"}=${encodeURIComponent(msg)}`);
+    if (!subject) {
+      redirectErr("বিষয়ের নাম পূরণ করা বাধ্যতামূলক।");
+    }
 
-// একটি প্রশ্ন হাতে যোগ করা
-export async function addQuestion(fd: FormData) {
-  await staff();
+    const items = JSON.parse(itemsRaw);
+    if (!Array.isArray(items) || items.length === 0) {
+      redirectErr("সংরক্ষণ করার মতো কোনো প্রশ্ন নির্বাচন করা হয়নি।");
+    }
 
-  const type = s(fd.get("type"));
-  const text = s(fd.get("text"));
-  if (!text) back("প্রশ্ন লিখুন");
+    const records = items.map((it: any) => ({
+      category,
+      subject,
+      topic,
+      difficulty,
+      lang,
+      source,
+      approved,
+      text: String(it.text || "").trim(),
+      options: {
+        A: String(it.options?.A || "").trim(),
+        B: String(it.options?.B || "").trim(),
+        C: String(it.options?.C || "").trim(),
+        D: String(it.options?.D || "").trim(),
+      },
+      correct: it.correct && ["A", "B", "C", "D"].includes(it.correct) ? it.correct : "",
+      explanation: String(it.explanation || "").trim(),
+    })).filter((r) => r.text.length > 0);
 
-  let options: Record<string, string> = {};
-  let correct = "";
-  if (type === "MCQ") {
-    options = {
-      A: s(fd.get("A")),
-      B: s(fd.get("B")),
-      C: s(fd.get("C")),
-      D: s(fd.get("D")),
-    };
-    correct = s(fd.get("correct")).toUpperCase();
-    if (Object.values(options).some((v) => !v)) back("৪টি অপশনই দিন");
-    if (!["A", "B", "C", "D"].includes(correct)) back("সঠিক উত্তর বেছে নিন");
+    const res = await db.question.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
+
+    count = res.count;
+    revalidatePath("/admin/questions");
+    revalidatePath("/question-builder");
+  } catch (e: any) {
+    if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+    redirectErr(e?.message || "প্রশ্ন সংরক্ষণে ত্রুটি হয়েছে।");
   }
 
+  redirectOk(`সফলভাবে ${count}টি প্রশ্ন ডাটাবেজে যুক্ত হয়েছে।`);
+}
+
+// ২. একক প্রশ্ন যোগ করা
+export async function addQuestion(fd: FormData): Promise<void> {
   try {
+    await staff();
+    const category = String(fd.get("category") || "").trim();
+    const subject = String(fd.get("subject") || "").trim();
+    const topic = String(fd.get("topic") || "").trim();
+    const text = String(fd.get("text") || "").trim();
+    const difficulty = z.enum(["EASY", "MEDIUM", "HARD"]).parse(String(fd.get("difficulty") || "MEDIUM"));
+    const lang = String(fd.get("lang") || "Bangla").trim();
+    const correct = String(fd.get("correct") || "").trim();
+    const explanation = String(fd.get("explanation") || "").trim();
+
+    const options = {
+      A: String(fd.get("optA") || "").trim(),
+      B: String(fd.get("optB") || "").trim(),
+      C: String(fd.get("optC") || "").trim(),
+      D: String(fd.get("optD") || "").trim(),
+    };
+
+    if (!category || !subject || !text) {
+      redirectErr("শ্রেণি, বিষয় এবং প্রশ্ন দেওয়া বাধ্যতামূলক।");
+    }
+
     await db.question.create({
       data: {
-        subject: s(fd.get("subject")),
-        category: s(fd.get("category")),
-        topic: s(fd.get("topic")),
-        difficulty: pickDiff(fd.get("difficulty")),
-        lang: s(fd.get("lang")) || "Bangla",
+        category,
+        subject,
+        topic: topic || "সাধারণ",
+        difficulty,
+        lang,
         text,
         options,
         correct,
-        explanation: s(fd.get("explanation")),
-        approved: true,
-        source: s(fd.get("source")) || "Manual",
+        explanation,
+        approved: fd.get("approved") === "on",
+        source: "MANUAL",
       },
     });
-  } catch (e) {
-    console.error("addQuestion failed:", e);
-    back("সংরক্ষণ হয়নি: " + (e instanceof Error ? e.message.slice(-180) : "অজানা সমস্যা"));
+
+    revalidatePath("/admin/questions");
+    revalidatePath("/question-builder");
+  } catch (e: any) {
+    if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+    redirectErr(e?.message || "প্রশ্ন যোগ করা যায়নি।");
   }
 
-  revalidatePath(BACK);
-  back("প্রশ্ন যোগ হয়েছে", true);
+  redirectOk("প্রশ্নটি সফলভাবে ডাটাবেজে যুক্ত হয়েছে।");
 }
 
-// প্রতি লাইনে: প্রশ্ন | A | B | C | D | correct(A-D) | ব্যাখ্যা
-export async function importQuestions(fd: FormData) {
-  await staff();
-
-  const raw = s(fd.get("bulk"));
-  const base = {
-    subject: s(fd.get("subject")),
-    category: s(fd.get("category")),
-    topic: s(fd.get("topic")),
-    difficulty: pickDiff(fd.get("difficulty")),
-    lang: s(fd.get("lang")) || "Bangla",
-    source: s(fd.get("source")) || "Import",
-  };
-
-  const rows = raw
-    .split("\n")
-    .map((l) => l.split("|").map((x) => x.trim()))
-    .filter((c) => c.length >= 6 && c[0])
-    .map((c) => ({
-      ...base,
-      text: c[0],
-      options: { A: c[1], B: c[2], C: c[3], D: c[4] },
-      correct: c[5].toUpperCase(),
-      explanation: c[6] ?? "",
-      approved: true,
-    }))
-    .filter((r) => ["A", "B", "C", "D"].includes(r.correct));
-
-  if (!rows.length) back("কোনো সঠিক লাইন পাওয়া যায়নি। ফরম্যাট দেখুন");
-
+// ৩. অনুমোদন টগল
+export async function toggleApprove(id: string, current: boolean): Promise<void> {
   try {
-    await db.question.createMany({ data: rows });
-  } catch (e) {
-    console.error("importQuestions failed:", e);
-    back("ইমপোর্ট হয়নি: " + (e instanceof Error ? e.message.slice(-180) : "অজানা সমস্যা"));
+    await staff();
+    await db.question.update({
+      where: { id },
+      data: { approved: !current },
+    });
+    revalidatePath("/admin/questions");
+    revalidatePath("/question-builder");
+  } catch (e: any) {
+    if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+    redirectErr(e?.message || "অনুমোদন স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।");
   }
 
-  revalidatePath(BACK);
-  back(`${rows.length}টি প্রশ্ন ইমপোর্ট হয়েছে`, true);
+  redirectOk("প্রশ্নের অনুমোদন স্ট্যাটাস আপডেট হয়েছে।");
 }
 
-// একটি প্রশ্ন মুছে ফেলা
-export async function deleteQuestion(id: string) {
-  await staff();
+// ৪. প্রশ্ন মোছা
+export async function deleteQuestion(id: string): Promise<void> {
   try {
+    await staff();
     await db.question.delete({ where: { id } });
-  } catch (e) {
-    console.error("deleteQuestion failed:", e);
+    revalidatePath("/admin/questions");
+    revalidatePath("/question-builder");
+  } catch (e: any) {
+    if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+    redirectErr(e?.message || "প্রশ্ন মোছা যায়নি।");
   }
-  revalidatePath(BACK);
-  back("মুছে ফেলা হয়েছে", true);
+
+  redirectOk("প্রশ্নটি মুছে ফেলা হয়েছে।");
 }
 
-// অনুমোদন চালু/বন্ধ করা
-export async function toggleApproved(id: string) {
-  await staff();
+// ৫. একসাথে সব অপেক্ষমাণ প্রশ্ন অনুমোদন
+export async function approveAllPending(): Promise<void> {
+  let count = 0;
   try {
-    const q = await db.question.findUnique({ where: { id }, select: { approved: true } });
-    if (q) await db.question.update({ where: { id }, data: { approved: !q.approved } });
-  } catch (e) {
-    console.error("toggleApproved failed:", e);
-  }
-  revalidatePath(BACK);
-  back("আপডেট হয়েছে", true);
-}
-
-// সব অপেক্ষমাণ প্রশ্ন একসাথে অনুমোদন
-export async function approveAllPending() {
-  await staff();
-  try {
-    await db.question.updateMany({ where: { approved: false }, data: { approved: true } });
-  } catch (e) {
-    console.error("approveAllPending failed:", e);
-  }
-  revalidatePath(BACK);
-  back("সব অপেক্ষমাণ প্রশ্ন অনুমোদিত হয়েছে", true);
-}
-
-// PDF থেকে আনা প্রশ্ন একসাথে সংরক্ষণ
-type IncomingItem = {
-  text?: unknown;
-  options?: { A?: unknown; B?: unknown; C?: unknown; D?: unknown };
-  correct?: unknown;
-  explanation?: unknown;
-};
-
-type SaveRecord = {
-  subject: string;
-  category: string;
-  topic: string;
-  difficulty: Diff;
-  lang: string;
-  text: string;
-  options: { A: string; B: string; C: string; D: string };
-  correct: string;
-  explanation: string;
-  approved: boolean;
-  source: string;
-};
-
-export async function saveExtracted(
-  meta: {
-    subject: string;
-    category: string;
-    topic: string;
-    difficulty: string;
-    lang: string;
-    source: string;
-    approved: boolean;
-  },
-  items: IncomingItem[]
-): Promise<{ ok: boolean; count?: number; error?: string }> {
-  await staff();
-
-  const difficulty: Diff =
-    meta.difficulty === "EASY" || meta.difficulty === "HARD" ? meta.difficulty : "MEDIUM";
-
-  const records: SaveRecord[] = [];
-
-  for (const it of items) {
-    const text = String(it.text ?? "").trim();
-    if (text.length === 0) continue;
-
-    const opts = it.options ?? {};
-    const correctRaw = String(it.correct ?? "").trim().toUpperCase();
-
-    records.push({
-      subject: meta.subject,
-      category: meta.category,
-      topic: meta.topic,
-      difficulty,
-      lang: meta.lang || "Bangla",
-      text,
-      options: {
-        A: String(opts.A ?? "").trim(),
-        B: String(opts.B ?? "").trim(),
-        C: String(opts.C ?? "").trim(),
-        D: String(opts.D ?? "").trim(),
-      },
-      correct: ["A", "B", "C", "D"].includes(correctRaw) ? correctRaw : "",
-      explanation: String(it.explanation ?? "").trim(),
-      approved: meta.approved,
-      source: meta.source || "PDF_IMPORT",
+    await staff();
+    const res = await db.question.updateMany({
+      where: { approved: false },
+      data: { approved: true },
     });
+    count = res.count;
+    revalidatePath("/admin/questions");
+    revalidatePath("/question-builder");
+  } catch (e: any) {
+    if (e?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+    redirectErr(e?.message || "অনুমোদন ব্যর্থ হয়েছে।");
   }
 
-  if (records.length === 0) {
-    return { ok: false, error: "সংরক্ষণ করার মতো কোনো প্রশ্ন নেই।" };
-  }
-
-  try {
-    const res = await db.question.createMany({ data: records });
-    revalidatePath(BACK);
-    return { ok: true, count: res.count };
-  } catch (e) {
-    console.error("saveExtracted failed:", e);
-    return { ok: false, error: "সংরক্ষণ হয়নি, আবার চেষ্টা করুন।" };
-  }
+  redirectOk(`মোট ${count}টি প্রশ্ন সফলভাবে অনুমোদন করা হয়েছে।`);
 }
