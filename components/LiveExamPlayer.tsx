@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, CheckCircle2, Trophy, Clock, RefreshCcw } from "lucide-react";
+import MathText from "@/components/MathText"; // 👈 KaTeX ম্যাথ রেন্ডারার
 
 export const toBn = (n: number | string) =>
   n.toString().replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[+d]);
@@ -146,7 +147,6 @@ export default function LiveExamPlayer({
               {studentInfo?.name} (রোল: {toBn(studentInfo?.roll || "১")})
             </div>
 
-            {/* Submit বাটনকে বাংলায় 'জমা দিন' করা হলো */}
             <button
               onClick={() => setShowWarningModal(true)}
               className="rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-1.5 text-sm font-bold text-white shadow-md active:scale-95 transition"
@@ -174,9 +174,11 @@ export default function LiveExamPlayer({
               const selectedOpt = selectedAnswers[qIndex];
               return (
                 <div key={qIndex} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+                  {/* 🎯 প্রশ্ন রেন্ডারিংয়ে MathText ব্যবহার */}
                   <h3 className="text-base font-bold text-slate-900 leading-relaxed mb-4">
-                    {toBn(qIndex + 1)}) {q.question}
+                    {toBn(qIndex + 1)}) <MathText text={q.question} />
                   </h3>
+
                   <div className="space-y-2.5">
                     {q.options.map((opt, optIndex) => {
                       const isSelected = selectedOpt === optIndex;
@@ -197,7 +199,10 @@ export default function LiveExamPlayer({
                           >
                             {banglaOptions[optIndex]}
                           </span>
-                          <span className="text-sm">{opt}</span>
+                          {/* 🎯 অপশন রেন্ডারিংয়ে MathText ব্যবহার (ভগ্নাংশ উপর-নিচে দেখাবে) */}
+                          <div className="text-sm flex-1">
+                            <MathText text={opt} />
+                          </div>
                         </div>
                       );
                     })}
@@ -209,7 +214,7 @@ export default function LiveExamPlayer({
         </>
       )}
 
-      {/* ২. সাবমিট সতর্কতা মোডাল (সম্পূর্ণ বাংলায়) */}
+      {/* ২. সাবমিট সতর্কতা মোডাল */}
       {showWarningModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
@@ -412,7 +417,7 @@ export default function LiveExamPlayer({
                 <div key={qIndex} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      {toBn(qIndex + 1)}) {q.question}
+                      {toBn(qIndex + 1)}) <MathText text={q.question} />
                     </h3>
                     {isUnanswered && (
                       <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
@@ -442,7 +447,9 @@ export default function LiveExamPlayer({
                           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${badgeClass}`}>
                             {banglaOptions[optIndex]}
                           </span>
-                          <span className="text-sm flex-1">{opt}</span>
+                          <div className="text-sm flex-1">
+                            <MathText text={opt} />
+                          </div>
                           {isThisUserWrong && <span className="text-[11px] font-bold text-red-600">(আপনার উত্তর)</span>}
                         </div>
                       );
@@ -459,7 +466,7 @@ export default function LiveExamPlayer({
                     {showExp && (
                       <div className="mt-3 rounded-xl bg-blue-50/80 border border-blue-100 p-3.5 text-xs text-slate-700 leading-relaxed">
                         <span className="font-bold text-blue-900 block mb-1">💡 সঠিক উত্তরের ব্যাখ্যা:</span>
-                        {q.explanation || "এই প্রশ্নের জন্য কোনো অতিরিক্ত ব্যাখ্যা দেওয়া নেই।"}
+                        <MathText text={q.explanation || "এই প্রশ্নের জন্য কোনো অতিরিক্ত ব্যাখ্যা দেওয়া নেই।"} />
                       </div>
                     )}
                   </div>
