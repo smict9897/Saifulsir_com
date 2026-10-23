@@ -1,9 +1,9 @@
 "use client";
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { 
   FileUp, Loader2, CheckCircle2, AlertCircle, Save, 
-  CheckSquare, Square, RefreshCcw 
+  CheckSquare, Square 
 } from "lucide-react";
 import curriculum from "../nctb-curriculum.json";
 import MathText from "@/components/MathText";
@@ -36,7 +36,19 @@ function getCurriculumChapters(cat: string, subject: string): string[] {
   return sub ? sub.chapters : [];
 }
 
-// 🎯 ১. কো-অর্ডিনেট ভিত্তিক নিখুঁত ২-কলাম টেক্সট এক্সট্রাক্টর (অক্ষর ভাঙা ও স্পেস দূরীকরণ)
+// 🎯 ১. বাংলা ভাঙা যুক্তাক্ষর ও স্পেস জোড়া লাগানোর হেল্পার
+function healBengaliText(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/([অ-হড়-য়০-৯a-zA-Z])\s+([়্া-ৌঁ-ঃ])/gu, "$1$2")
+    .replace(/([্])\s+([অ-হড়-য়])/gu, "$1$2")
+    .replace(/([অ-হ])\s+্র/gu, "$1্র")
+    .replace(/([অ-হ])\s+্য/gu, "$1্য")
+    .replace(/\(\s*([কখগঘabcdABCD])\s*[\)\.]/gu, "($1)")
+    .replace(/[ \t]+/g, " ");
+}
+
+// 🎯 ২. কো-অর্ডিনেট ভিত্তিক ২-কলাম টেক্সট এক্সট্রাক্টর
 async function extractCleanTwoColumnPdf(file: File): Promise<string> {
   if (typeof window === "undefined") return "";
 
@@ -66,7 +78,6 @@ async function extractCleanTwoColumnPdf(file: File): Promise<string> {
     const col1Items: any[] = [];
     const col2Items: any[] = [];
 
-    // আইটেমগুলো কলাম অনুযায়ী ভাগ করা
     textContent.items.forEach((item: any) => {
       const x = item.transform[4];
       if (x < midX - 5) {
@@ -76,55 +87,63 @@ async function extractCleanTwoColumnPdf(file: File): Promise<string> {
       }
     });
 
-    // অক্ষরের দূরত্ব মেপে নিখুঁত লাইন তৈরি করার ফাংশন (যাতে শব্দের ভেতরে স্পেস না পড়ে)
-    const buildColumnLines = (items: any[]) => {
+    const buildColumn = (items: any[]) => {
       if (!items.length) return "";
-      // উপর থেকে নিচে সাজানো
       items.sort((a, b) => b.transform[5] - a.transform[5]);
 
-      let result = "";
-      let currentLineY = items[0].transform[5];
+      let res = "";
+      let currentY = items[0].transform[5];
       let lastXEnd = items[0].transform[4] + items[0].width;
-      result += items[0].str;
+      res += items[0].str;
 
       for (let i = 1; i < items.length; i++) {
-        const item = items[i];
-        const y = item.transform[5];
-        const x = item.transform[4];
+        const it = items[i];
+        const y = it.transform[5];
+        const x = it.transform[4];
 
-        // যদি নতুন লাইনে যায় (y ব্যবধান ৪ পিক্সেলের বেশি)
-        if (Math.abs(y - currentLineY) > 5) {
-          result += "\n" + item.str;
-          currentLineY = y;
-          lastXEnd = x + item.width;
+        if (Math.abs(y - currentY) > 5) {
+          res += "\n" + it.str;
+          currentY = y;
+          lastXEnd = x + it.width;
         } else {
-          // একই লাইনের ভেতরে: যদি দূরত্ব বড় হয় তবেই স্পেস দেবে, অন্যথায় জোড়া লাগাবে
           const gap = x - lastXEnd;
-          if (gap > 4) {
-            result += " " + item.str;
-          } else {
-            result += item.str;
-          }
-          lastXEnd = Math.max(lastXEnd, x + item.width);
+          if (gap > 4) res += " " + it.str;
+          else res += it.str;
+          lastXEnd = Math.max(lastXEnd, x + it.width);
         }
       }
-      return result;
+      return res;
     };
 
-    const col1Text = buildColumnLines(col1Items);
-    const col2Text = buildColumnLines(col2Items);
-
-    fullDocumentText += `\n${col1Text}\n\n${col2Text}\n`;
+    fullDocumentText += `\n${buildColumn(col1Items)}\n\n${buildColumn(col2Items)}\n`;
   }
 
-  // বাংলা ভাঙা যুক্তাক্ষর জোড়া লাগানোর ফিল্টার
-  return fullDocumentText
-    .replace(/([অ-হড়-য়])\s+([্া-ৌ])/gu, "$1$2")
-    .replace(/([্])\s+([অ-হড়-য়])/gu, "$1$2")
-    .replace(/([অ-হড়-য়্])\s+([া-ৌ])/gu, "$1$2");
+  return healBengaliText(fullDocumentText);
 }
 
-// 🎯 ২. শক্তিশালী পার্সার (MCQ, সংক্ষিপ্ত ও সৃজনশীল আলাদা করার নিয়ম)
+// 🎯 ৩. বাউন্ডেড প্রশ্ন কাটার স্লাইসার (এক প্রশ্ন অন্য প্রশ্নে কখনো ঢুকবে না)
+function sliceByQuestionNumbers(sectionText: string): string[] {
+  const qNumRegex = /(?:^|\n|\s{2,})([০-৯\d]{1,3})\s*[।\.\)]\s*/gu;
+  const matches: { index: number; num: string }[] = [];
+
+  let m;
+  while ((m = qNumRegex.exec(sectionText)) !== null) {
+    matches.push({ index: m.index, num: m[1] });
+  }
+
+  if (matches.length === 0) return [];
+
+  const chunks: string[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index;
+    const end = i < matches.length - 1 ? matches[i + 1].index : sectionText.length;
+    const block = sectionText.substring(start, end).trim();
+    if (block) chunks.push(block);
+  }
+  return chunks;
+}
+
+// 🎯 ৪. সম্পূর্ণ ৩-সেকশন পার্সার (MCQ + সংক্ষিপ্ত + সৃজনশীল)
 function parseQuestionsEngine(raw: string) {
   const mcqs: any[] = [];
   const shorts: any[] = [];
@@ -135,18 +154,24 @@ function parseQuestionsEngine(raw: string) {
   const clean = (s: string) => s.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
   const text = raw.replace(/\r\n/g, "\n");
 
-  // সেকশন ইনডেক্স খোঁজা
-  const shortIdx = text.search(/সংক্ষিপ্ত\s*উত্তর\s*প্রশ্ন/i);
-  const cqIdx = text.search(/সৃজনশীল\s*প্রশ্ন/i);
+  // সেকশন হেডলাইন আলাদা করা
+  const shortIdx = text.search(/সং\s*ক্ষি\s*প্ত\s*উ\s*ত্ত\s*র\s*প্র\s*শ্ন|সং\s*ক্ষি\s*প্ত\s*প্র\s*শ্ন/i);
+  const cqIdx = text.search(/সৃ\s*জ\s*ন\s*শী\s*ল\s*প্র\s*শ্ন/i);
 
   let mcqSection = "";
   let shortSection = "";
   let cqSection = "";
 
   if (shortIdx !== -1 && cqIdx !== -1) {
-    mcqSection = text.slice(0, shortIdx);
-    shortSection = text.slice(shortIdx, cqIdx);
-    cqSection = text.slice(cqIdx);
+    if (shortIdx < cqIdx) {
+      mcqSection = text.slice(0, shortIdx);
+      shortSection = text.slice(shortIdx, cqIdx);
+      cqSection = text.slice(cqIdx);
+    } else {
+      mcqSection = text.slice(0, cqIdx);
+      cqSection = text.slice(cqIdx, shortIdx);
+      shortSection = text.slice(shortIdx);
+    }
   } else if (shortIdx !== -1) {
     mcqSection = text.slice(0, shortIdx);
     shortSection = text.slice(shortIdx);
@@ -157,28 +182,30 @@ function parseQuestionsEngine(raw: string) {
     mcqSection = text;
   }
 
-  // 📝 ১. বহুনির্বাচনি (MCQ) পার্সিং (১ থেকে ১৩৭)
+  // 📝 ১. বহুনির্বাচনি (MCQ) - বাংলা ও ইংরেজি উভয় অপশন সাপোর্ট
   if (mcqSection) {
-    // ০১। বা ১। বা 1. দিয়ে প্রতিটি প্রশ্ন আলাদা করা
-    const rawBlocks = mcqSection.split(/(?=(?:^|\n)\s*[০-৯\d]{1,3}\s*[।\.\)]\s*)/u).filter(Boolean);
+    const chunks = sliceByQuestionNumbers(mcqSection);
 
-    rawBlocks.forEach((block, idx) => {
-      const trimmed = block.trim();
-      // স্কুলের হেডার অংশ বাদ দেওয়া (যদি প্রশ্ন নম্বর না থাকে)
-      if (!/^[০-৯\d]{1,3}\s*[।\.\)]/u.test(trimmed)) return;
+    chunks.forEach((chunk, idx) => {
+      // স্কুলের হেডার অংশ বাদ দেওয়া
+      if (chunk.includes("আপনার প্রতিষ্ঠানের নাম") || chunk.includes("বহুনির্বাচনি অংশ")) {
+        const actualStart = chunk.search(/[০-৯\d]{1,3}\s*[।\.\)]\s*/u);
+        if (actualStart !== -1) chunk = chunk.slice(actualStart);
+        else return;
+      }
 
-      // অপশন (ক), (খ), (গ), (ঘ) খোঁজা
-      const k = trimmed.search(/[\(\[]?[কaA][\.\)\]]/u);
-      const kh = trimmed.search(/[\(\[]?[খbB][\.\)\]]/u);
-      const g = trimmed.search(/[\(\[]?[গcC][\.\)\]]/u);
-      const gh = trimmed.search(/[\(\[]?[ঘdD][\.\)\]]/u);
+      // বাংলা (ক, খ, গ, ঘ) অথবা ইংরেজি (a, b, c, d / A, B, C, D) অপশন সনাক্তকরণ
+      const k = chunk.search(/(?:\(|^|\s)[কaA][\.\)\]]/u);
+      const kh = chunk.search(/(?:\(|^|\s)[খbB][\.\)\]]/u);
+      const g = chunk.search(/(?:\(|^|\s)[গcC][\.\)\]]/u);
+      const gh = chunk.search(/(?:\(|^|\s)[ঘdD][\.\)\]]/u);
 
       if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
-        const qStem = clean(trimmed.slice(0, k)).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "");
-        const optK = clean(trimmed.slice(k, kh)).replace(/^[\(\[]?[কaA][\.\)\]]\s*/u, "");
-        const optKh = clean(trimmed.slice(kh, g)).replace(/^[\(\[]?[খbB][\.\)\]]\s*/u, "");
-        const optG = clean(trimmed.slice(g, gh)).replace(/^[\(\[]?[গcC][\.\)\]]\s*/u, "");
-        const optGh = clean(trimmed.slice(gh)).replace(/^[\(\[]?[ঘdD][\.\)\]]\s*/u, "");
+        const qStem = clean(chunk.slice(0, k)).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "");
+        const optK = clean(chunk.slice(k, kh)).replace(/^[\(\[]?[কaA][\.\)\]]\s*/u, "");
+        const optKh = clean(chunk.slice(kh, g)).replace(/^[\(\[]?[খbB][\.\)\]]\s*/u, "");
+        const optG = clean(chunk.slice(g, gh)).replace(/^[\(\[]?[গcC][\.\)\]]\s*/u, "");
+        const optGh = clean(chunk.slice(gh)).replace(/^[\(\[]?[ঘdD][\.\)\]]\s*/u, "");
 
         if (qStem && optK && optKh) {
           mcqs.push({
@@ -195,64 +222,51 @@ function parseQuestionsEngine(raw: string) {
 
   // ✍️ ২. সংক্ষিপ্ত প্রশ্ন পার্সিং (১ থেকে ৬৮)
   if (shortSection) {
-    const rawBlocks = shortSection.split(/(?=(?:^|\n)\s*[০-৯\d]{1,3}\s*[।\.\)]\s*)/u).filter(Boolean);
-    rawBlocks.forEach((block, idx) => {
-      const trimmed = clean(block);
-      if (!/^[০-৯\d]{1,3}\s*[।\.\)]/u.test(trimmed)) return;
-      if (trimmed.includes("সংক্ষিপ্ত উত্তর প্রশ্ন") || trimmed.includes("প্রতি প্রশ্নের মান")) return;
-
-      const qText = trimmed.replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "");
-      shorts.push({
-        id: `short-${idx + 1}`,
-        text: qText,
-        options: {},
-        correct: "",
-        sourceType: "SHORT",
-      });
+    const chunks = sliceByQuestionNumbers(shortSection);
+    chunks.forEach((chunk, idx) => {
+      const qText = clean(chunk).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "");
+      if (qText.length > 5 && !qText.includes("সংক্ষিপ্ত উত্তর প্রশ্ন")) {
+        shorts.push({
+          id: `short-${idx + 1}`,
+          text: qText,
+          options: {},
+          correct: "",
+          sourceType: "SHORT",
+        });
+      }
     });
   }
 
   // 🧠 ৩. সৃজনশীল প্রশ্ন পার্সিং (১ থেকে ১৯, উদ্দীপক + ক, খ, গ, ঘ)
-  if (cqPartParsed(cqSection, cqs)) {
-    // parsed
+  if (cqSection) {
+    const chunks = sliceByQuestionNumbers(cqSection);
+    chunks.forEach((chunk, idx) => {
+      const k = chunk.search(/\(ক\)/);
+      const kh = chunk.search(/\(খ\)/);
+      const g = chunk.search(/\(গ\)/);
+      const gh = chunk.search(/\(ঘ\)/);
+
+      if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
+        const stimulus = clean(chunk.slice(0, k)).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "");
+        const subK = clean(chunk.slice(k, kh)).replace(/^\(ক\)\s*/, "");
+        const subKh = clean(chunk.slice(kh, g)).replace(/^\(খ\)\s*/, "");
+        const subG = clean(chunk.slice(g, gh)).replace(/^\(গ\)\s*/, "");
+        const subGh = clean(chunk.slice(gh)).replace(/^\(ঘ\)\s*/, "");
+
+        const fullCq = `${stimulus}\n\n(ক) ${subK}\n(খ) ${subKh}\n(গ) ${subG}\n(ঘ) ${subGh}`;
+
+        cqs.push({
+          id: `cq-${idx + 1}`,
+          text: fullCq,
+          options: { ক: subK, খ: subKh, গ: subG, ঘ: subGh },
+          correct: "",
+          sourceType: "CQ",
+        });
+      }
+    });
   }
 
   return { mcqs, shorts, cqs };
-}
-
-function cqPartParsed(cqSection: string, cqs: any[]) {
-  if (!cqSection) return false;
-  const blocks = cqSection.split(/(?=(?:^|\n)\s*[০-৯\d]{1,3}\s*[।\.\)]\s*)/u).filter(Boolean);
-
-  blocks.forEach((block, idx) => {
-    const trimmed = block.trim();
-    if (!/^[০-৯\d]{1,3}\s*[।\.\)]/u.test(trimmed)) return;
-    if (trimmed.includes("সৃজনশীল প্রশ্ন") || trimmed.includes("প্রতিটি প্রশ্নের মান")) return;
-
-    const k = trimmed.search(/\(ক\)/);
-    const kh = trimmed.search(/\(খ\)/);
-    const g = trimmed.search(/\(গ\)/);
-    const gh = trimmed.search(/\(ঘ\)/);
-
-    if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
-      const stimulus = trimmed.slice(0, k).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "").trim();
-      const subK = trimmed.slice(k, kh).replace(/^\(ক\)\s*/, "").trim();
-      const subKh = trimmed.slice(kh, g).replace(/^\(খ\)\s*/, "").trim();
-      const subG = trimmed.slice(g, gh).replace(/^\(গ\)\s*/, "").trim();
-      const subGh = trimmed.slice(gh).replace(/^\(ঘ\)\s*/, "").trim();
-
-      const fullCq = `${stimulus}\n\n(ক) ${subK}\n(খ) ${subKh}\n(গ) ${subG}\n(ঘ) ${subGh}`;
-
-      cqs.push({
-        id: `cq-${idx + 1}`,
-        text: fullCq,
-        options: { ক: subK, খ: subKh, গ: subG, ঘ: subGh },
-        correct: "",
-        sourceType: "CQ",
-      });
-    }
-  });
-  return true;
 }
 
 export default function QbExtract() {
@@ -274,7 +288,6 @@ export default function QbExtract() {
   const [pastedText, setPastedText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // ৩টি আলাদা ট্যাব
   const [activeTab, setActiveTab] = useState<"mcq" | "short" | "cq">("mcq");
   const [mcqList, setMcqList] = useState<any[]>([]);
   const [shortList, setShortList] = useState<any[]>([]);
@@ -293,12 +306,16 @@ export default function QbExtract() {
     e.preventDefault();
     setMsg(null);
 
+    if (!subject) {
+      setMsg({ ok: false, text: "দয়া করে বিষয় নির্বাচন করুন।" });
+      return;
+    }
     if (inputMode === "file" && !selectedFile) {
-      setMsg({ ok: false, text: "দয়া করে একটি PDF ফাইল বেছে নিন।" });
+      setMsg({ ok: false, text: "একটি PDF ফাইল নির্বাচন করুন।" });
       return;
     }
     if (inputMode === "text" && !pastedText.trim()) {
-      setMsg({ ok: false, text: "দয়া করে টেক্সট পেস্ট করুন।" });
+      setMsg({ ok: false, text: "টেক্সট পেস্ট করুন।" });
       return;
     }
 
@@ -308,7 +325,6 @@ export default function QbExtract() {
       let rawText = "";
 
       if (inputMode === "file" && selectedFile) {
-        // কো-অর্ডিনেট ভিত্তিক ২-কলাম টেক্সট এক্সট্রাকশন
         rawText = await extractCleanTwoColumnPdf(selectedFile);
       } else {
         rawText = pastedText;
@@ -324,7 +340,7 @@ export default function QbExtract() {
       setSelectedIds(allIds);
 
       if (allIds.length === 0) {
-        setMsg({ ok: false, text: "কোনো প্রশ্ন আলাদা করা যায়নি। পিডিএফটি স্ক্যান করা ছবি কি না নিশ্চিত করুন।" });
+        setMsg({ ok: false, text: "কোনো প্রশ্ন আলাদা করা যায়নি। পিডিএফটি স্ক্যান ছবি কি না নিশ্চিত করুন।" });
       } else {
         setMsg({
           ok: true,
@@ -332,7 +348,7 @@ export default function QbExtract() {
         });
       }
     } catch (err: any) {
-      setMsg({ ok: false, text: "ত্রুটি: " + err.message });
+      setMsg({ ok: false, text: "এক্সট্র্যাক্ট ত্রুটি: " + err.message });
     } finally {
       setBusy(false);
     }
@@ -342,7 +358,6 @@ export default function QbExtract() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  // বাল্ক সেভ হ্যান্ডলার
   const handleBulkSave = async () => {
     const listToSave: any[] = [];
 
@@ -517,7 +532,6 @@ export default function QbExtract() {
           </select>
         </div>
 
-        {/* ইনপুট মোড সুইচ */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex gap-2 mb-2">
             <button
@@ -573,7 +587,7 @@ export default function QbExtract() {
           className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition disabled:opacity-60"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-          <span>{busy ? "পিডিএফ কলাম বিশ্লেষণ করে প্রশ্ন পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
+          <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
         </button>
 
         {msg && (
@@ -591,7 +605,7 @@ export default function QbExtract() {
         )}
       </form>
 
-      {/* 🎯 ৩টি স্মার্ট ট্যাব ও বাল্ক সেভ ইন্টারফেস */}
+      {/* ৩টি ট্যাব ও বাল্ক সেভ ইন্টারফেস */}
       {totalCount > 0 && (
         <div className="space-y-4 pt-2 animate-in fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
