@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const PER_PAGE = 20;
 const input =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900";
 const btn = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white";
 
 function Common() {
@@ -71,12 +71,12 @@ export default async function AdminQuestions({
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <h1 className="text-2xl font-bold">প্রশ্ন ব্যাংক ({total})</h1>
+
       {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
       {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{ok}</p>}
 
-      <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-        <h2 className="mb-3 font-semibold">PDF থেকে প্রশ্ন আনুন</h2>
-        <PdfImport />
+      <section>
+        <PdfImport categories={CLASSES} />
       </section>
 
       <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
@@ -123,7 +123,7 @@ export default async function AdminQuestions({
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-semibold">সাম্প্রতিক প্রশ্ন</h2>
           {pendingCount > 0 && (
             <form action={approveAllPending}>
@@ -136,10 +136,14 @@ export default async function AdminQuestions({
 
         <ul className="space-y-3">
           {rows.map((q) => (
-            <li key={q.id} className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+            <li
+              key={q.id}
+              className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700"
+            >
               <p className="font-medium">{q.text}</p>
               <p className="mt-1 text-xs text-slate-500">
-                {q.category} · {q.subject} · {q.topic} · {q.source} · {q.approved ? "অনুমোদিত" : "অপেক্ষমাণ"}
+                {q.category} · {q.subject} · {q.topic} · {q.source} ·{" "}
+                {q.approved ? "অনুমোদিত" : "অপেক্ষমাণ"}
                 {q.correct ? "" : " · উত্তর নেই"}
               </p>
               <div className="mt-2 flex gap-2">
@@ -149,7 +153,9 @@ export default async function AdminQuestions({
                   </button>
                 </form>
                 <form action={deleteQuestion.bind(null, q.id)}>
-                  <button className="rounded border border-red-300 px-2 py-1 text-xs text-red-600">মুছুন</button>
+                  <button className="rounded border border-red-300 px-2 py-1 text-xs text-red-600">
+                    মুছুন
+                  </button>
                 </form>
               </div>
             </li>
