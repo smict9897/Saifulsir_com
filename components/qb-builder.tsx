@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Printer, Shuffle, Wand2 } from "lucide-react";
+import MathText from "@/components/MathText"; // 👈 KaTeX ম্যাথ রেন্ডারার যুক্ত করা হলো
 
 type Item = {
   id: string; text: string; options: Record<string, string>; correct: string;
@@ -63,6 +64,7 @@ const printCss = `
 @media print {
   header, footer, nav, .fixed, [data-noprint] { display: none !important; }
   body { background: #fff !important; }
+  .katex { font-size: 1.05em !important; }
 }`;
 
 export default function QbBuilder() {
@@ -153,7 +155,6 @@ export default function QbBuilder() {
 
   const isMcq = view.some((v) => v.opts.length > 0);
   const fullMarks = info.marks || String(items.length);
-  // "উত্তরপত্র" ফরম্যাটে শুধু উত্তর। অন্য ফরম্যাটে টিক দিলে তবেই উত্তরমালা, নতুন পাতায়।
   const showKey = isMcq && (cfg.format === "ans" || cfg.ansKey);
   const keyOnNewPage = cfg.format !== "ans";
 
@@ -248,7 +249,7 @@ export default function QbBuilder() {
       </aside>
 
       <section className="overflow-x-auto">
-        <div id="paper" className="mx-auto w-full max-w-[820px] bg-white p-6 text-black shadow print:max-w-none print:p-0 print:shadow-none">
+        <div id="paper" className="mx-auto w-full max-w-[820px] bg-white p-6 text-black shadow print:max-w-none print:p-0 print:shadow-none font-sans">
           <div className="text-center">
             {show.title && <h2 className="text-lg font-bold" contentEditable={edit} suppressContentEditableWarning>{info.inst || "প্রতিষ্ঠানের নাম"}</h2>}
             {show.address && info.address && <p className="text-xs">{info.address}</p>}
@@ -288,26 +289,38 @@ export default function QbBuilder() {
               {view.map(({ q, opts, ci }, i) => (
                 <div key={q.id} style={{ breakInside: "avoid" }} className="mb-3 text-[13px] leading-snug">
                   <div className="flex justify-between gap-2">
-                    <p contentEditable={edit} suppressContentEditableWarning><b>{i + 1}.</b> {q.text}</p>
+                    {/* 🎯 ১. প্রশ্নের মধ্যে KaTeX MathText ব্যবহার */}
+                    <p contentEditable={edit} suppressContentEditableWarning>
+                      <b>{i + 1}.</b> {edit ? q.text : <MathText text={q.text} />}
+                    </p>
                     {show.marks && <span className="shrink-0 text-xs">[১]</span>}
                   </div>
+
+                  {/* 🎯 ২. অপশনের মধ্যে KaTeX MathText ব্যবহার (ভগ্নাংশ উপর-নিচে দেখাবে) */}
                   {opts.length > 0 && (
                     <div className="mt-1 grid gap-x-3 gap-y-1" style={{ gridTemplateColumns: `repeat(${cfg.optCols}, minmax(0, 1fr))` }}>
                       {opts.map((o, k) => (
                         <p key={k} className="flex items-start gap-1.5">
                           {tag(k, k === ci)}
-                          <span contentEditable={edit} suppressContentEditableWarning>{o}</span>
+                          <span contentEditable={edit} suppressContentEditableWarning>
+                            {edit ? o : <MathText text={o} />}
+                          </span>
                         </p>
                       ))}
                     </div>
                   )}
+
                   {show.tags && (
                     <p className="mt-1 text-[10px] text-slate-600">
                       {[q.category, q.subject, q.topic, q.source].filter(Boolean).map((t) => `[${t}]`).join(" ")}
                     </p>
                   )}
+
+                  {/* 🎯 ৩. উত্তরের ব্যাখ্যার মধ্যে KaTeX MathText ব্যবহার */}
                   {cfg.format === "sug" && q.explanation && (
-                    <p className="mt-1 text-[11px] text-slate-700">ব্যাখ্যা: {q.explanation}</p>
+                    <p className="mt-1 text-[11px] text-slate-700">
+                      ব্যাখ্যা: <MathText text={q.explanation} />
+                    </p>
                   )}
                 </div>
               ))}
