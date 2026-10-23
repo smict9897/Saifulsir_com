@@ -7,7 +7,10 @@ import { db } from "@/lib/db";
 import { admin, staff } from "@/lib/guard";
 import { social } from "@/lib/social";
 
-const done = () => revalidatePath("/", "layout");
+const done = () => {
+  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+};
 const str = (fd: FormData, k: string) => { const v = fd.get(k); return typeof v === "string" ? v : ""; };
 const link = z.string().trim().refine((s) => s === "" || /^https:\/\/\S+$/.test(s), "Links must start with https://");
 
@@ -38,18 +41,42 @@ export async function deleteNotice(id: string): Promise<void> {
   done();
 }
 
+// 🎯 ১. রোল ও অ্যাডমিন ড্যাশবোর্ড পারমিশন আপডেট (ফিক্সড)
 export async function setRole(id: string, fd: FormData): Promise<void> {
   const me = await admin();
-  const role = z.enum(["ADMIN", "TEACHER", "STUDENT"]).parse(fd.get("role"));
-  if (id === me.id) throw new Error("You cannot change your own role.");
-  await db.user.update({ where: { id }, data: { role } });
+  
+  // আইডি সরাসরি বা ফরম থেকে রিসিভ করা
+  const targetId = id || String(fd.get("id") || fd.get("userId") || "");
+  const rawRole = String(fd.get("role") || "").trim();
+  const role = z.enum(["ADMIN", "TEACHER", "STUDENT"]).parse(rawRole);
+
+  if (!targetId) throw new Error("User ID পাওয়া যায়নি।");
+  if (me?.id && targetId === me.id) throw new Error("আপনি নিজের রোল পরিবর্তন করতে পারবেন না।");
+
+  // ডাটাবেজে নতুন রোল সেভ
+  await db.user.update({
+    where: { id: targetId },
+    data: { role },
+  });
+
+  // 🚀 ফিক্স: /admin পেজ রিভ্যালিডেট করা হলো যাতে সেভ চাপামাত্রই স্ক্রিনে রোল আপডেট দেখায়!
+  revalidatePath("/admin");
   revalidatePath("/admin/users");
+  revalidatePath("/", "layout");
 }
-export async function deleteUser(id: string): Promise<void> {
+
+// 🎯 ২. ইউজার ডিলিট অ্যাকশন (ফিক্সড)
+export async function deleteUser(id: string, fd?: FormData): Promise<void> {
   const me = await admin();
-  if (id === me.id) throw new Error("You cannot delete your own account.");
-  await db.user.delete({ where: { id } });
+  const targetId = id || String(fd?.get("id") || fd?.get("userId") || "");
+
+  if (me?.id && targetId === me.id) throw new Error("আপনি নিজের অ্যাকাউন্ট মুছতে পারবেন না।");
+
+  await db.user.delete({ where: { id: targetId } });
+
+  revalidatePath("/admin");
   revalidatePath("/admin/users");
+  revalidatePath("/", "layout");
 }
 
 const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
