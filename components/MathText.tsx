@@ -12,19 +12,23 @@ interface MathTextProps {
 export default function MathText({ text, className = "" }: MathTextProps) {
   if (!text) return null;
 
-  // ১. সাধারণ ভগ্নাংশ যেমন "১/৩" বা "4/5" কে স্বয়ংক্রিয়ভাবে LaTeX \frac{...}{...} এ রূপান্তর
-  const preparedText = text.replace(
-    /([০-৯\d]+)\/([০-৯\d]+)/g,
+  // 🎯 ১. আবৃত্ত দশমিক / পৌনঃপুনিক ডট (\u0307) থাকলে KaTeX \dot{} এ রূপান্তর (বক্স দূর করার ম্যাজিক)
+  let preparedText = text
+    .replace(/([০-৯\d])\s*[\u0307\u0308\u02D9\u0358]/gu, (_, d) => `$\\dot{${d}}$`)
+    .replace(/[\u0307\u0308\u02D9]([০-৯\d])/gu, (_, d) => `$\\dot{${d}}$`);
+
+  // 🎯 ২. সাধারণ ভগ্নাংশ যেমন "১/৩" বা "4/5" কে স্বয়ংক্রিয়ভাবে উপর-নিচে রূপান্তর
+  preparedText = preparedText.replace(
+    /(?<![\$\w])([০-৯\d]+)\/([০-৯\d]+)(?![\$\w])/g,
     (_, num, den) => `$\\frac{${num}}{${den}}$`
   );
 
-  // ২. $...$ (ইনলাইন ম্যাথ) এবং সাধারণ টেক্সট আলাদা করা
+  // ৩. $...$ (ম্যাথ ফর্মুলা) এবং সাধারণ টেক্সট আলাদা করে রেন্ডার
   const parts = preparedText.split(/(\$[^$]+\$)/g);
 
   return (
     <span className={`inline-math-wrapper ${className}`}>
       {parts.map((part, index) => {
-        // যদি এটি ম্যাথ এক্সপ্রেশন হয় ($ দিয়ে শুরু ও শেষ)
         if (part.startsWith("$") && part.endsWith("$")) {
           const formula = part.slice(1, -1);
           try {
@@ -44,7 +48,6 @@ export default function MathText({ text, className = "" }: MathTextProps) {
           }
         }
 
-        // সাধারণ টেক্সট
         return <span key={index}>{part}</span>;
       })}
     </span>
