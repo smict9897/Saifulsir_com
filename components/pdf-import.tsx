@@ -27,12 +27,12 @@ const CLASS_MAP: Record<string, string> = {
 };
 
 export default function PdfImport({ categories }: PdfImportProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
   const [inputMode, setInputMode] = useState<"file" | "text">("file");
 
-  // 🎯 আপনার আইডিয়া: প্রশ্নের ধরন সিলেক্টর (AUTO | MCQ | SHORT | CQ)
+  // 🎯 ১. প্রশ্নের ধরন স্টেট (AUTO | MCQ | SHORT | CQ)
   const [parseMode, setParseMode] = useState<"AUTO" | "MCQ" | "SHORT" | "CQ">("AUTO");
 
   const [busy, setBusy] = useState(false);
@@ -101,10 +101,9 @@ export default function PdfImport({ categories }: PdfImportProps) {
         setSelectedShortNums((data.shortQuestions || []).map((s: ParsedShort) => s.number));
         setSelectedCqNums((data.cqs || []).map((c: ParsedCQ) => c.number));
 
-        // যে ট্যাবে প্রশ্ন পাওয়া গেছে সরাসরি সেই ট্যাবে সুইচ করা
-        if (parseMode === "SHORT" || (data.shortQuestions || []).length > 0 && (data.mcqs || []).length === 0) {
+        if (parseMode === "SHORT" || ((data.shortQuestions || []).length > 0 && (data.mcqs || []).length === 0)) {
           setActiveTab("short");
-        } else if (parseMode === "CQ" || (data.cqs || []).length > 0 && (data.mcqs || []).length === 0) {
+        } else if (parseMode === "CQ" || ((data.cqs || []).length > 0 && (data.mcqs || []).length === 0)) {
           setActiveTab("cq");
         } else {
           setActiveTab("mcq");
@@ -173,12 +172,12 @@ export default function PdfImport({ categories }: PdfImportProps) {
 
       {open && (
         <div className="mt-4 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-          <form onSubmit={handleUpload} className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={handleUpload} className="space-y-3">
             
-            {/* 🎯 প্রশ্নের ধরন নির্বাচনের স্মার্ট বাটন */}
-            <div className="sm:col-span-2 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-                প্রশ্নের ধরন সিলেক্ট করুন:
+            {/* 🎯 প্রশ্নের ধরন নির্বাচনের ৪টি বাটন (একদম উপরে) */}
+            <div className="bg-blue-50/60 dark:bg-slate-800/60 p-3 rounded-2xl border border-blue-200 dark:border-slate-700">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                প্রশ্নের ধরন বেছে নিন (যে ফাইল দিচ্ছেন):
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
@@ -191,10 +190,10 @@ export default function PdfImport({ categories }: PdfImportProps) {
                     key={m.id}
                     type="button"
                     onClick={() => setParseMode(m.id as any)}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition text-center ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition text-center ${
                       parseMode === m.id
                         ? "bg-blue-600 text-white shadow-xs"
-                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
                     }`}
                   >
                     {m.label}
@@ -203,48 +202,51 @@ export default function PdfImport({ categories }: PdfImportProps) {
               </div>
             </div>
 
-            <div>
-              <label className={labelCls}>শ্রেণি</label>
-              <select value={category} onChange={(e) => { setCategory(e.target.value); setSubject(""); setTopic(""); }} className={inputCls}>
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}</option>
-                ))}
-              </select>
-            </div>
+            {/* ড্রপডাউনসমূহ */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>শ্রেণি</label>
+                <select value={category} onChange={(e) => { setCategory(e.target.value); setSubject(""); setTopic(""); }} className={inputCls}>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className={labelCls}>বিষয় *</label>
-              <select value={subject} onChange={(e) => { setSubject(e.target.value); setTopic(""); }} className={inputCls}>
-                <option value="">বিষয় বাছুন</option>
-                {subjectList.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
-                <option value={OTHER}>অন্য (নিজে লিখুন)</option>
-              </select>
-              {subject === OTHER && <input type="text" placeholder="বিষয়ের নাম" value={customSubject} onChange={(e) => setCustomSubject(e.target.value)} className={inputCls + " mt-2"} />}
-            </div>
-
-            <div>
-              <label className={labelCls}>অধ্যায়</label>
-              {chapterList.length > 0 ? (
-                <select value={topic} onChange={(e) => setTopic(e.target.value)} className={inputCls}>
-                  <option value="">অধ্যায় বাছুন</option>
-                  {chapterList.map((c) => <option key={c} value={c}>{c}</option>)}
+              <div>
+                <label className={labelCls}>বিষয় *</label>
+                <select value={subject} onChange={(e) => { setSubject(e.target.value); setTopic(""); }} className={inputCls}>
+                  <option value="">বিষয় বাছুন</option>
+                  {subjectList.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
                   <option value={OTHER}>অন্য (নিজে লিখুন)</option>
                 </select>
-              ) : (
-                <input type="text" placeholder="অধ্যায়" value={topic === OTHER ? customTopic : topic} onChange={(e) => { setTopic(OTHER); setCustomTopic(e.target.value); }} className={inputCls} />
-              )}
-              {chapterList.length > 0 && topic === OTHER && <input type="text" placeholder="অধ্যায় নাম" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} className={inputCls + " mt-2"} />}
+                {subject === OTHER && <input type="text" placeholder="বিষয়ের নাম" value={customSubject} onChange={(e) => setCustomSubject(e.target.value)} className={inputCls + " mt-2"} />}
+              </div>
+
+              <div>
+                <label className={labelCls}>অধ্যায়</label>
+                {chapterList.length > 0 ? (
+                  <select value={topic} onChange={(e) => setTopic(e.target.value)} className={inputCls}>
+                    <option value="">অধ্যায় বাছুন</option>
+                    {chapterList.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value={OTHER}>অন্য (নিজে লিখুন)</option>
+                  </select>
+                ) : (
+                  <input type="text" placeholder="অধ্যায়" value={topic === OTHER ? customTopic : topic} onChange={(e) => { setTopic(OTHER); setCustomTopic(e.target.value); }} className={inputCls} />
+                )}
+                {chapterList.length > 0 && topic === OTHER && <input type="text" placeholder="অধ্যায় নাম" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} className={inputCls + " mt-2"} />}
+              </div>
+
+              <div>
+                <label className={labelCls}>উৎস / বোর্ড-সাল</label>
+                <input type="text" value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="যেমন: বোর্ড বই" />
+              </div>
             </div>
 
-            <div>
-              <label className={labelCls}>উৎস / বোর্ড-সাল</label>
-              <input type="text" value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="যেমন: বোর্ড বই" />
-            </div>
-
-            <div className="sm:col-span-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
               <div className="flex gap-2 mb-2">
-                <button type="button" onClick={() => setInputMode("file")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "file" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>PDF ফাইল</button>
-                <button type="button" onClick={() => setInputMode("text")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "text" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>টেক্সট পেস্ট</button>
+                <button type="button" onClick={() => setInputMode("file")} className={`px-3 py-1 rounded-lg text-xs font-bold transition ${inputMode === "file" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>PDF ফাইল</button>
+                <button type="button" onClick={() => setInputMode("text")} className={`px-3 py-1 rounded-lg text-xs font-bold transition ${inputMode === "text" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>টেক্সট পেস্ট</button>
               </div>
 
               {inputMode === "file" ? (
@@ -254,19 +256,17 @@ export default function PdfImport({ categories }: PdfImportProps) {
               )}
             </div>
 
-            <div className="flex items-center sm:col-span-2">
+            <div className="flex items-center">
               <label className="flex items-center gap-2 text-xs cursor-pointer">
                 <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} className="rounded" />
                 সরাসরি অনুমোদন দিন (Approved)
               </label>
             </div>
 
-            <div className="sm:col-span-2">
-              <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50">
-                {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
-              </button>
-            </div>
+            <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 sm:text-sm">
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+              <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
+            </button>
           </form>
 
           {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold border border-red-200">{error}</div>}
