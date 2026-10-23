@@ -39,7 +39,6 @@ const BN_TO_KEY: Record<string, OptionKey> = {
   "A": "A", "B": "B", "C": "C", "D": "D",
 };
 
-// ১। বা ০১। বা 1. দিয়ে প্রশ্ন নম্বরের সীমানা তৈরি
 const QSTART_REGEX = /(?:^|\n|\s{2,})([০-৯\d]{1,3})\s*[।\.\)]\s*/gu;
 
 function sliceSectionByNumbers(sectionText: string) {
@@ -63,10 +62,95 @@ function sliceSectionByNumbers(sectionText: string) {
   return chunks;
 }
 
-export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult {
+// 🎯 মোড অনুযায়ী পার্স করার মূল ফাংশন
+export function parseAllQuestionsFromText(
+  raw: string, 
+  mode: "AUTO" | "MCQ" | "SHORT" | "CQ" = "AUTO"
+): MultiSectionParseResult {
   const body = joinMarks(cleanText(raw));
 
-  // ৩টি সেকশনের সীমানা খোঁজা
+  const result: MultiSectionParseResult = {
+    mcqs: [],
+    shortQuestions: [],
+    cqs: [],
+  };
+
+  // ✍️ ১. যদি ইউজার সরাসরি "শুধুমাত্র সংক্ষিপ্ত প্রশ্ন (SHORT)" মোড সিলেক্ট করে
+  if (mode === "SHORT") {
+    const chunks = sliceSectionByNumbers(body);
+    chunks.forEach(({ num, text }) => {
+      const qClean = text
+        .replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "")
+        .replace(/সং\s*ক্ষি\s*প্ত\s*উ\s*ত্ত\s*র\s*প্র\s*শ্ন.*/u, "")
+        .trim();
+
+      if (qClean.length > 5) {
+        result.shortQuestions.push({
+          number: num,
+          text: qClean,
+          marks: "২",
+        });
+      }
+    });
+    return result;
+  }
+
+  // 🧠 ২. যদি ইউজার সরাসরি "শুধুমাত্র সৃজনশীল (CQ)" মোড সিলেক্ট করে
+  if (mode === "CQ") {
+    const chunks = sliceSectionByNumbers(body);
+    chunks.forEach(({ num, text }) => {
+      const k = text.search(/\(ক\)/);
+      const kh = text.search(/\(খ\)/);
+      const g = text.search(/\(গ\)/);
+      const gh = text.search(/\(ঘ\)/);
+
+      if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
+        const stimulus = text.slice(0, k).replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
+        const subK = text.slice(k, kh).replace(/^\(ক\)\s*/, "").trim();
+        const subKh = text.slice(kh, g).replace(/^\(খ\)\s*/, "").trim();
+        const subG = text.slice(g, gh).replace(/^\(গ\)\s*/, "").trim();
+        const subGh = text.slice(gh).replace(/^\(ঘ\)\s*/, "").trim();
+
+        result.cqs.push({
+          number: num,
+          stimulus: stimulus || "উদ্দীপক",
+          subQuestions: { k: subK, kh: subKh, g: subG, gh: subGh },
+        });
+      }
+    });
+    return result;
+  }
+
+  // 📝 ৩. যদি "শুধুমাত্র বহুনির্বাচনি (MCQ)" মোড সিলেক্ট করে
+  if (mode === "MCQ") {
+    const chunks = sliceSectionByNumbers(body);
+    chunks.forEach(({ num, text }) => {
+      let qBlock = text;
+      const k = qBlock.search(/(?:\(|\b)[কaA][\.\)]/u);
+      const kh = qBlock.search(/(?:\(|\b)[খbB][\.\)]/u);
+      const g = qBlock.search(/(?:\(|\b)[গcC][\.\)]/u);
+      const gh = qBlock.search(/(?:\(|\b)[ঘdD][\.\)]/u);
+
+      if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
+        const stem = qBlock.slice(0, k).replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
+        const optA = qBlock.slice(k, kh).replace(/^(?:\(|\b)[কaA][\.\)]\s*/u, "").trim();
+        const optB = qBlock.slice(kh, g).replace(/^(?:\(|\b)[খbB][\.\)]\s*/u, "").trim();
+        const optC = qBlock.slice(g, gh).replace(/^(?:\(|\b)[গcC][\.\)]\s*/u, "").trim();
+        const optD = qBlock.slice(gh).replace(/^(?:\(|\b)[ঘdD][\.\)]\s*/u, "").trim();
+
+        result.mcqs.push({
+          number: num,
+          text: stem,
+          options: { A: optA, B: optB, C: optC, D: optD },
+          correct: "",
+          flags: [],
+        });
+      }
+    });
+    return result;
+  }
+
+  // 🤖 ৪. অটো ডিটেক্ট (AUTO) মোড: ৩টি সেকশনের হেডলাইন খুঁজে আলাদা করা
   const shortIdx = body.search(/সং\s*ক্ষি\s*প্ত\s*উ\s*ত্ত\s*র\s*প্র\s*শ্ন|সং\s*ক্ষি\s*প্ত\s*প্র\s*শ্ন/iu);
   const cqIdx = body.search(/সৃ\s*জ\s*ন\s*শী\s*ল\s*প্র\s*শ্ন/iu);
 
@@ -94,22 +178,11 @@ export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult 
     mcqText = body;
   }
 
-  const result: MultiSectionParseResult = {
-    mcqs: [],
-    shortQuestions: [],
-    cqs: [],
-  };
-
-  // 📝 ১. বহুনির্বাচনি (MCQ) পার্সিং
+  // অটো MCQ
   if (mcqText) {
     const mcqChunks = sliceSectionByNumbers(mcqText);
     mcqChunks.forEach(({ num, text }) => {
       let qBlock = text;
-      if (qBlock.includes("প্রতিষ্ঠানের নাম") || qBlock.includes("বহুনির্বাচনি অংশ")) {
-        const p = qBlock.search(/[০-৯\d]{1,3}\s*[।\.]\s*/u);
-        if (p !== -1) qBlock = qBlock.slice(p);
-      }
-
       const k = qBlock.search(/(?:\(|\b)[কaA][\.\)]/u);
       const kh = qBlock.search(/(?:\(|\b)[খbB][\.\)]/u);
       const g = qBlock.search(/(?:\(|\b)[গcC][\.\)]/u);
@@ -133,14 +206,13 @@ export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult 
     });
   }
 
-  // ✍️ ২. সংক্ষিপ্ত প্রশ্ন পার্সিং (৬৮টি প্রশ্ন উদ্ধার)
+  // অটো সংক্ষিপ্ত
   if (shortText) {
     const shortChunks = sliceSectionByNumbers(shortText);
     shortChunks.forEach(({ num, text }) => {
       const qClean = text
         .replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "")
         .replace(/সং\s*ক্ষি\s*প্ত\s*উ\s*ত্ত\s*র\s*প্র\s*শ্ন.*/u, "")
-        .replace(/৬৮\s*x\s*২\s*=\s*১৩৬.*/u, "")
         .trim();
 
       if (qClean.length > 5) {
@@ -153,7 +225,7 @@ export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult 
     });
   }
 
-  // 🧠 ৩. সৃজনশীল প্রশ্ন (CQ) পার্সিং (একটার ভেতর আরেকটা ঢুকবে না)
+  // অটো সৃজনশীল
   if (cqText) {
     const cqChunks = sliceSectionByNumbers(cqText);
     cqChunks.forEach(({ num, text }) => {
@@ -163,12 +235,7 @@ export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult 
       const gh = text.search(/\(ঘ\)/);
 
       if (k !== -1 && kh !== -1 && g !== -1 && gh !== -1 && k < kh && kh < g && g < gh) {
-        const stimulus = text
-          .slice(0, k)
-          .replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "")
-          .replace(/সৃ\s*জ\s*ন\s*শী\s*ল\s*প্র\s*শ্ন.*/u, "")
-          .trim();
-
+        const stimulus = text.slice(0, k).replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "").trim();
         const subK = text.slice(k, kh).replace(/^\(ক\)\s*/, "").trim();
         const subKh = text.slice(kh, g).replace(/^\(খ\)\s*/, "").trim();
         const subG = text.slice(g, gh).replace(/^\(গ\)\s*/, "").trim();
@@ -187,6 +254,6 @@ export function parseAllQuestionsFromText(raw: string): MultiSectionParseResult 
 }
 
 export function parseMcqText(raw: string) {
-  const res = parseAllQuestionsFromText(raw);
+  const res = parseAllQuestionsFromText(raw, "MCQ");
   return res.mcqs;
 }
