@@ -11,6 +11,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const rawText = String(body.text || "").trim();
+    const mode = (body.mode || "AUTO") as "AUTO" | "MCQ" | "SHORT" | "CQ";
 
     if (!rawText) {
       return NextResponse.json(
@@ -19,10 +20,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🎯 উভয় ফাংশনই সাপোর্ট করবে (জিরো টাইপ এরর)
+    // 🎯 ইউজার যে মোড সিলেক্ট করেছে সেই মোড অনুযায়ী পার্স করা
     let data: any;
     if (typeof (parser as any).parseAllQuestionsFromText === "function") {
-      data = (parser as any).parseAllQuestionsFromText(rawText);
+      data = (parser as any).parseAllQuestionsFromText(rawText, mode);
     } else if (typeof (parser as any).parseMcqText === "function") {
       const mcqs = (parser as any).parseMcqText(rawText);
       data = { mcqs, shortQuestions: [], cqs: [] };
