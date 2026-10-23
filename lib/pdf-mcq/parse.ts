@@ -16,22 +16,22 @@ const BN_TO_KEY: Record<string, OptionKey> = {
   "A": "A", "B": "B", "C": "C", "D": "D",
 };
 
-const QSTART = /(?:^|\n|\s{2,})([০-৯\d]{1,3})\s*[।\.]\s*/g;
+// ১। বা ০১। বা 1. দিয়ে প্রশ্ন শুরুর অবস্থান চিহ্নিত করা
+const QSTART_REGEX = /(?:^|\n|\s{2,})([০-৯\d]{1,3})\s*[।\.\)]\s*/gu;
 
 function findQuestionStarts(text: string) {
-  const out: { num: number; index: number; matchLen: number }[] = [];
-  const re = new RegExp(QSTART.source, "gu");
+  const out: { num: number; index: number }[] = [];
+  const re = new RegExp(QSTART_REGEX.source, "gu");
   let m: RegExpExecArray | null;
 
   while ((m = re.exec(text)) !== null) {
     const rawNum = m[1];
     const num = Number(toAsciiDigits(rawNum));
     if (!isNaN(num) && num > 0) {
-      out.push({ num, index: m.index, matchLen: m[0].length });
+      out.push({ num, index: m.index });
     }
   }
 
-  // ইন্ডেক্স অনুসারে সাজানো
   return out.sort((a, b) => a.index - b.index);
 }
 
@@ -43,7 +43,6 @@ function findOptionMarkers(block: string) {
   while ((m = re.exec(block)) !== null) {
     const key = BN_TO_KEY[m[1]];
     if (!key) continue;
-    // একই ব্লকে ডুপ্লিকেট অপশন মার্কার থাকলে প্রথমটি নেওয়া
     if (found.some((f) => f.key === key)) continue;
     found.push({ key, index: m.index, len: m[0].length });
   }
@@ -58,14 +57,14 @@ function parseBlock(num: number, block: string): ParsedMcq {
   const stemEnd = markers.length ? markers[0].index : block.length;
   let text = block
     .slice(0, stemEnd)
-    .replace(/^\s*[০-৯\d]{1,3}\s*[।\.]\s*/, "")
+    .replace(/^\s*[০-৯\d]{1,3}\s*[।\.\)]\s*/, "")
     .trim();
 
-  // যদি শুরুতে স্কুলের নাম বা হেডার টেক্সট থাকে তা বাদ দেওয়া
-  if (text.includes("বহুনির্বাচনি") || text.includes("পূর্ণমান")) {
-    const splitPoint = text.search(/নিচের|কোনটি|কাকে|কত|কী|কোন|একটি/u);
+  // স্কুলের প্রাতিষ্ঠানিক হেডার থাকলে তা প্রশ্ন থেকে কেটে ফেলা
+  if (text.includes("আপনার প্রতিষ্ঠানের নাম") || text.includes("বহুনির্বাচনি অংশ") || text.includes("পূর্ণমান")) {
+    const splitPoint = text.search(/নিচের|কোনটি|কাকে|কত|কী|কোন|একটি|[০-৯\d]{1,3}\s*[।\.\)]/u);
     if (splitPoint !== -1) {
-      text = text.slice(splitPoint).trim();
+      text = text.slice(splitPoint).replace(/^[০-৯\d]{1,3}\s*[।\.\)]\s*/, "").trim();
     }
   }
 
@@ -75,7 +74,7 @@ function parseBlock(num: number, block: string): ParsedMcq {
     const e = i + 1 < markers.length ? markers[i + 1].index : block.length;
     let optText = block.slice(s, e).trim();
 
-    // অপশনের শেষে যদি [Ans: ক] জাতীয় ট্যাগ থাকে
+    // অপশনের সাথে উত্তর লেখা থাকলে আলাদা করা
     const ansMatch = optText.match(/\[?(?:উত্তর|Ans|সঠিক)\s*[:ঃ]?\s*([কখগঘabcdABCD])\]?/i);
     if (ansMatch) {
       optText = optText.replace(ansMatch[0], "").trim();
@@ -84,12 +83,11 @@ function parseBlock(num: number, block: string): ParsedMcq {
     options[mk.key] = optText;
   });
 
-  if (!text) flags.push("প্রশ্নের বক্তব্য ফাঁকা");
+  if (!text) flags.push("প্রশ্নের বক্তব্য খালি");
   for (const k of ["A", "B", "C", "D"] as OptionKey[]) {
     if (!options[k]) flags.push(`অপশন ${k} পাওয়া যায়নি`);
   }
 
-  // চিত্রমূলক প্রশ্ন কি না যাচাই
   if (/চিত্র|উদ্দীপক|প্রতীক|চিহ্ন/u.test(text) && !/i\.|ii\./.test(text)) {
     flags.push("চিত্র সংবলিত প্রশ্ন হতে পারে");
   }
@@ -97,14 +95,25 @@ function parseBlock(num: number, block: string): ParsedMcq {
   return { number: num, text, options, correct: "", flags };
 }
 
+// 🎯 বাউন্ডেড পার্সিং: প্রতিটি প্রশ্নকে পরবর্তী প্রশ্নের আগেই সীমাবদ্ধ রাখা
 export function parseMcqText(raw: string): ParsedMcq[] {
   const body = joinMarks(cleanText(raw));
   const starts = findQuestionStarts(body);
 
   if (starts.length === 0) return [];
 
-  return starts.map((s, i) => {
-    const end = i + 1 < starts.length ? starts[i + 1].index : body.length;
-    return parseBlock(s.num, body.slice(s.index, end));
-  });
+  const parsedList: ParsedMcq[] = [];
+
+  for (let i = 0; i < starts.length; i++) {
+    const currentStart = starts[i].index;
+    // পরবর্তী প্রশ্নের শুরুতেই বর্তমান প্রশ্নের সীমানা শেষ হবে
+    const nextStart = i + 1 < starts.length ? starts[i + 1].index : body.length;
+    const block = body.slice(currentStart, nextStart).trim();
+
+    if (block) {
+      parsedList.push(parseBlock(starts[i].num, block));
+    }
+  }
+
+  return parsedList;
 }
