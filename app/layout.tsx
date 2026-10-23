@@ -32,6 +32,15 @@ import InstallPrompt from "@/components/InstallPrompt";
   }}
 />
 
+<head>
+  <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+  {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    crossOrigin="anonymous"
+  />
+</head>
 // 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ সীমাবদ্ধ করা হলো
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
