@@ -4,6 +4,74 @@ import { db } from "@/lib/db";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
+// 🎯 যেভাবেই ডাটাবেজে options সেভ থাকুক, ভেতর থেকে আসল উত্তরের লেখা বের করার স্মার্ট পার্সার
+function extractOptions(rawOptions: any): string[] {
+  if (!rawOptions) return [];
+
+  let data = rawOptions;
+
+  // ১. যদি স্ট্রিং আকারে থাকে, JSON পার্স করা
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      const lines = data.split(/\n/).map((s: string) => s.trim()).filter(Boolean);
+      if (lines.length >= 2) return lines;
+    }
+  }
+
+  // ২. যদি অ্যারে আকারে থাকে
+  if (Array.isArray(data)) {
+    return data.map((item: any) => {
+      if (typeof item === "string") return item.trim();
+      if (typeof item === "object" && item !== null) {
+        return String(item.text || item.option || item.value || item.title || Object.values(item)[0] || "").trim();
+      }
+      return String(item).trim();
+    }).filter(Boolean);
+  }
+
+  // ৩. যদি অবজেক্ট বা কী-ভ্যালু ম্যাপ আকারে থাকে (যেমন: { "ক": "উত্তর ১", "খ": "উত্তর ২" } বা { A: "...", B: "..." })
+  if (typeof data === "object" && data !== null) {
+    if (Array.isArray(data.options)) {
+      return extractOptions(data.options);
+    }
+
+    const keys = Object.keys(data);
+    const preferredOrder = [
+      "ক", "খ", "গ", "ঘ",
+      "A", "B", "C", "D",
+      "a", "b", "c", "d",
+      "১", "২", "৩", "৪",
+      "1", "2", "3", "4",
+      "0", "1", "2", "3",
+      "opt1", "opt2", "opt3", "opt4"
+    ];
+
+    const sortedKeys = [...keys].sort((a, b) => {
+      const idxA = preferredOrder.indexOf(a);
+      const idxB = preferredOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    const values = sortedKeys.map((k) => {
+      const val = data[k];
+      if (typeof val === "string") return val.trim();
+      if (typeof val === "object" && val !== null) {
+        return String(val.text || val.value || Object.values(val)[0] || "").trim();
+      }
+      return String(val || "").trim();
+    }).filter(Boolean);
+
+    if (values.length > 0) return values;
+  }
+
+  return [];
+}
+
 export async function POST(req: Request) {
   try {
     const { mode, className, subject, chapter, difficulty, count, language } = await req.json();
@@ -67,7 +135,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // ৪. এখনো না পেলে ডাটাবেজের একটি নমুনা দেখিয়ে সাহায্য করা
+      // ৪. এখনো না পেলে নোটিশ দেখানো
       if (!dbQuestions || dbQuestions.length === 0) {
         const sample = await db.question.findFirst({
           select: { category: true, subject: true, topic: true },
@@ -83,29 +151,38 @@ export async function POST(req: Request) {
         });
       }
 
-      // Live MCQ ফরম্যাটে রূপান্তর
-      const formatted = dbQuestions.map((q, idx) => {
-        let opts: string[] = [];
-        try {
-          opts = Array.isArray(q.options) ? (q.options as string[]) : JSON.parse(q.options as string);
-        } catch {
-          opts = ["ক", "খ", "গ", "ঘ"];
-        }
+      // 🎯 Live MCQ ফরম্যাটে রূপান্তর (আসল অপশন টেক্সট সহ)
+      const letterMap: Record<string, number> = {
+        "ক": 0, "খ": 1, "গ": 2, "ঘ": 3,
+        "A": 0, "B": 1, "C": 2, "D": 3,
+        "a": 0, "b": 1, "c": 2, "d": 3,
+        "১": 0, "২": 1, "৩": 2, "৪": 3,
+        "0": 0, "1": 1, "2": 2, "3": 3,
+      };
 
+      const formatted = dbQuestions.map((q, idx) => {
+        // আসল উত্তরের তালিকা বের করা
+        const opts = extractOptions(q.options);
+
+        // সঠিক উত্তরের ইনডেক্স নির্ধারণ
         let correctIdx = 0;
-        if (!isNaN(Number(q.correct))) {
-          correctIdx = parseInt(q.correct);
+        const correctStr = String(q.correct || "").trim();
+
+        if (letterMap[correctStr] !== undefined) {
+          correctIdx = letterMap[correctStr];
+        } else if (!isNaN(Number(correctStr)) && Number(correctStr) >= 0 && Number(correctStr) < opts.length) {
+          correctIdx = parseInt(correctStr);
         } else {
-          const found = opts.findIndex((o) => o === q.correct);
+          const found = opts.findIndex((o) => o === correctStr || o.includes(correctStr));
           correctIdx = found !== -1 ? found : 0;
         }
 
         return {
           id: q.id || idx + 1,
           question: q.text,
-          options: opts,
+          options: opts.length > 0 ? opts : ["অপশন ১", "অপশন ২", "অপশন ৩", "অপশন ৪"],
           correctAnswer: correctIdx,
-          explanation: q.explanation || "ব্যাখ্যা উপলব্ধ নেই।",
+          explanation: q.explanation || "উত্তরের ব্যাখ্যা ডাটাবেজে উপলব্ধ নেই।",
         };
       });
 
@@ -113,7 +190,7 @@ export async function POST(req: Request) {
     }
 
     // ==========================================
-    // ২. AI মোড
+    // ২. AI মোড (Gemini AI Mode)
     // ==========================================
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -136,7 +213,7 @@ Return a pure JSON array ONLY:
   {
     "id": 1,
     "question": "প্রশ্নের টেক্সট বাংলায়",
-    "options": ["অপশন ক", "অপশন খ", "অপশন গ", "অপশন ঘ"],
+    "options": ["অপশন ক এর আসল উত্তর", "অপশন খ এর আসল উত্তর", "অপশন গ এর আসল উত্তর", "অপশন ঘ এর আসল উত্তর"],
     "correctAnswer": 0,
     "explanation": "সঠিক উত্তরের ব্যাখ্যা"
   }
