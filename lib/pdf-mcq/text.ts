@@ -16,9 +16,12 @@ export function toAsciiDigits(s: string): string {
 export function joinMarks(s: string): string {
   if (!s) return "";
   return s
-    .replace(/[ \t]+(?=[\u09BC\u09BE-\u09CD\u09D7\u0981-\u0983\u09DF])/g, "")
-    .replace(/\u09CD[ \t]+/g, "\u09CD")
+    // কার ও যুক্তবর্ণের মাঝের অযাচিত ফাঁকা মুছে ফেলা
     .replace(/([অ-হড়-য়০-৯a-zA-Z])\s+([়্া-ৌঁ-ঃ])/gu, "$1$2")
     .replace(/([্])\s+([অ-হড়-য়])/gu, "$1$2")
+    .replace(/([অ-হ])\s+্র/gu, "$1্র")
+    .replace(/([অ-হ])\s+্য/gu, "$1্য")
+    // ব্র্যাকেট অপশন পরিষ্কার করা: "( ক )" -> "(ক)"
+    .replace(/\(\s*([কখগঘabcdABCD])\s*[\)\.]/gu, "($1)")
     .replace(/[ \t]{2,}/g, " ");
 }
