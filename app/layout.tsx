@@ -11,37 +11,8 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
-// app/layout.tsx এর <head> এর ভেতরে এটি যোগ করুন:
-<script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "SaifulSir",
-      "alternateName": ["SaifulSir.com", "Saiful Sir", "সাইফুল স্যার"],
-      "url": "https://saifulsir.com",
-      "description": "বাংলাদেশের স্মার্ট এডুকেশন প্ল্যাটফর্ম - নোট, সাজেশন ও অনলাইন পরীক্ষা",
-      "publisher": {
-        "@type": "Organization",
-        "name": "SaifulSir.com",
-        "url": "https://saifulsir.com",
-        "logo": "https://saifulsir.com/logo.png"
-      }
-    }),
-  }}
-/>
 
-<head>
-  <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-  {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
-    crossOrigin="anonymous"
-  />
-</head>
-// 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ সীমাবদ্ধ করা হলো
+// 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
   variable: "--font-bn",
@@ -49,12 +20,12 @@ const bn = localFont({
   declarations: [
     {
       prop: "unicode-range",
-      value: "U+0980-09FF, U+200C-200D", // শুধু বাংলা অক্ষর থাকলে এটি কাজ করবে
+      value: "U+0980-09FF, U+200C-200D",
     },
   ],
 });
 
-// 🎯 ২. ইংরেজি ও গণিতের চিহ্নের জন্য Tinos (Times New Roman-এর হুবহু অফিশিয়াল সংস্করণ)
+// 🎯 ২. ইংরেজি ও গণিতের ফন্টের জন্য Tinos (Times New Roman)
 const en = Tinos({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -66,9 +37,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
   return {
     metadataBase: new URL(process.env.SITE_URL ?? "https://saifulsir.com"),
-    // 🎯 এখানে ব্র্যান্ড নাম সহ টাইটেল আপডেট হলো:
     title: {
-      default: "SaifulSir.com | Saifulsir - শিক্ষা ও পরীক্ষার পূর্ণাঙ্গ প্রস্তুতি",
+      default: "SaifulSir.com | সাইফুল স্যার - শিক্ষা ও পরীক্ষার পূর্ণাঙ্গ প্রস্তুতি",
       template: "%s | SaifulSir.com",
     },
     description: site.metaDescription,
@@ -96,11 +66,37 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        
+        {/* 🎯 গুগল ব্র্যান্ড স্কিমা */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "SaifulSir",
+              "alternateName": ["SaifulSir.com", "Saiful Sir", "সাইফুল স্যার"],
+              "url": "https://saifulsir.com",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://saifulsir.com/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            }),
+          }}
+        />
+
+        {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+          crossOrigin="anonymous"
+        />
       </head>
+      
       <body
         className="pb-16 md:pb-0"
         style={{
-          // 💡 প্রথমে ইংরেজি ফন্ট (Times New Roman / Tinos), এরপর বাংলা (AdorshoLipi)
           fontFamily: 'var(--font-en), "Times New Roman", var(--font-bn), serif',
         }}
       >
