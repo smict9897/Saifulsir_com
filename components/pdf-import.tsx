@@ -2,8 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { 
-  FileUp, Loader2, CheckCircle2, AlertTriangle, 
-  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save, HelpCircle 
+  FileUp, Loader2, AlertTriangle, 
+  Trash2, CheckSquare, Square, ChevronDown, ChevronUp, Save 
 } from "lucide-react";
 import type { OptionKey, ParsedMcq, ParsedShort, ParsedCQ } from "@/lib/pdf-mcq/parse";
 import { saveExtracted } from "@/app/admin/questions/actions";
@@ -31,6 +31,9 @@ export default function PdfImport({ categories }: PdfImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
   const [inputMode, setInputMode] = useState<"file" | "text">("file");
+
+  // 🎯 আপনার আইডিয়া: প্রশ্নের ধরন সিলেক্টর (AUTO | MCQ | SHORT | CQ)
+  const [parseMode, setParseMode] = useState<"AUTO" | "MCQ" | "SHORT" | "CQ">("AUTO");
 
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -77,6 +80,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
 
     setBusy(true);
     setError(null);
+    setNotice(null);
 
     try {
       const textToSend = inputMode === "file" && file ? await extractCleanTwoColumnPdf(file) : pastedText;
@@ -84,7 +88,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
       const res = await fetch("/api/admin/pdf-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textToSend }),
+        body: JSON.stringify({ text: textToSend, mode: parseMode }), // 👈 মোড পাঠানো হচ্ছে
       });
 
       const data = await res.json();
@@ -97,9 +101,14 @@ export default function PdfImport({ categories }: PdfImportProps) {
         setSelectedShortNums((data.shortQuestions || []).map((s: ParsedShort) => s.number));
         setSelectedCqNums((data.cqs || []).map((c: ParsedCQ) => c.number));
 
-        if ((data.mcqs || []).length > 0) setActiveTab("mcq");
-        else if ((data.cqs || []).length > 0) setActiveTab("cq");
-        else if ((data.shortQuestions || []).length > 0) setActiveTab("short");
+        // যে ট্যাবে প্রশ্ন পাওয়া গেছে সরাসরি সেই ট্যাবে সুইচ করা
+        if (parseMode === "SHORT" || (data.shortQuestions || []).length > 0 && (data.mcqs || []).length === 0) {
+          setActiveTab("short");
+        } else if (parseMode === "CQ" || (data.cqs || []).length > 0 && (data.mcqs || []).length === 0) {
+          setActiveTab("cq");
+        } else {
+          setActiveTab("mcq");
+        }
 
         setNotice(`🎉 ${(data.mcqs || []).length}টি MCQ, ${(data.shortQuestions || []).length}টি সংক্ষিপ্ত, ${(data.cqs || []).length}টি সৃজনশীল প্রশ্ন পাওয়া গেছে!`);
       } else {
@@ -113,7 +122,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
   };
 
   const handleBulkSave = async () => {
-    if (!finalSubject) { alert("বিষয় দিন।"); return; }
+    if (!finalSubject) { alert("দয়া করে বিষয় নির্বাচন করুন।"); return; }
     const itemsToSave: any[] = [];
 
     mcqs.forEach((q) => {
@@ -155,7 +164,7 @@ export default function PdfImport({ categories }: PdfImportProps) {
       <div onClick={() => setOpen(!open)} className="flex cursor-pointer select-none items-center justify-between text-base font-bold text-slate-900 dark:text-slate-100">
         <span className="flex items-center gap-2">
           <FileUp size={20} className="text-blue-600" />
-          PDF বা ছবি থেকে প্রশ্ন তুলুন (MCQ, SQ, CQ আলাদা পার্সার)
+          PDF থেকে প্রশ্ন তুলুন (MCQ, সংক্ষিপ্ত, সৃজনশীল)
         </span>
         <button type="button" className="p-1 text-slate-500">
           {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -165,6 +174,35 @@ export default function PdfImport({ categories }: PdfImportProps) {
       {open && (
         <div className="mt-4 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
           <form onSubmit={handleUpload} className="grid gap-3 sm:grid-cols-2">
+            
+            {/* 🎯 প্রশ্নের ধরন নির্বাচনের স্মার্ট বাটন */}
+            <div className="sm:col-span-2 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                প্রশ্নের ধরন সিলেক্ট করুন:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: "AUTO", label: "🤖 অটো ডিটেক্ট" },
+                  { id: "MCQ", label: "📝 শুধু MCQ" },
+                  { id: "SHORT", label: "✍️ শুধু সংক্ষিপ্ত (SQ)" },
+                  { id: "CQ", label: "🧠 শুধু সৃজনশীল (CQ)" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setParseMode(m.id as any)}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition text-center ${
+                      parseMode === m.id
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label className={labelCls}>শ্রেণি</label>
               <select value={category} onChange={(e) => { setCategory(e.target.value); setSubject(""); setTopic(""); }} className={inputCls}>
@@ -199,14 +237,14 @@ export default function PdfImport({ categories }: PdfImportProps) {
             </div>
 
             <div>
-              <label className={labelCls}>বোর্ড-সাল</label>
-              <input type="text" value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="ঢাকা বোর্ড ২০২৫" />
+              <label className={labelCls}>উৎস / বোর্ড-সাল</label>
+              <input type="text" value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} placeholder="যেমন: বোর্ড বই" />
             </div>
 
             <div className="sm:col-span-2 pt-1 border-t border-slate-100 dark:border-slate-800">
               <div className="flex gap-2 mb-2">
-                <button type="button" onClick={() => setInputMode("file")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "file" ? "bg-slate-900 text-white" : "bg-slate-100"}`}>PDF ফাইল</button>
-                <button type="button" onClick={() => setInputMode("text")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "text" ? "bg-slate-900 text-white" : "bg-slate-100"}`}>টেক্সট পেস্ট</button>
+                <button type="button" onClick={() => setInputMode("file")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "file" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>PDF ফাইল</button>
+                <button type="button" onClick={() => setInputMode("text")} className={`px-3 py-1 rounded-lg text-xs font-bold ${inputMode === "text" ? "bg-slate-900 text-white" : "bg-slate-100 dark:bg-slate-800"}`}>টেক্সট পেস্ট</button>
               </div>
 
               {inputMode === "file" ? (
@@ -226,12 +264,12 @@ export default function PdfImport({ categories }: PdfImportProps) {
             <div className="sm:col-span-2">
               <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50">
                 {busy ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-                <span>{busy ? "পিডিএফ পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
+                <span>{busy ? "পিডিএফ থেকে প্রশ্ন পড়া হচ্ছে…" : "প্রশ্ন বের করুন"}</span>
               </button>
             </div>
           </form>
 
-          {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold border border-red-200 flex items-center gap-2"><AlertTriangle size={15} /> <span>{error}</span></div>}
+          {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold border border-red-200">{error}</div>}
           {notice && <div className="p-3 rounded-xl bg-green-50 text-green-700 text-xs font-bold border border-green-200">{notice}</div>}
 
           {total > 0 && (
