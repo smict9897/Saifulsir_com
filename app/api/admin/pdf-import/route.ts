@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { staff } from "@/lib/guard";
-import { parseMcqText } from "@/lib/pdf-mcq/parse";
+import { parseAllQuestionsFromText } from "@/lib/pdf-mcq/parse";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -14,28 +14,27 @@ export async function POST(req: Request) {
 
     if (!rawText) {
       return NextResponse.json(
-        { ok: false, error: "কোনো টেক্সট পাওয়া যায়নি। ফাইলটি খালি অথবা স্ক্যান করা ছবি হতে পারে।" },
+        { ok: false, error: "কোনো টেক্সট পাওয়া যায়নি। ফাইলটি খালি হতে পারে।" },
         { status: 422 }
       );
     }
 
-    // পিওর কোড ও বাউন্ডেড পার্সিং রান করা
-    const questions = parseMcqText(rawText);
+    // ৩টি ক্যাটাগরির প্রশ্ন আলাদা করা
+    const data = parseAllQuestionsFromText(rawText);
 
-    if (questions.length === 0) {
+    const total = data.mcqs.length + data.shortQuestions.length + data.cqs.length;
+    if (total === 0) {
       return NextResponse.json(
-        { ok: false, error: "পিডিএফ থেকে প্রশ্ন আলাদা করা সম্ভব হয়নি। ফরম্যাট পরীক্ষা করুন।" },
+        { ok: false, error: "পিডিএফ থেকে কোনো প্রশ্ন আলাদা করা যায়নি। প্রশ্নপত্রের ফরম্যাট পরীক্ষা করুন।" },
         { status: 422 }
       );
     }
 
     return NextResponse.json({
       ok: true,
-      count: questions.length,
-      questions,
-      warnings: questions
-        .filter((q) => q.flags.length > 0)
-        .map((q) => `প্রশ্ন ${q.number}: ${q.flags.join(", ")}`),
+      mcqs: data.mcqs,
+      shortQuestions: data.shortQuestions,
+      cqs: data.cqs,
     });
   } catch (err: any) {
     console.error("PDF Import API Error:", err);
