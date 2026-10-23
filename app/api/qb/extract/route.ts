@@ -20,8 +20,8 @@ export async function POST(req: Request) {
     // Prisma Question টেবিলে বাল্ক ইনসার্ট ফরম্যাট
     const records = questions.map((q: any) => ({
       category: category || "SSC",
-      subject: subject || "সাধারণ",
-      topic: topic || "অধ্যায় ১",
+      subject: subject || "রসায়ন",
+      topic: topic || "অধ্যায় ১",
       difficulty: difficulty || "MEDIUM",
       lang: lang || "Bangla",
       text: q.text,
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       source: source || `PDF_${q.sourceType || "EXTRACT"}`,
     }));
 
-    // এক ক্লিকে সব প্রশ্ন ডাটাবেজে সেভ (Prisma createMany)
+    // একবারে সব প্রশ্ন ডাটাবেজে সংরক্ষণ (Prisma createMany)
     const result = await db.question.createMany({
       data: records,
       skipDuplicates: true,
