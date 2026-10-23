@@ -15,7 +15,15 @@ export async function extractCleanTwoColumnPdf(file: File): Promise<string> {
   });
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  // 🎯 CMap যুক্ত করা হলো যাতে অক্সিজেন, গ্লুকোজ, ব্রোঞ্জের মতো বাংলা যুক্তাক্ষর না ভাঙে
+  const loadingTask = pdfjsLib.getDocument({
+    data: arrayBuffer,
+    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
+    cMapPacked: true,
+  });
+
+  const pdfDoc = await loadingTask.promise;
   let fullText = "";
 
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
@@ -28,7 +36,8 @@ export async function extractCleanTwoColumnPdf(file: File): Promise<string> {
     const col2Items: any[] = [];
 
     textContent.items.forEach((item: any) => {
-      if (item.transform[4] < midX - 5) col1Items.push(item);
+      const x = item.transform[4];
+      if (x < midX - 5) col1Items.push(item);
       else col2Items.push(item);
     });
 
@@ -48,7 +57,8 @@ export async function extractCleanTwoColumnPdf(file: File): Promise<string> {
           currentY = y;
           lastXEnd = x + it.width;
         } else {
-          res += (x - lastXEnd > 4 ? " " : "") + it.str;
+          // অক্ষরের মাঝের দূরত্ব মাপা
+          res += (x - lastXEnd > 3 ? " " : "") + it.str;
           lastXEnd = Math.max(lastXEnd, x + it.width);
         }
       }
