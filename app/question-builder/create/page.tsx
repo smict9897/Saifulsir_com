@@ -5,59 +5,65 @@ import QbPicker from "@/components/qb-picker";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "প্রশ্ন নির্বাচন" };
 
-type SP = { category?: string; subject?: string; topic?: string; type?: string; q?: string; page?: string };
-const PER_PAGE = 15;
+type SP = { category?: string; subject?: string; topic?: string; q?: string; page?: string };
+const PER_PAGE = 50; // একবারে ৫০টি প্রশ্ন লোড হবে
 
 export default async function CreatePage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const category = sp.category ?? "";
   const subject = sp.subject ?? "";
   const topic = sp.topic ?? "";
-  const type = sp.type === "written" ? "written" : "mcq";
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const base = {
+  // 🎯 type (mcq/written) ফিল্টার বাদ দেওয়া হলো, যাতে সব প্রশ্ন একবারে আসে
+  const where = {
     approved: true,
     ...(category ? { category } : {}),
     ...(subject ? { subject } : {}),
-  };
-  const where = {
-    ...base,
     ...(topic ? { topic } : {}),
-    correct: type === "mcq" ? { not: "" } : "",
     ...(q ? { text: { contains: q, mode: "insensitive" as const } } : {}),
   };
 
   const [rows, total, topicRows] = await Promise.all([
     db.question.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PER_PAGE, take: PER_PAGE }),
     db.question.count({ where }),
-    db.question.findMany({ where: base, select: { topic: true }, distinct: ["topic"] }),
+    db.question.findMany({ where: { approved: true, ...(category ? { category } : {}) }, select: { topic: true }, distinct: ["topic"] }),
   ]);
+  
   const topics = topicRows.map((t) => t.topic).filter(Boolean);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   const href = (o: Partial<SP>) => {
-    const m: SP = { category, subject, topic, type, q, ...o };
+    const m: SP = { category, subject, topic, q, ...o };
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(m)) if (v) p.set(k, String(v));
     return `?${p.toString()}`;
   };
 
-  const items = rows.map((r) => ({
-    id: r.id,
-    text: r.text,
-    options: r.options as Record<string, string>,
-    correct: r.correct,
-    explanation: r.explanation,
-    category: r.category,
-    subject: r.subject,
-    topic: r.topic,
-    source: r.source,
-  }));
+  const items = rows.map((r) => {
+    // 🎯 ডাটাবেজের ডেটা দেখে প্রশ্নের ধরন বের করা (MCQ, SHORT, CQ)
+    let itemType = "MCQ";
+    if (!r.correct) {
+      itemType = r.options && Object.keys(r.options).length > 0 ? "CQ" : "SHORT";
+    }
+    
+    return {
+      id: r.id,
+      text: r.text,
+      options: r.options as Record<string, string>,
+      correct: r.correct,
+      explanation: r.explanation,
+      category: r.category,
+      subject: r.subject,
+      topic: r.topic,
+      source: r.source,
+      type: itemType, // 🎯 টাইপ পাস করা হলো
+      stimulus: (r.options as any)?.stimulus || "",
+      subQuestions: (r.options as any)?.subQuestions || r.options,
+    };
+  });
 
-  const tab = (on: boolean) =>
-    `rounded-lg px-4 py-2 text-sm font-semibold ${on ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-700"}`;
   const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm";
 
   return (
@@ -68,7 +74,6 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
       <form method="get" className="mt-4 grid gap-2">
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="subject" value={subject} />
-        <input type="hidden" name="type" value={type} />
         <select name="topic" defaultValue={topic} className={input}>
           <option value="">অধ্যায় নির্বাচন করুন</option>
           {topics.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -83,11 +88,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
         মোট {total ? (page - 1) * PER_PAGE + 1 : 0} - {Math.min(page * PER_PAGE, total)} টি প্রশ্ন (মোট {total})
       </p>
 
-      <div className="mt-2 flex gap-2">
-        <Link href={href({ type: "mcq", page: "1" })} className={tab(type === "mcq")}>বহুনির্বাচনি</Link>
-        <Link href={href({ type: "written", page: "1" })} className={tab(type === "written")}>লিখিত</Link>
-      </div>
-
+      {/* 🎯 এখানে QbPicker-কে সব ডেটা দেওয়া হলো, সে নিজেই ট্যাব ম্যানেজ করবে */}
       <QbPicker items={items} />
 
       <nav aria-label="Pagination" className="my-8 flex items-center justify-center gap-4 text-sm">
