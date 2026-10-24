@@ -7,7 +7,8 @@ import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/gener
 import curriculum from "../nctb-curriculum.json";
 
 type Triple = { category: string; subject: string; topic: string };
-type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English" };
+// 🎯 type যুক্ত করা হলো
+type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English"; type?: "MCQ" | "SHORT" | "CQ" | "MIXED" };
 
 const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const OTHER = "__other__";
@@ -26,7 +27,6 @@ const classLabel = (v: string) => {
 };
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
 
-// NCTB JSON থেকে ক্লাস ম্যাপিং
 const CLASS_MAP: Record<string, string> = {
   "6": "Class 6",
   "7": "Class 7",
@@ -70,6 +70,9 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
   const [count, setCount] = useState<number>(opts[0]);
   const [lang, setLang] = useState<"Bangla" | "English">("Bangla");
+  
+  // 🎯 নতুন স্টেট: প্রশ্নের ধরন
+  const [qType, setQType] = useState<"MCQ" | "SHORT" | "CQ" | "MIXED">("MCQ");
 
   const [items, setItems] = useState<QuizItem[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -93,7 +96,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
     } catch {}
   }, []);
 
-  // Curriculum + database subjects
   const curriculumSubjects = useMemo(() => getCurriculumSubjects(cat), [cat]);
   const dbSubjects = useMemo(
     () => uniq(triples.filter((t) => t.category === cat).map((t) => t.subject)),
@@ -104,7 +106,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const subjIsOther = subjSel === OTHER || (cat !== "" && subjects.length === 0);
   const subject = subjIsOther ? subjOther.trim() : subjSel;
 
-  // Curriculum + database chapters
   const curriculumChapters = useMemo(() => getCurriculumChapters(cat, subjSel), [cat, subjSel]);
   const dbTopics = useMemo(
     () => (subjIsOther ? [] : uniq(triples.filter((t) => t.category === cat && t.subject === subjSel).map((t) => t.topic))),
@@ -128,7 +129,9 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       setError("ক্লাস, বিষয় ও অধ্যায় তিনটিই দিন।");
       return;
     }
-    const m: Meta = { subject, category: cat, topic, difficulty, lang };
+    
+    // 🎯 মেটাতে প্রশ্নের ধরন যুক্ত করা হলো
+    const m: Meta = { subject, category: cat, topic, difficulty, lang, type: qType };
     setMeta(m);
     stopRef.current = false;
     setLoading(true);
@@ -349,6 +352,17 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           )}
         </div>
 
+        {/* 🎯 এখানে প্রশ্নের ধরন সিলেক্টর যুক্ত করা হলো */}
+        <label className="grid gap-1 text-sm font-medium">
+          <span>প্রশ্নের ধরন</span>
+          <select value={qType} onChange={(e) => setQType(e.target.value as any)} className={f} disabled={loading}>
+            <option value="MCQ">📝 শুধু MCQ (বহুনির্বাচনি)</option>
+            <option value="SHORT">✍️ শুধু সংক্ষিপ্ত প্রশ্ন</option>
+            <option value="CQ">🧠 শুধু সৃজনশীল প্রশ্ন</option>
+            <option value="MIXED">🎲 মিক্স (MCQ + সংক্ষিপ্ত + সৃজনশীল)</option>
+          </select>
+        </label>
+
         <div className="grid grid-cols-3 gap-2">
           <label className="grid gap-1 text-sm font-medium">
             <span>কঠিনতা</span>
@@ -381,7 +395,8 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {loading ? `প্রশ্ন তৈরি হচ্ছে… \( {items.length}/ \){count}` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
+          {/* 🎯 এখানে টেক্সট এররটি ঠিক করা হলো */}
+          {loading ? `প্রশ্ন তৈরি হচ্ছে… (${items.length}/${count})` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
         </button>
 
         {loading && (
@@ -412,8 +427,9 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       {items.length > 0 && !loading && (
         <div className="mt-5 grid gap-4">
           <p className="text-sm text-slate-600">
+            {/* 🎯 এখানে টেক্সট এররটি ঠিক করা হলো */}
             {allSaved && meta
-              ? `\( {items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে ( \){meta.category} › ${meta.subject} › ${meta.topic})`
+              ? `${items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে (${meta.category} › ${meta.subject} › ${meta.topic})`
               : `${items.length} টি প্রশ্ন তৈরি হয়েছে`}
           </p>
 
@@ -442,34 +458,43 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
           {items.slice(0, PREVIEW).map((q, i) => {
             const chosen = picked[i];
+            // 🎯 যদি প্রশ্নটি MCQ না হয়, তবে অপশন না দেখিয়ে শুধু টেক্সট দেখাবে
+            const isMcq = q.options && Object.keys(q.options).length > 0;
+
             return (
               <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="font-semibold">{i + 1}. {q.text}</p>
-                <div className="mt-2 grid gap-2">
-                  {(["A", "B", "C", "D"] as const).map((k, j) => {
-                    const isCorrect = k === q.correct;
-                    const isChosen = chosen === k;
-                    const cls = chosen
-                      ? isCorrect
-                        ? "border-emerald-600 bg-emerald-50"
-                        : isChosen
-                          ? "border-red-500 bg-red-50"
-                          : "border-slate-200"
-                      : "border-slate-300 hover:bg-slate-50";
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        disabled={!!chosen}
-                        onClick={() => setPicked((p) => ({ ...p, [i]: k }))}
-                        className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${cls}`}
-                      >
-                        <b>{BN[j]}.</b>
-                        <span>{q.options[k]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                
+                {isMcq ? (
+                  <div className="mt-2 grid gap-2">
+                    {(["A", "B", "C", "D"] as const).map((k, j) => {
+                      const isCorrect = k === q.correct;
+                      const isChosen = chosen === k;
+                      const cls = chosen
+                        ? isCorrect
+                          ? "border-emerald-600 bg-emerald-50"
+                          : isChosen
+                            ? "border-red-500 bg-red-50"
+                            : "border-slate-200"
+                        : "border-slate-300 hover:bg-slate-50";
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          disabled={!!chosen}
+                          onClick={() => setPicked((p) => ({ ...p, [i]: k }))}
+                          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${cls}`}
+                        >
+                          <b>{BN[j]}.</b>
+                          <span>{q.options[k]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-600">ব্যাখ্যা/উত্তর: {q.explanation || "সংরক্ষিত আছে"}</p>
+                )}
+
                 {chosen && q.explanation && (
                   <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-700">{q.explanation}</p>
                 )}
@@ -480,4 +505,4 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       )}
     </div>
   );
-                               }
+}
