@@ -17,9 +17,8 @@ export async function POST(req: Request) {
     }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
-
     if (!apiKey) {
-      return NextResponse.json({ ok: false, error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি!" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি! Vercel-এ সেট করুন।" }, { status: 400 });
     }
 
     try {
@@ -52,14 +51,14 @@ ${rawText.slice(0, 30000)}
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "deepseek-chat", // Reasoner থেকে Chat-এ ফিরিয়ে আনা হলো (দ্রুত এবং বেশি টোকেন সাপোর্ট করে)
+          model: "deepseek-chat",
           messages: [
             { role: "system", content: "You are a Bengali digitizer. Output only valid JSON." },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },
           temperature: 0.1,
-          max_tokens: 8000, // 🎯 রেসপন্সের সীমা বাড়ানো হলো
+          max_tokens: 8000,
         }),
       });
 
@@ -71,34 +70,20 @@ ${rawText.slice(0, 30000)}
       const data = await deepseekRes.json();
       const content = data?.choices?.[0]?.message?.content;
 
-      if (!content) {
-        throw new Error("API থেকে কোনো রেসপন্স পাওয়া যায়নি।");
-      }
+      if (!content) throw new Error("API থেকে কোনো রেসপন্স পাওয়া যায়নি।");
 
-      // 🎯 JSON ফিক্সিং লজিক (যদি কোনো কারণে ব্র্যাকেট বা ইনভার্টেড কমা মিসিং থাকে)
       let cleaned = content.trim();
       if (cleaned.startsWith("```")) {
         cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
       }
 
-      // কেটে যাওয়া JSON রিপেয়ার করার চেষ্টা
-      try {
-        const parsed = JSON.parse(cleaned);
-        return NextResponse.json({
-          ok: true,
-          mcqs: parsed.mcqs || [],
-          shortQuestions: parsed.shortQuestions || [],
-          cqs: parsed.cqs || [],
-        });
-      } catch (parseError) {
-        console.error("JSON Parse Error. Raw content:", cleaned);
-        
-        // যদি JSON ভেঙে যায়, তবে সাধারণ এরর মেসেজ দেওয়া
-        return NextResponse.json({ 
-          ok: false, 
-          error: `JSON ফরম্যাট ভেঙে গেছে। দয়া করে পিডিএফটি ছোট অংশে (যেমন: শুধু MCQ) আপলোড করে দেখুন।` 
-        }, { status: 500 });
-      }
+      const parsed = JSON.parse(cleaned);
+      return NextResponse.json({
+        ok: true,
+        mcqs: parsed.mcqs || [],
+        shortQuestions: parsed.shortQuestions || [],
+        cqs: parsed.cqs || [],
+      });
 
     } catch (aiErr: any) {
       console.error("AI API Error:", aiErr);
