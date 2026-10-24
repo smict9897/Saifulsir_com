@@ -3,8 +3,6 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 
-export const maxDuration = 60; // Vercel টাইমআউট বাড়ানোর জন্য
-
 const Input = z.object({
   subject: z.string().min(1), category: z.string().min(1), topic: z.string().min(1),
   difficulty: z.enum(["Easy", "Medium", "Hard"]), count: z.coerce.number().int().min(1).max(20),
