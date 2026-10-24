@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "প্রশ্ন নির্বাচন" };
 
 type SP = { category?: string; subject?: string; topic?: string; q?: string; page?: string };
-const PER_PAGE = 50; // একবারে ৫০টি প্রশ্ন লোড হবে
+const PER_PAGE = 50;
 
 export default async function CreatePage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
@@ -16,7 +16,6 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number(sp.page) || 1);
 
-  // 🎯 type (mcq/written) ফিল্টার বাদ দেওয়া হলো, যাতে সব প্রশ্ন একবারে আসে
   const where = {
     approved: true,
     ...(category ? { category } : {}),
@@ -42,25 +41,29 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
   };
 
   const items = rows.map((r) => {
-    // 🎯 ডাটাবেজের ডেটা দেখে প্রশ্নের ধরন বের করা (MCQ, SHORT, CQ)
+    // 🎯 সঠিকভাবে MCQ, SHORT এবং CQ ডিটেক্ট করার লজিক
     let itemType = "MCQ";
+    const opts = (r.options as any) || {};
+    
     if (!r.correct) {
-      itemType = r.options && Object.keys(r.options).length > 0 ? "CQ" : "SHORT";
+      // যদি অপশনে উদ্দীপক বা ক/খ/গ/ঘ থাকে, তবেই সেটি CQ, অন্যথায় SHORT
+      const isCq = opts.stimulus || opts.k || opts.ক || opts.subQuestions || (r.text && r.text.includes("(ক)"));
+      itemType = isCq ? "CQ" : "SHORT";
     }
     
     return {
       id: r.id,
       text: r.text,
-      options: r.options as Record<string, string>,
+      options: opts,
       correct: r.correct,
       explanation: r.explanation,
       category: r.category,
       subject: r.subject,
       topic: r.topic,
       source: r.source,
-      type: itemType, // 🎯 টাইপ পাস করা হলো
-      stimulus: (r.options as any)?.stimulus || "",
-      subQuestions: (r.options as any)?.subQuestions || r.options,
+      type: itemType, // 🎯 এখানে টাইপটি পাস করা হলো
+      stimulus: opts.stimulus || "",
+      subQuestions: itemType === "CQ" ? opts : undefined,
     };
   });
 
@@ -88,7 +91,6 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
         মোট {total ? (page - 1) * PER_PAGE + 1 : 0} - {Math.min(page * PER_PAGE, total)} টি প্রশ্ন (মোট {total})
       </p>
 
-      {/* 🎯 এখানে QbPicker-কে সব ডেটা দেওয়া হলো, সে নিজেই ট্যাব ম্যানেজ করবে */}
       <QbPicker items={items} />
 
       <nav aria-label="Pagination" className="my-8 flex items-center justify-center gap-4 text-sm">
