@@ -129,7 +129,8 @@ export default function QbBuilder() {
     return shuffle(mcqs, base).map((q, i) => {
       let entries: [string, string][] = [];
       if (q.options && typeof q.options === "object") {
-        entries = Object.entries(q.options).sort(([a], [b]) => a.localeCompare(b));
+        // 🎯 টাইপ কাস্টিং ঠিক করা হলো
+        entries = (Object.entries(q.options) as [string, string][]).sort(([a], [b]) => a.localeCompare(b));
       }
       const opts = shuffle(entries, base ? base + i + 1 : 0);
       return { q, opts: opts.map(([, v]) => v), ci: opts.findIndex(([k]) => k === q.correct) };
