@@ -7,14 +7,12 @@ import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/gener
 import curriculum from "../nctb-curriculum.json";
 
 type Triple = { category: string; subject: string; topic: string };
-// 🎯 type যুক্ত করা হলো
 type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English"; type?: "MCQ" | "SHORT" | "CQ" | "MIXED" };
 
 const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const OTHER = "__other__";
 const BN = ["ক", "খ", "গ", "ঘ"];
 const DRAFT = "qb:draft";
-const BATCH = 10;
 const PREVIEW = 30;
 const MAX_PAPER = 50;
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
@@ -71,7 +69,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const [count, setCount] = useState<number>(opts[0]);
   const [lang, setLang] = useState<"Bangla" | "English">("Bangla");
   
-  // 🎯 নতুন স্টেট: প্রশ্নের ধরন
   const [qType, setQType] = useState<"MCQ" | "SHORT" | "CQ" | "MIXED">("MCQ");
 
   const [items, setItems] = useState<QuizItem[]>([]);
@@ -130,11 +127,16 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       return;
     }
     
-    // 🎯 মেটাতে প্রশ্নের ধরন যুক্ত করা হলো
     const m: Meta = { subject, category: cat, topic, difficulty, lang, type: qType };
     setMeta(m);
     stopRef.current = false;
     setLoading(true);
+
+    // 🎯 প্রশ্নের ধরন অনুযায়ী ব্যাচ সাইজ পরিবর্তন (টাইমআউট এড়াতে)
+    let currentBatch = 10;
+    if (qType === "CQ") currentBatch = 2; // সৃজনশীল প্রশ্ন বড় হয়, তাই ২টি করে
+    else if (qType === "SHORT") currentBatch = 5;
+    else if (qType === "MIXED") currentBatch = 3;
 
     const all: QuizItem[] = [];
     const ids: string[] = [];
@@ -145,7 +147,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
     try {
       while (all.length < count && !stopRef.current && fails < 3) {
-        const need = Math.min(BATCH, count - all.length);
+        const need = Math.min(currentBatch, count - all.length);
         const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => q.text.slice(0, 80)) });
         if (!r.ok) {
           fails++;
@@ -352,7 +354,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           )}
         </div>
 
-        {/* 🎯 এখানে প্রশ্নের ধরন সিলেক্টর যুক্ত করা হলো */}
         <label className="grid gap-1 text-sm font-medium">
           <span>প্রশ্নের ধরন</span>
           <select value={qType} onChange={(e) => setQType(e.target.value as any)} className={f} disabled={loading}>
@@ -395,7 +396,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {/* 🎯 এখানে টেক্সট এররটি ঠিক করা হলো */}
           {loading ? `প্রশ্ন তৈরি হচ্ছে… (${items.length}/${count})` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
         </button>
 
@@ -427,7 +427,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       {items.length > 0 && !loading && (
         <div className="mt-5 grid gap-4">
           <p className="text-sm text-slate-600">
-            {/* 🎯 এখানে টেক্সট এররটি ঠিক করা হলো */}
             {allSaved && meta
               ? `${items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে (${meta.category} › ${meta.subject} › ${meta.topic})`
               : `${items.length} টি প্রশ্ন তৈরি হয়েছে`}
@@ -458,7 +457,6 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
           {items.slice(0, PREVIEW).map((q, i) => {
             const chosen = picked[i];
-            // 🎯 যদি প্রশ্নটি MCQ না হয়, তবে অপশন না দেখিয়ে শুধু টেক্সট দেখাবে
             const isMcq = q.options && Object.keys(q.options).length > 0;
 
             return (
