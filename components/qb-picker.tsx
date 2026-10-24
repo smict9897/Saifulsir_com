@@ -1,105 +1,153 @@
 "use client";
+
+import React, { useState, useEffect } from "react";
+import { Search, ChevronDown, CheckSquare, Square, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
-import MathText from "@/components/MathText"; // 👈 KaTeX ম্যাথ রেন্ডারার ইমপোর্ট
 
-export type QItem = {
-  id: string; text: string; options: Record<string, string>; correct: string;
-  explanation: string; category: string; subject: string; topic: string; source: string;
-};
+export default function QbPicker() {
+  // 🎯 ট্যাব ফিল্টার
+  const [activeTab, setActiveTab] = useState<"MCQ" | "SHORT" | "CQ">("MCQ");
+  
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-const KEY = "qb:selected";
-
-export default function QbPicker({ items }: { items: QItem[] }) {
-  const [sel, setSel] = useState<string[]>([]);
-  const [ready, setReady] = useState(false);
-
+  // ডেমো ডাটা লোড (আপনার আসল API ফেচিং এখানে বসবে)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setSel(JSON.parse(raw));
-    } catch {}
-    setReady(true);
+    // ধরুন এখানে API থেকে ডাটা আসছে
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (!ready) return;
-    try { localStorage.setItem(KEY, JSON.stringify(sel)); } catch {}
-  }, [sel, ready]);
+  // 🎯 ট্যাব অনুযায়ী প্রশ্ন ফিল্টার
+  const filteredQuestions = questions.filter((q) => {
+    const matchesTab = q.type === activeTab;
+    const matchesSearch = q.text.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
 
-  const ids = items.map((i) => i.id);
-  const allOnPage = ids.length > 0 && ids.every((id) => sel.includes(id));
-  const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const togglePage = () =>
-    setSel((s) => (allOnPage ? s.filter((id) => !ids.includes(id)) : Array.from(new Set([...s, ...ids]))));
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
+  const selectAll = () => {
+    if (selectedIds.length === filteredQuestions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredQuestions.map((q) => q.id));
+    }
+  };
+
+  const handleProceed = () => {
+    // লোকাল স্টোরেজে সেভ করে পরের পেজে পাঠানো
+    localStorage.setItem("qb:selected", JSON.stringify(selectedIds));
+    window.location.href = "/qb-builder";
+  };
 
   return (
-    <div className="mt-3 font-sans">
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 rounded-lg border border-dashed border-slate-400 px-3 py-2 text-sm cursor-pointer">
-          <input type="checkbox" checked={allOnPage} onChange={togglePage} />
-          সব নির্বাচন (এই পাতা)
-        </label>
-        <Link href="/question-builder/build" className="rounded-lg bg-amber-400 hover:bg-amber-500 px-3 py-2 text-sm font-semibold text-slate-900 transition">
-          নির্বাচিত প্রশ্ন দেখুন ({sel.length})
-        </Link>
-        <button type="button" onClick={() => setSel([])} className="rounded-lg bg-pink-600 hover:bg-pink-700 px-3 py-2 text-sm font-semibold text-white transition">
-          সব মুছুন
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+      <div className="mx-auto max-w-3xl space-y-4">
+        
+        <h1 className="text-2xl font-extrabold text-slate-900">৮ • তথ্য ও যোগাযোগ প্রযুক্তি</h1>
 
-      {!items.length && <p className="mt-6 text-slate-600">কোনো প্রশ্ন পাওয়া যায়নি।</p>}
+        {/* সার্চ বার */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="এখানে খুঁজুন"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pl-10 text-sm outline-none focus:border-blue-500"
+            />
+            <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
+          </div>
+          <button className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm">খুঁজুন</button>
+        </div>
 
-      <ol className="mt-4 grid gap-4">
-        {items.map((q, i) => {
-          const on = sel.includes(q.id);
-          const opts = Object.entries(q.options ?? {}).sort(([a], [b]) => a.localeCompare(b));
-          return (
-            <li key={q.id} className={`rounded-xl border bg-white p-4 text-sm transition ${on ? "border-blue-600 shadow-xs" : "border-slate-200"}`}>
-              <label className="flex cursor-pointer items-start gap-3">
-                <input type="checkbox" checked={on} onChange={() => toggle(q.id)} className="mt-1" />
-                {/* 🎯 ১. প্রশ্নের মধ্যে KaTeX ব্যবহার */}
-                <span className="font-medium flex-1">
-                  {i + 1}. <MathText text={q.text} />
-                </span>
-              </label>
+        {/* মোট প্রশ্ন */}
+        <div className="flex justify-between items-center text-sm font-bold text-slate-700 mt-4">
+          <span>মোট {filteredQuestions.length} টি প্রশ্ন</span>
+        </div>
 
-              {opts.length > 0 && (
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {opts.map(([k, v]) => (
-                    <p key={k} className="flex items-start gap-2">
-                      {k === q.correct
-                        ? <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-green-600" />
-                        : <Circle size={18} className="mt-0.5 shrink-0 text-slate-400" />}
-                      {/* 🎯 ২. অপশনের মধ্যে KaTeX ব্যবহার (ভগ্নাংশ উপর-নিচে দেখাবে) */}
-                      <span className="flex-1">
-                        <MathText text={v} />
-                      </span>
-                    </p>
-                  ))}
+        {/* 🎯 ট্যাবগুলো: বহুনির্বাচনি, সংক্ষিপ্ত, সৃজনশীল */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTab("MCQ")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+              activeTab === "MCQ" ? "bg-blue-600 text-white shadow-md" : "bg-white border text-slate-700"
+            }`}
+          >
+            বহুনির্বাচনি
+          </button>
+          <button
+            onClick={() => setActiveTab("SHORT")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+              activeTab === "SHORT" ? "bg-emerald-600 text-white shadow-md" : "bg-white border text-slate-700"
+            }`}
+          >
+            সংক্ষিপ্ত
+          </button>
+          <button
+            onClick={() => setActiveTab("CQ")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+              activeTab === "CQ" ? "bg-indigo-600 text-white shadow-md" : "bg-white border text-slate-700"
+            }`}
+          >
+            সৃজনশীল
+          </button>
+        </div>
+
+        {/* কন্ট্রোল বাটন */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button onClick={selectAll} className="flex items-center gap-2 rounded-xl border border-dashed border-slate-400 bg-white px-4 py-2 text-sm font-semibold">
+            {selectedIds.length === filteredQuestions.length && filteredQuestions.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
+            সব নির্বাচন (এই পাতা)
+          </button>
+          
+          <button onClick={handleProceed} className="rounded-xl bg-amber-400 px-5 py-2 text-sm font-bold text-amber-950 shadow-sm">
+            নির্বাচিত প্রশ্ন দেখুন ({selectedIds.length})
+          </button>
+          
+          <button onClick={() => setSelectedIds([])} className="flex items-center gap-1 rounded-xl bg-pink-600 px-4 py-2 text-sm font-bold text-white shadow-sm">
+            <Trash2 size={16} /> সব মুছুন
+          </button>
+        </div>
+
+        {/* প্রশ্ন লিস্ট */}
+        <div className="mt-6 space-y-3">
+          {loading ? (
+            <p className="text-center text-slate-500 py-10">লোড হচ্ছে...</p>
+          ) : filteredQuestions.length === 0 ? (
+            <p className="text-center text-slate-500 py-10 font-medium">কোনো প্রশ্ন পাওয়া যায়নি।</p>
+          ) : (
+            filteredQuestions.map((q) => (
+              <div key={q.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-start gap-3">
+                <button onClick={() => toggleSelect(q.id)} className="mt-1 text-blue-600">
+                  {selectedIds.includes(q.id) ? <CheckSquare size={20} /> : <Square size={20} />}
+                </button>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{q.text}</p>
+                  {activeTab === "MCQ" && q.options && (
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-slate-600">
+                      <span>(ক) {q.options.A}</span>
+                      <span>(খ) {q.options.B}</span>
+                      <span>(গ) {q.options.C}</span>
+                      <span>(ঘ) {q.options.D}</span>
+                    </div>
+                  )}
+                  {activeTab === "CQ" && q.subQuestions && (
+                     <div className="mt-2 text-xs text-slate-600">
+                        উদ্দীপক: {q.stimulus}
+                     </div>
+                  )}
                 </div>
-              )}
+              </div>
+            ))
+          )}
+        </div>
 
-              <p className="mt-3 flex flex-wrap gap-1.5 text-xs">
-                {[q.category, q.subject, q.topic, q.source].filter(Boolean).map((t, j) => (
-                  <span key={j} className="rounded bg-amber-50 text-amber-900 px-2 py-0.5 border border-amber-200/50">[{t}]</span>
-                ))}
-              </p>
-
-              {q.explanation && (
-                <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer font-semibold text-slate-700">ব্যাখ্যা</summary>
-                  {/* 🎯 ৩. উত্তরের ব্যাখ্যার মধ্যে KaTeX ব্যবহার */}
-                  <div className="mt-1 text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <MathText text={q.explanation} />
-                  </div>
-                </details>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      </div>
     </div>
   );
 }
