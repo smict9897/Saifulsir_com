@@ -23,6 +23,7 @@ const PostSchema = z.object({
   focusKeyword: z.string().trim().max(80),
   keywords: z.string().max(1200),
   categoryId: z.string(),
+  chapter: z.string().max(200).optional(), 
   tags: z.string().max(800),
   metaTitle: z.string().trim().max(70),
   metaDescription: z.string().trim().max(170),
