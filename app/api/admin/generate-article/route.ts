@@ -1,4 +1,24 @@
-// ... (আগের ইমপোর্ট এবং কোড একই থাকবে)
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { auth } from "@/auth";
+import { callDeepSeekText } from "@/lib/deepseek"; 
+
+export const maxDuration = 60;
+
+const Body = z.object({
+  topic: z.string().min(2).max(200),
+  outline: z.array(z.string()).min(1),
+  keywords: z.array(z.string()).optional(),
+});
+
+export async function POST(req: Request) {
+  const role = (await auth())?.user?.role;
+  if (role !== "ADMIN") return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
+
+  const p = Body.safeParse(await req.json().catch(() => ({})));
+  if (!p.success) return NextResponse.json({ ok: false, error: "Invalid data" }, { status: 400 });
+
+  const { topic, outline, keywords = [] } = p.data;
 
   const prompt = `You are an expert SEO content writer for a Bangladeshi education website.
 Topic: "${topic}"
@@ -20,8 +40,9 @@ CRITICAL RULES:
   
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status || 500 });
 
-  // কখনো কখনো AI ```html ... ``` দিয়ে ঘিরে ফেলে, সেটা সরানোর জন্য
-  let cleanHtml = r.data;
+  // 👇 এখানে TypeScript এরর ফিক্স করা হয়েছে 👇
+  let cleanHtml = String(r.data || "");
+  
   if (cleanHtml.startsWith("```html")) {
     cleanHtml = cleanHtml.replace(/^```html\n?/, "").replace(/```$/, "");
   } else if (cleanHtml.startsWith("```")) {
