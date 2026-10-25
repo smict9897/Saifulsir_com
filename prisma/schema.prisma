@@ -110,6 +110,7 @@ model Post {
   coverAlt        String?
   downloadUrl     String?
   categoryId      String?
+  chapter         String?
   tags            String[]  @default([])
   published       Boolean   @default(true)
   category        Category? @relation(fields: [categoryId], references: [id])
