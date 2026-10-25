@@ -40,14 +40,55 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
   }
   if (p.slug && key !== p.slug) permanentRedirect(`/blog/${p.slug}`);
   const href = `/blog/${p.slug ?? p.id}`;
+  
+  const description = p.metaDescription || p.excerpt || p.body.replace(/[#!\[\]()]/g, "").replace(/\s+/g, " ").slice(0, 155);
+
+  // 👇 আপডেট করা Article Schema 👇
   const ld = {
-    "@context": "https://schema.org", "@type": "Article", headline: p.metaTitle || p.title,
-    datePublished: p.createdAt.toISOString(), author: { "@type": "Person", name: "Saiful Islam" },
-    mainEntityOfPage: `${base()}${href}`, keywords: [...p.keywords, ...p.tags].join(", "), ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
+    "@context": "https://schema.org", 
+    "@type": "Article", 
+    headline: p.metaTitle || p.title,
+    description: description,
+    datePublished: p.createdAt.toISOString(),
+    author: { "@type": "Person", name: "Saiful Islam" },
+    publisher: {
+      "@type": "Organization",
+      name: "SaifulSir.com",
+      logo: { "@type": "ImageObject", url: `${base()}/logo.png` }
+    },
+    mainEntityOfPage: `${base()}${href}`, 
+    keywords: [...p.keywords, ...p.tags].join(", "), 
+    ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
   };
+
+  // 👇 নতুন FAQ Schema (আপনার ডাটাবেসে faqs থাকলে এটি কাজ করবে) 👇
+  // টাইপ এরর এড়াতে (p as any) ব্যবহার করা হলো
+  const postFaqs = (p as any).faqs; 
+  let faqLd = null;
+  
+  if (postFaqs && Array.isArray(postFaqs) && postFaqs.length > 0) {
+    faqLd = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": postFaqs.map((faq: any) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+  }
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
+      {/* 👇 স্কিমা স্ক্রিপ্টসমূহ 👇 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
+      {faqLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }} />
+      )}
+      
       <article>
         {!p.published && <p className="mb-4 rounded-xl bg-orange-100 p-3 text-sm font-medium text-orange-800">Draft: only admins and teachers can see this page.</p>}
         <nav aria-label="Breadcrumb" className="mb-3 text-sm text-slate-500">
