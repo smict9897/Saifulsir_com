@@ -134,7 +134,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
     // 🎯 প্রশ্নের ধরন অনুযায়ী ব্যাচ সাইজ পরিবর্তন (টাইমআউট এড়াতে)
     let currentBatch = 10;
-    if (qType === "CQ") currentBatch = 2; // সৃজনশীল প্রশ্ন বড় হয়, তাই ২টি করে
+    if (qType === "CQ") currentBatch = 2; 
     else if (qType === "SHORT") currentBatch = 5;
     else if (qType === "MIXED") currentBatch = 3;
 
@@ -148,14 +148,15 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
     try {
       while (all.length < count && !stopRef.current && fails < 3) {
         const need = Math.min(currentBatch, count - all.length);
-        const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => q.text.slice(0, 80)) });
+        // 🎯 এখানে text বা stimulus না থাকলে ক্র্যাশ হবে না
+        const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => (q.text || q.stimulus || "").slice(0, 80)) });
         if (!r.ok) {
           fails++;
           lastErr = r.error;
           continue;
         }
-        const seen = new Set(all.map((q) => norm(q.text)));
-        const fresh = r.items.filter((q) => !seen.has(norm(q.text))).slice(0, need);
+        const seen = new Set(all.map((q) => norm(q.text || q.stimulus || "")));
+        const fresh = r.items.filter((q) => !seen.has(norm(q.text || q.stimulus || ""))).slice(0, need);
         if (!fresh.length) {
           fails++;
           continue;
@@ -457,13 +458,31 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
           {items.slice(0, PREVIEW).map((q, i) => {
             const chosen = picked[i];
-            const isMcq = q.options && Object.keys(q.options).length > 0;
+            // 🎯 এখানে টাইপ চেক করে UI রেন্ডার করা হয়েছে
+            const isCq = q.type === "CQ" || !!q.subQuestions;
+            const isShort = q.type === "SHORT";
+            const isMcq = !isCq && !isShort;
 
             return (
               <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <p className="font-semibold">{i + 1}. {q.text}</p>
                 
-                {isMcq ? (
+                {/* 🎯 CQ হলে উদ্দীপক, নাহলে টেক্সট */}
+                <p className="font-semibold mb-2">
+                  {i + 1}. {isCq ? (q.stimulus || "উদ্দীপক") : (q.text || "প্রশ্ন")}
+                </p>
+                
+                {/* 🎯 CQ হলে ক, খ, গ, ঘ দেখাবে */}
+                {isCq && q.subQuestions && (
+                  <div className="mt-2 text-sm text-slate-700 space-y-1 pl-2">
+                    <p><b>(ক)</b> {q.subQuestions.k || ""}</p>
+                    <p><b>(খ)</b> {q.subQuestions.kh || ""}</p>
+                    <p><b>(গ)</b> {q.subQuestions.g || ""}</p>
+                    <p><b>(ঘ)</b> {q.subQuestions.gh || ""}</p>
+                  </div>
+                )}
+
+                {/* 🎯 MCQ হলে অপশন দেখাবে */}
+                {isMcq && (
                   <div className="mt-2 grid gap-2">
                     {(["A", "B", "C", "D"] as const).map((k, j) => {
                       const isCorrect = k === q.correct;
@@ -489,11 +508,14 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
                       );
                     })}
                   </div>
-                ) : (
+                )}
+
+                {/* 🎯 Short হলে উত্তর/ব্যাখ্যা দেখাবে */}
+                {isShort && (
                   <p className="mt-2 text-sm text-slate-600">ব্যাখ্যা/উত্তর: {q.explanation || "সংরক্ষিত আছে"}</p>
                 )}
 
-                {chosen && q.explanation && (
+                {chosen && q.explanation && isMcq && (
                   <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-700">{q.explanation}</p>
                 )}
               </div>
