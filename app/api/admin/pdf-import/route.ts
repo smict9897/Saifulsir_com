@@ -1,28 +1,9 @@
 import { NextResponse } from "next/server";
 import { staff } from "@/lib/guard";
+import { parseAllQuestionsFromText } from "@/lib/pdf-mcq/parse";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
-
-// 🎯 JSON ভেঙে গেলে তা অটো-রিপেয়ার করার ফাংশন
-function repairJson(jsonStr: string) {
-  let str = jsonStr.trim();
-  // যদি স্ট্রিং মাঝখানে কেটে যায় (যেমন: "text": "প্রশ্ন...)
-  if (str.match(/"[^"]*$/)) {
-    str += '"';
-  }
-  
-  // খোলা ব্র্যাকেট ও কার্লি ব্রেস গুনে সেগুলো ক্লোজ করা
-  let openBrackets = (str.match(/\[/g) || []).length;
-  let closeBrackets = (str.match(/\]/g) || []).length;
-  let openBraces = (str.match(/\{/g) || []).length;
-  let closeBraces = (str.match(/\}/g) || []).length;
-
-  for (let i = 0; i < openBrackets - closeBrackets; i++) str += "]";
-  for (let i = 0; i < openBraces - closeBraces; i++) str += "}";
-  
-  return str;
-}
 
 export async function POST(req: Request) {
   try {
@@ -38,32 +19,23 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ ok: false, error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি! Vercel-এ সেট করুন।" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "❌ DEEPSEEK_API_KEY পাওয়া যায়নি!" }, { status: 400 });
     }
 
     try {
+      // 🎯 ১. AI-এর কাছে শুধু টেক্সট ঠিক করার জন্য রিকোয়েস্ট পাঠানো (JSON নয়)
       const prompt = `
-You are an expert Bengali educational digitizer. 
-The following text is from a PDF with broken Bengali fonts. Fix the text and extract questions as JSON.
+You are an expert Bengali editor. 
+The following text is extracted from a PDF and has broken fonts, missing ligatures, and spelling errors (e.g., 'বরুিনবাঁচিন' should be 'বহুনির্বাচনি', 'ুকোজ' should be 'গ্লুকোজ').
+Your task is to fix the Bengali spelling and broken characters.
 
 RULES:
-1. Fix broken Bengali letters (e.g., 'বরুিনবাঁচিন' -> 'বহুনির্বাচনি', 'ুকোজ' -> 'গ্লুকোজ').
-2. Extract ONLY the requested mode: "${mode}". If mode is AUTO, extract MCQ, SHORT, and CQ.
-3. DO NOT mix CQ sub-questions (ক, খ, গ, ঘ) with MCQ options.
-4. AUTO-ANSWER: If an MCQ answer is missing, solve it yourself and set "correct" to "A", "B", "C", or "D".
-5. Format chemical formulas in LaTeX (e.g., $CO_2$).
-
-CRITICAL: You MUST return a perfectly valid and COMPLETELY CLOSED JSON object. Do not leave it unfinished.
-
-Return ONLY valid JSON:
-{
-  "mcqs": [{ "number": 1, "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "flags": [] }],
-  "shortQuestions": [{ "number": 1, "text": "প্রশ্ন", "marks": "২" }],
-  "cqs": [{ "number": 1, "stimulus": "উদ্দীপক", "subQuestions": { "k": "ক", "kh": "খ", "g": "গ", "gh": "ঘ" } }]
-}
+1. DO NOT change the structure or format of the text.
+2. DO NOT answer the questions or add extra text.
+3. Return ONLY the corrected text.
 
 Text:
-${rawText.slice(0, 30000)}
+${rawText.slice(0, 25000)}
 `;
 
       const deepseekRes = await fetch("https://api.deepseek.com/chat/completions", {
@@ -75,53 +47,47 @@ ${rawText.slice(0, 30000)}
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: [
-            { role: "system", content: "You are a Bengali digitizer. Output only valid JSON." },
+            { role: "system", content: "You are a text correction tool. Output only the fixed text." },
             { role: "user", content: prompt },
           ],
-          response_format: { type: "json_object" },
           temperature: 0.1,
-          max_tokens: 8192, // 🎯 ৮০০০ থেকে বাড়িয়ে ৮১৯২ করা হলো (সর্বোচ্চ লিমিট)
+          max_tokens: 8192, // আউটপুট লিমিট বাড়ানো হলো
         }),
       });
 
       if (!deepseekRes.ok) {
-        const errorData = await deepseekRes.text();
-        throw new Error(`API Error: ${deepseekRes.status} - ${errorData}`);
+        throw new Error(`API Error: ${deepseekRes.status}`);
       }
 
       const data = await deepseekRes.json();
-      const content = data?.choices?.[0]?.message?.content;
+      let fixedText = data?.choices?.[0]?.message?.content || rawText;
 
-      if (!content) throw new Error("API থেকে কোনো রেসপন্স পাওয়া যায়নি।");
-
-      let cleaned = content.trim();
-      if (cleaned.startsWith("```")) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      // মার্কডাউন ক্লিন করা (যদি AI ```markdown দেয়)
+      if (fixedText.startsWith("```")) {
+        fixedText = fixedText.replace(/^```(?:markdown|text)?\s*/i, "").replace(/\s*```$/, "").trim();
       }
 
-      // 🎯 JSON পার্স করার সময় অটো-রিপেয়ার লজিক ব্যবহার করা হলো
-      let parsed;
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch (parseError) {
-        console.warn("JSON was cut off. Trying to repair...");
-        try {
-          parsed = JSON.parse(repairJson(cleaned));
-        } catch (repairError) {
-          throw new Error("AI-এর তৈরি JSON সম্পূর্ণ নয়। দয়া করে পিডিএফটি ছোট অংশে (যেমন: শুধু MCQ) আপলোড করুন বা আবার চেষ্টা করুন।");
-        }
-      }
+      // 🎯 ২. এবার এই ঠিক করা টেক্সটটি আপনার লোকাল পার্সারে পাঠানো হলো
+      const fallbackData = parseAllQuestionsFromText(fixedText, mode);
 
       return NextResponse.json({
         ok: true,
-        mcqs: parsed.mcqs || [],
-        shortQuestions: parsed.shortQuestions || [],
-        cqs: parsed.cqs || [],
+        mcqs: fallbackData.mcqs || [],
+        shortQuestions: fallbackData.shortQuestions || [],
+        cqs: fallbackData.cqs || [],
       });
 
     } catch (aiErr: any) {
       console.error("AI API Error:", aiErr);
-      return NextResponse.json({ ok: false, error: `AI Error: ${aiErr?.message}` }, { status: 500 });
+      
+      // 🎯 ৩. যদি AI ফেইল করে, তবে লোকাল পার্সার দিয়ে যতটা সম্ভব চেষ্টা করা হবে
+      const fallbackData = parseAllQuestionsFromText(rawText, mode);
+      return NextResponse.json({
+        ok: true,
+        mcqs: fallbackData.mcqs || [],
+        shortQuestions: fallbackData.shortQuestions || [],
+        cqs: fallbackData.cqs || [],
+      });
     }
 
   } catch (err: any) {
