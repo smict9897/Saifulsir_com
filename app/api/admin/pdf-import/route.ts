@@ -4,6 +4,26 @@ import { staff } from "@/lib/guard";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
+// 🎯 JSON ভেঙে গেলে তা অটো-রিপেয়ার করার ফাংশন
+function repairJson(jsonStr: string) {
+  let str = jsonStr.trim();
+  // যদি স্ট্রিং মাঝখানে কেটে যায় (যেমন: "text": "প্রশ্ন...)
+  if (str.match(/"[^"]*$/)) {
+    str += '"';
+  }
+  
+  // খোলা ব্র্যাকেট ও কার্লি ব্রেস গুনে সেগুলো ক্লোজ করা
+  let openBrackets = (str.match(/\[/g) || []).length;
+  let closeBrackets = (str.match(/\]/g) || []).length;
+  let openBraces = (str.match(/\{/g) || []).length;
+  let closeBraces = (str.match(/\}/g) || []).length;
+
+  for (let i = 0; i < openBrackets - closeBrackets; i++) str += "]";
+  for (let i = 0; i < openBraces - closeBraces; i++) str += "}";
+  
+  return str;
+}
+
 export async function POST(req: Request) {
   try {
     await staff();
@@ -33,6 +53,8 @@ RULES:
 4. AUTO-ANSWER: If an MCQ answer is missing, solve it yourself and set "correct" to "A", "B", "C", or "D".
 5. Format chemical formulas in LaTeX (e.g., $CO_2$).
 
+CRITICAL: You MUST return a perfectly valid and COMPLETELY CLOSED JSON object. Do not leave it unfinished.
+
 Return ONLY valid JSON:
 {
   "mcqs": [{ "number": 1, "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "flags": [] }],
@@ -58,7 +80,7 @@ ${rawText.slice(0, 30000)}
           ],
           response_format: { type: "json_object" },
           temperature: 0.1,
-          max_tokens: 8000,
+          max_tokens: 8192, // 🎯 ৮০০০ থেকে বাড়িয়ে ৮১৯২ করা হলো (সর্বোচ্চ লিমিট)
         }),
       });
 
@@ -77,7 +99,19 @@ ${rawText.slice(0, 30000)}
         cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
       }
 
-      const parsed = JSON.parse(cleaned);
+      // 🎯 JSON পার্স করার সময় অটো-রিপেয়ার লজিক ব্যবহার করা হলো
+      let parsed;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (parseError) {
+        console.warn("JSON was cut off. Trying to repair...");
+        try {
+          parsed = JSON.parse(repairJson(cleaned));
+        } catch (repairError) {
+          throw new Error("AI-এর তৈরি JSON সম্পূর্ণ নয়। দয়া করে পিডিএফটি ছোট অংশে (যেমন: শুধু MCQ) আপলোড করুন বা আবার চেষ্টা করুন।");
+        }
+      }
+
       return NextResponse.json({
         ok: true,
         mcqs: parsed.mcqs || [],
