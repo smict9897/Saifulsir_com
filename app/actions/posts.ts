@@ -72,6 +72,7 @@ export async function savePost(id: string | null, _: PostState, fd: FormData): P
       keywords, 
       slug: d.slug || null, 
       categoryId: d.categoryId || null,
+      chapter: d.chapter || null,
       tags: parseTags(d.tags, text), 
       published: isPublished,
       metaTitle: d.metaTitle || null, 
