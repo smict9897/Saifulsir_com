@@ -34,11 +34,14 @@ Rules:
 - Tone should be helpful, educational, and easy to understand.
 - Return ONLY the markdown content, no JSON, no extra text.`;
 
-  // max_tokens বাড়িয়ে 8192 করা হলো যাতে লম্বা আর্টিকেল তৈরি হয়
-  const r = await callDeepSeekJson<{ content: string }>(prompt, 0.7, 8192); 
+  // এখানে জেনেরিক (<{ content: string }>) সরিয়ে দেওয়া হয়েছে
+  const r = await callDeepSeekJson(prompt, 0.7, 8192); 
   
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status || 500 });
 
-  // DeepSeek JSON মোডে রেসপন্স দিলে সেটি থেকে মার্কডাউন বের করা
-  return NextResponse.json({ ok: true, content: r.data.content || (r.data as any).article || "" });
+  // টাইপ এরর এড়াতে 'as any' ব্যবহার করা হলো
+  const data = r.data as any;
+  const content = data.content || data.article || data.text || "";
+
+  return NextResponse.json({ ok: true, content });
 }
