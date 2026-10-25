@@ -121,6 +121,22 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
     }));
   };
 
+  // 👇 নতুন আর্টিকেল বডি ইভেন্ট লিসেনার 👇
+  useEffect(() => {
+    const handleBodyInsert = (e: Event) => {
+      const customEvent = e as CustomEvent<{ content: string }>;
+      const { content } = customEvent.detail;
+      if (content) {
+        setHtml(content);
+        setTab("html"); // কন্টেন্ট দেখতে HTML ট্যাবে নিয়ে যাবে
+        setRaw(true);
+      }
+    };
+    window.addEventListener("cms:body", handleBodyInsert);
+    return () => window.removeEventListener("cms:body", handleBodyInsert);
+  }, []);
+  // 👆 -------------------------------- 👆
+
   useEffect(() => {
     const doc = new DOMParser().parseFromString(html.replace(/<\/(p|h[1-6]|li|blockquote|div)>/gi, " </$1>"), "text/html");
     const text = (doc.body.textContent ?? "").replace(/\s+/g, " ").trim();
