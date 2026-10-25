@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { callDeepSeekJson } from "@/lib/deepseek";
+import { callDeepSeekText } from "@/lib/deepseek"; // 👈 এখানে callDeepSeekText ইমপোর্ট করা হলো
 
 export const maxDuration = 60;
 
@@ -34,14 +34,11 @@ Rules:
 - Tone should be helpful, educational, and easy to understand.
 - Return ONLY the markdown content, no JSON, no extra text.`;
 
-  // এখানে জেনেরিক (<{ content: string }>) সরিয়ে দেওয়া হয়েছে
-  const r = await callDeepSeekJson(prompt, 0.7, 8192); 
+  // 👇 এখানে callDeepSeekText ব্যবহার করা হলো
+  const r = await callDeepSeekText(prompt, 0.7, 8192); 
   
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status || 500 });
 
-  // টাইপ এরর এড়াতে 'as any' ব্যবহার করা হলো
-  const data = r.data as any;
-  const content = data.content || data.article || data.text || "";
-
-  return NextResponse.json({ ok: true, content });
+  // সরাসরি রেসপন্স রিটার্ন করছি
+  return NextResponse.json({ ok: true, content: r.data });
 }
