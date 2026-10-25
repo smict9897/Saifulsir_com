@@ -484,7 +484,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
                           className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${cls}`}
                         >
                           <b>{BN[j]}.</b>
-                          <span>{q.options[k]}</span>
+                          <span>{q.options?.[k] || ""}</span>
                         </button>
                       );
                     })}
