@@ -1,4 +1,5 @@
 "use client";
+import CategorySelector from "@/components/category-selector";
 import { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { savePost, uploadInline, type PostState } from "@/app/actions/posts";
@@ -39,7 +40,7 @@ async function compressImage(file: File, maxSide = 1600, quality = 0.82): Promis
 }
 
 export type PostFormData = {
-  id?: string; title: string; slug: string; categoryId: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
+  id?: string; title: string; slug: string; categoryId: string; chapter?: string; tags: string; published: boolean; focusKeyword: string; keywords: string;
   metaTitle: string; metaDescription: string; coverUrl: string | null; coverAlt: string; downloadUrl: string; body: string;
 };
 const empty: PostFormData = {
@@ -445,12 +446,14 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
           {tagList.map((t) => <span key={t} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-royal">#{t}</span>)}
         </div>
       )}
-      <label><L t="Category" />
-        <select name="categoryId" defaultValue={post.categoryId} className={f}>
-          <option value="">No category</option>
-          {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </label>
+      <div>
+  <L t="Category (Class, Subject & Chapter)" />
+  <CategorySelector 
+    cats={cats as any} 
+    initialCategoryId={post.categoryId} 
+    initialChapter={post.chapter} 
+  />
+</div>
 
            {post.coverUrl && (
         <div>
