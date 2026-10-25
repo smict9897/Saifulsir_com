@@ -290,6 +290,17 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
     }
     setArticleLoading(false);
   }
+
+  // 👇 এডিটরে পাঠানোর ফাংশন 👇
+  function sendToComposer() {
+    if (!articleText) return;
+    try {
+      window.dispatchEvent(new CustomEvent("cms:body", { detail: { content: articleText } }));
+      setNotice("আর্টিকেলটি মূল এডিটরে পাঠানো হয়েছে!");
+    } catch {
+      setError("এডিটরে পাঠানো যায়নি।");
+    }
+  }
   // 👆 --------------------------------- 👆
 
   function applySeo(patch: SeoPatch, keys: string[]) {
@@ -579,7 +590,7 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
                 </div>
               )}
 
-              {/* 👇 এখানে নতুন আর্টিকেল জেনারেটর UI বসানো হলো 👇 */}
+              {/* 👇 আর্টিকেল জেনারেটর ও প্রিভিউ বাটন 👇 */}
               {pack.outline.length > 0 && (
                 <div className="mt-3 flex gap-2">
                   <button
@@ -596,15 +607,24 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
 
               {articleText && (
                 <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
                     <p className="text-xs font-semibold text-slate-700">তৈরি হওয়া আর্টিকেল</p>
-                    <button
-                      type="button"
-                      onClick={() => void copy(articleText, "generated-article")}
-                      className={`${btn} border-slate-300 bg-white py-1`}
-                    >
-                      {copied === "generated-article" ? <Check size={13} className="text-green-600" /> : <Copy size={13} />} কপি করুন
-                    </button>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => void copy(articleText, "generated-article")}
+                        className={`${btn} border-slate-300 bg-white py-1`}
+                      >
+                        {copied === "generated-article" ? <Check size={13} className="text-green-600" /> : <Copy size={13} />} কপি করুন
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendToComposer}
+                        className={`${btn} border-green-600 bg-green-600 text-white py-1 hover:bg-green-700`}
+                      >
+                        <PlusCircle size={13} /> এডিটরে পাঠান
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -613,7 +633,7 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
                   />
                 </div>
               )}
-              {/* 👆 নতুন আর্টিকেল UI এখানে শেষ 👆 */}
+              {/* 👆 ------------------------------------------------- 👆 */}
 
               {pack.faqs.length > 0 && (
                 <div className="rounded-lg border border-slate-200 bg-white p-2 text-sm">
