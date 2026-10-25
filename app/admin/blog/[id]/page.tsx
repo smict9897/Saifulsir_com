@@ -9,7 +9,7 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
   const id = (await params).id;
   const [p, cats] = await Promise.all([
     db.post.findUnique({ where: { id } }),
-    db.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, slug: true } }),
   ]);
   if (!p) notFound();
   return (
