@@ -89,7 +89,7 @@ export default function ExamPage() {
         examTitle={`${selectedClass} • ${selectedSubject} ${finalChapterText ? `(${finalChapterText})` : ""}`}
         questions={questions}
         timeInMinutes={parseInt(count)}
-        negativeMark={0.5}
+        // 🎯 শুধু এই negativeMark={0.5} লাইনটি বাদ দেওয়া হয়েছে
       />
     );
   }
@@ -170,7 +170,6 @@ export default function ExamPage() {
               )}
             </div>
 
-            {/* 🎯 এখানে প্রশ্নের ধরন যোগ করা হলো */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1.5">প্রশ্নের ধরন</label>
               <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500">
@@ -213,7 +212,6 @@ export default function ExamPage() {
             </button>
           </form>
           
-          {/* আপনার স্ক্রিনশটে থাকা নিচের লেখাটি ঠিক করা হলো */}
           <p className="mt-4 text-xs text-slate-500">
             {questions.length} টি প্রশ্ন তৈরি হয়েছে এবং প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে ({selectedClass} » {selectedSubject} » {selectedChapter || "সকল অধ্যায়"})
           </p>
