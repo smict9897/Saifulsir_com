@@ -86,7 +86,6 @@ export default function ExamPage() {
         examTitle={`${selectedClass} • ${selectedSubject} ${finalChapterText ? `(${finalChapterText})` : ""}`}
         questions={questions}
         timeInMinutes={parseInt(count)}
-        negativeMark={0.5}
       />
     );
   }
@@ -247,7 +246,7 @@ export default function ExamPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 active:scale-98 transition disabled:opacity-70"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 active:scale-[0.99]"
             >
               {loading ? (
                 <>
