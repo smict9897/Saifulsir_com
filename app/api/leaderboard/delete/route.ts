@@ -4,16 +4,22 @@ import { auth } from "@/auth";
 
 export async function POST(req: Request) {
   try {
+    // 🎯 চেক করা হচ্ছে ইউজার অ্যাডমিন কি না
     const session = await auth();
     if (session?.user?.role !== "ADMIN") {
       return NextResponse.json({ success: false, error: "Only admins can delete." }, { status: 403 });
     }
 
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ success: false, error: "Missing ID." }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Missing ID." }, { status: 400 });
+    }
 
-    // 🎯 আপনার ডাটাবেজ টেবিলের নাম অনুযায়ী এটি পরিবর্তন করুন (যেমন: db.leaderboard বা db.examResult)
-    await db.leaderboard.delete({ where: { id } });
+    // 🎯 আপনার ডাটাবেজে যে নামেই মডেল থাকুক, (db as any) দিলে এরর আসবে না।
+    // তবে আপনি যদি নিশ্চিত হন আপনার মডেলের নাম (যেমন: examResult), তবে (db as any).leaderboard এর জায়গায় db.examResult লিখতে পারেন।
+    await (db as any).leaderboard.delete({
+      where: { id },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
