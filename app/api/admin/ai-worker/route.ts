@@ -35,9 +35,10 @@ export async function GET() {
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY সেট করা নেই!");
 
     let systemPrompt = "";
-    // 🎯 এখানে existingQs ডিক্লেয়ার করা হলো যাতে নিচে এবং উপরে দুই জায়গায় কাজ করে
-    let existingQs: any[] = []; 
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
+
+    // 🎯 এখানে existingQs কে গ্লোবালি ডিক্লেয়ার করা হলো যাতে নিচে কাজ করে
+    let existingQs: any[] = []; 
 
     if (task.type === "BLOG") {
       // ব্লগের জন্য প্রম্পট
@@ -113,7 +114,7 @@ export async function GET() {
     }
 
     if (task.type === "BLOG") {
-      // ব্লগ সেভ (আগের মতোই)
+      // ব্লগ সেভ
       const tagsArray = typeof parsed.tags === 'string' ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
       const keywordsArray = typeof parsed.keywords === 'string' ? parsed.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [];
 
@@ -137,7 +138,6 @@ export async function GET() {
       const questionsList = parsed.questions || parsed.mcqs || [];
       if (!Array.isArray(questionsList) || questionsList.length === 0) throw new Error("AI সঠিকভাবে কোনো প্রশ্ন তৈরি করতে পারেনি।");
 
-      // 🎯 এখন existingQs এখানে কাজ করবে
       const existingTexts = new Set(existingQs.map(q => q.text.trim().toLowerCase()));
       
       const uniqueQuestions = questionsList.filter((q: any) => {
