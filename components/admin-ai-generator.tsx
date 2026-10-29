@@ -16,9 +16,8 @@ export default function AdminAIGenerator() {
   const [prompt, setPrompt] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [status, setStatus] = useState<{ type: "success" | "error" | "info"; msg: string } | null>(null);
 
-  // স্ট্যাটাস ড্যাশবোর্ডের স্টেট
   const [stats, setStats] = useState({ pending: 0, processing: 0, completed: 0, failed: 0 });
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -50,7 +49,7 @@ export default function AdminAIGenerator() {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 10000); // প্রতি ১০ সেকেন্ডে আপডেট হবে
+    const interval = setInterval(fetchStats, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -61,6 +60,7 @@ export default function AdminAIGenerator() {
     setIsAllTopics(false);
   };
 
+  // 🎯 নতুন অটো-প্রসেসিং লজিক
   const handleGenerate = async () => {
     if (!subject) {
       setStatus({ type: "error", msg: "অনুগ্রহ করে বিষয় নির্বাচন করুন।" });
@@ -73,9 +73,10 @@ export default function AdminAIGenerator() {
     else finalTopics = ["সকল অধ্যায়"]; 
 
     setLoading(true);
-    setStatus(null);
+    setStatus({ type: "info", msg: "কাজ লাইনে যোগ করা হচ্ছে..." });
 
     try {
+      // ১. ডাটাবেজে কাজ জমা দেওয়া
       const res = await fetch("/api/admin/ai-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,11 +86,36 @@ export default function AdminAIGenerator() {
       const data = await res.json();
 
       if (data.success) {
-        setStatus({ type: "success", msg: `🎉 ${finalTopics.length} টি কাজ লাইনে যোগ হয়েছে!` });
+        setStatus({ type: "info", msg: "কাজ সফলভাবে জমা হয়েছে। এআই একের পর এক অংশ তৈরি করছে... (দয়া করে অপেক্ষা করুন)" });
         setPrompt(""); 
         setTopic("");
         setIsAllTopics(false);
         fetchStats(); 
+
+        // 🎯 ২. অটোমেটিক লুপ: যতক্ষণ কাজ বাকি আছে, ততক্ষণ একের পর এক এপিআই কল হবে
+        let hasMoreTasks = true;
+        while (hasMoreTasks) {
+          try {
+            const workerRes = await fetch("/api/admin/ai-worker");
+            const workerText = await workerRes.text();
+
+            if (workerText.includes("No Task")) {
+              hasMoreTasks = false; // সব কাজ শেষ
+              setStatus({ type: "success", msg: "🎉 আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে এবং ড্রাফটে সেভ হয়েছে!" });
+            } else if (workerText.includes("Error")) {
+              hasMoreTasks = false; // কোনো এরর হলে থেমে যাবে
+              setStatus({ type: "error", msg: `সমস্যা হয়েছে: ${workerText}` });
+            } else {
+              // সফলভাবে একটি পার্ট তৈরি হলো, স্ট্যাটাস আপডেট হবে এবং লুপ চলবে
+              fetchStats();
+              setStatus({ type: "info", msg: "একটি অংশ তৈরি হলো, পরের অংশ তৈরি হচ্ছে..." });
+            }
+          } catch (err) {
+            hasMoreTasks = false;
+            setStatus({ type: "error", msg: "নেটওয়ার্ক সমস্যা হয়েছে।" });
+          }
+        }
+        
         router.refresh();
       } else {
         setStatus({ type: "error", msg: data.error || "কিছু ভুল হয়েছে।" });
@@ -101,19 +127,15 @@ export default function AdminAIGenerator() {
     }
   };
 
-  // 🎯 কন্ডিশন ১: কোনো কাজ নেই (No Task)
   const noTask = !isInitialLoad && stats.pending === 0 && stats.processing === 0 && stats.completed === 0 && stats.failed === 0;
-
-  // 🎯 কন্ডিশন ২: সব কাজ শেষ (All Tasks Completed)
   const allTasksCompleted = !isInitialLoad && stats.pending === 0 && stats.processing === 0 && (stats.completed > 0 || stats.failed > 0);
 
   return (
     <div className="space-y-4 mb-6">
-      {/* ১. এআই জেনারেটর বক্স */}
       <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2 text-blue-900">
           <Sparkles size={20} className="text-blue-600" />
-          <h2 className="text-lg font-bold">AI অটো-জেনারেটর (ব্যাচ মোড)</h2>
+          <h2 className="text-lg font-bold">AI অটো-জেনারেটর (এক ক্লিকে সম্পূর্ণ)</h2>
         </div>
         
         <div className="grid gap-3 sm:grid-cols-2">
@@ -155,37 +177,40 @@ export default function AdminAIGenerator() {
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="বাড়তি কোনো নির্দেশনা..." rows={2} className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm outline-none focus:border-blue-500" disabled={loading} />
+          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="বাড়তি কোনো নির্দেশনা (যেমন: ২০০০ শব্দের মাস্টার প্রম্পট)..." rows={3} className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm outline-none focus:border-blue-500" disabled={loading} />
           
           <button onClick={handleGenerate} disabled={loading || !subject} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-60">
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-            {loading ? "কাজ জমা হচ্ছে..." : "কাজ দিন (Queue)"}
+            {loading ? "এআই কাজ করছে (বন্ধ করবেন না)..." : "এক ক্লিকে সম্পূর্ণ তৈরি করুন"}
           </button>
         </div>
 
         {status && (
-          <div className={`mt-4 flex items-start gap-2 rounded-xl p-3 text-sm font-semibold ${status.type === "success" ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200"}`}>
-            {status.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <div className={`mt-4 flex items-start gap-2 rounded-xl p-3 text-sm font-semibold ${
+            status.type === "success" ? "bg-green-100 text-green-800 border-green-200" : 
+            status.type === "error" ? "bg-red-100 text-red-800 border-red-200" :
+            "bg-blue-100 text-blue-800 border-blue-200"
+          }`}>
+            {status.type === "success" ? <CheckCircle2 size={18} /> : status.type === "error" ? <AlertCircle size={18} /> : <Loader2 size={18} className="animate-spin" />}
             <span>{status.msg}</span>
           </div>
         )}
       </div>
 
-      {/* ২. স্ট্যাটাস ড্যাশবোর্ড */}
+      {/* স্ট্যাটাস ড্যাশবোর্ড */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>কাজের বর্তমান অবস্থা (Task Status)</span>
           <span className="text-[10px] text-slate-400 font-normal">(প্রতি ১০ সেকেন্ডে আপডেট হয়)</span>
         </h3>
         
-        {/* ৪টি বক্স: Pending, Processing, Completed, Failed */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 flex items-center gap-3">
             <Clock size={20} className="text-orange-500" />
             <div><p className="text-xs text-slate-500">Pending</p><p className="text-lg font-bold text-orange-600">{stats.pending}</p></div>
           </div>
           <div className="bg-blue-50 rounded-xl p-3 border border-blue-100 flex items-center gap-3">
-            <Loader2 size={20} className="text-blue-500 animate-spin-slow" />
+            <Loader2 size={20} className="text-blue-500" />
             <div><p className="text-xs text-slate-500">Processing</p><p className="text-lg font-bold text-blue-600">{stats.processing}</p></div>
           </div>
           <div className="bg-green-50 rounded-xl p-3 border border-green-100 flex items-center gap-3">
@@ -198,7 +223,6 @@ export default function AdminAIGenerator() {
           </div>
         </div>
 
-        {/* 🎯 No Task মেসেজ (যদি একদমই কোনো কাজ না থাকে) */}
         {noTask && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm font-bold text-slate-600">
             <ListTodo size={18} className="text-slate-500" />
@@ -206,31 +230,12 @@ export default function AdminAIGenerator() {
           </div>
         )}
 
-        {/* 🎯 All Completed মেসেজ (যদি সব কাজ সফলভাবে শেষ হয়ে যায়) */}
         {allTasksCompleted && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 p-3 text-sm font-bold text-green-700 shadow-sm">
             <CheckCircle2 size={18} className="text-green-600" />
             <span>🎉 Your all task is completed! (আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে)</span>
           </div>
         )}
-
-        {/* সাম্প্রতিক ৫টি কাজের তালিকা */}
-        <div>
-          <p className="text-xs font-bold text-slate-500 mb-2">সর্বশেষ কাজগুলো:</p>
-          <ul className="space-y-1.5 text-xs">
-            {recentTasks.length === 0 && <li className="text-slate-400">কোনো কাজের রেকর্ড নেই।</li>}
-            {recentTasks.map((t) => (
-              <li key={t.id} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                <span className="truncate max-w-[250px] text-slate-700">{t.prompt}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  t.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
-                  t.status === 'PENDING' ? 'bg-orange-100 text-orange-700' : 
-                  t.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                }`}>{t.status}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );
