@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, Clock, CheckCheck, XCircle, ListTodo, Check, Save, Edit3 } from "lucide-react";
+// 🎯 এখানে CheckSquare এবং Square যোগ করা হলো
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, Clock, CheckCheck, XCircle, ListTodo, Check, Save, Edit3, CheckSquare, Square } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { NCTB_CLASSES } from "@/lib/nctb-data";
 
 export default function AdminAIGenerator() {
   const router = useRouter();
   
-  // 🎯 ১. জেনারেটরের স্টেট
+  // জেনারেটরের স্টেট
   const [category, setCategory] = useState(NCTB_CLASSES[0]?.class || "Class 9-10");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
@@ -23,7 +24,7 @@ export default function AdminAIGenerator() {
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // 🎯 ২. অ্যাপ্রুভালের স্টেট
+  // অ্যাপ্রুভালের স্টেট
   const [pendingQuestions, setPendingQuestions] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isApproving, setIsApproving] = useState(false);
@@ -41,7 +42,6 @@ export default function AdminAIGenerator() {
     return foundSubject ? foundSubject.chapters : [];
   }, [availableSubjects, subject]);
 
-  // ডাটা ফেচিং ফাংশন
   const fetchStats = async () => {
     try {
       const res = await fetch("/api/admin/ai-status");
@@ -65,7 +65,6 @@ export default function AdminAIGenerator() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🎯 কাজ জেনারেট করা
   const handleGenerate = async () => {
     if (!subject) return setStatus({ type: "error", msg: "অনুগ্রহ করে বিষয় নির্বাচন করুন।" });
 
@@ -119,7 +118,6 @@ export default function AdminAIGenerator() {
     } finally { setLoading(false); }
   };
 
-  // 🎯 অ্যাপ্রুভাল ফাংশনসমূহ
   const handleApproveOne = async (id: string) => {
     setIsApproving(true);
     try {
@@ -181,7 +179,6 @@ export default function AdminAIGenerator() {
 
   return (
     <div className="space-y-6 mb-6">
-      {/* ১. জেনারেটর সেকশন */}
       <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2 text-blue-900">
           <Sparkles size={20} className="text-blue-600" />
@@ -252,7 +249,6 @@ export default function AdminAIGenerator() {
         )}
       </div>
 
-      {/* ২. স্ট্যাটাস ড্যাশবোর্ড */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>কাজের বর্তমান অবস্থা</span>
@@ -281,7 +277,6 @@ export default function AdminAIGenerator() {
         )}
       </div>
 
-      {/* ৩. অ্যাপ্রুভাল সেকশন (নতুন) */}
       {pendingQuestions.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-slate-100 pb-3">
