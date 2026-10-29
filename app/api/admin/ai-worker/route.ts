@@ -35,10 +35,12 @@ export async function GET() {
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY সেট করা নেই!");
 
     let systemPrompt = "";
+    // 🎯 এখানে existingQs ডিক্লেয়ার করা হলো যাতে নিচে এবং উপরে দুই জায়গায় কাজ করে
+    let existingQs: any[] = []; 
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
 
     if (task.type === "BLOG") {
-      // 🎯 আর্টিকেলের জন্য প্রম্পট (অক্ষুণ্ন রাখা হয়েছে)
+      // ব্লগের জন্য প্রম্পট
       let partInstruction = "";
       if (task.part === 1) partInstruction = `Write Part 1 (approx 700 words): Introduction, basic concepts.`;
       else if (task.part === 2) partInstruction = `Write Part 2 (approx 700 words): Techniques and examples.`;
@@ -46,8 +48,8 @@ export async function GET() {
 
       systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post for: "${contextText}". ${partInstruction} Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "tag1, tag2", "focusKeyword": "...", "keywords": "kw1, kw2", "metaTitle": "...", "metaDescription": "..." }`;
     } else {
-      // 🎯 MCQ-এর জন্য প্রম্পট (ডুপ্লিকেট চেক সহ)
-      const existingQs = await db.question.findMany({
+      // 🎯 MCQ-এর জন্য আগের প্রশ্নগুলো ফেচ করা
+      existingQs = await db.question.findMany({
         where: { 
           topic: task.topic || undefined, 
           subject: task.subject || undefined, 
@@ -55,15 +57,20 @@ export async function GET() {
         },
         select: { text: true }, take: 150, orderBy: { createdAt: "desc" }
       });
+      
       const avoidText = existingQs.length > 0 
-        ? `CRITICAL: DO NOT repeat these questions: \n${existingQs.map(q => q.text).join("\n")}` : "";
+        ? `CRITICAL WARNING: The following questions ALREADY EXIST in our database. You MUST NOT generate any of them again. Generate completely new and different questions:\n${existingQs.map(q => q.text).join("\n")}` 
+        : "";
 
       systemPrompt = `You are an expert Bangladeshi teacher. Generate exactly 10 high-quality MCQs for: "${contextText}". 
-      This is part ${task.part} of ${task.totalParts}. ${avoidText}
+      This is part ${task.part} of ${task.totalParts}. 
+      
+      ${avoidText}
       
       CRITICAL RULES:
-      1. DO NOT put any checkmarks (✓, ✔), asterisks, or text like "উত্তর", "Ans" inside the option texts.
+      1. DO NOT put any checkmarks (✓, ✔), asterisks, or text like "উত্তর", "সঠিক", "Ans" inside the option texts.
       2. The options A, B, C, D must ONLY contain the option text.
+      3. Generate ONLY NEW questions that are not in the avoid list.
       
       Return ONLY a valid JSON object: { "questions": [ { "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "explanation": "ব্যাখ্যা", "difficulty": "EASY" | "MEDIUM" | "HARD" } ] }`;
     }
@@ -85,6 +92,7 @@ export async function GET() {
     });
 
     clearTimeout(timeoutId);
+
     if (!res.ok) throw new Error(`DeepSeek API Error: ${await res.text()}`);
 
     const data = await res.json();
@@ -105,7 +113,7 @@ export async function GET() {
     }
 
     if (task.type === "BLOG") {
-      // 🎯 আর্টিকেল সেভ (পার্ট ১,২,৩ জোড়া লাগানো)
+      // ব্লগ সেভ (আগের মতোই)
       const tagsArray = typeof parsed.tags === 'string' ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
       const keywordsArray = typeof parsed.keywords === 'string' ? parsed.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [];
 
@@ -125,10 +133,11 @@ export async function GET() {
         }
       }
     } else {
-      // 🎯 MCQ সেভ (ডুপ্লিকেট ফিল্টার সহ)
+      // 🎯 MCQ সেভ (ডুপ্লিকেট ফিল্টার)
       const questionsList = parsed.questions || parsed.mcqs || [];
       if (!Array.isArray(questionsList) || questionsList.length === 0) throw new Error("AI সঠিকভাবে কোনো প্রশ্ন তৈরি করতে পারেনি।");
 
+      // 🎯 এখন existingQs এখানে কাজ করবে
       const existingTexts = new Set(existingQs.map(q => q.text.trim().toLowerCase()));
       
       const uniqueQuestions = questionsList.filter((q: any) => {
