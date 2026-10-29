@@ -87,13 +87,12 @@ export async function GET() {
       }
     }
 
-    // 🎯 ৬. ডাটাবেজে সেভ করা (tags ও keywords উভয়কে Array-তে কনভার্ট করে)
+    // ৬. ডাটাবেজে সেভ করা
     if (task.type === "BLOG") {
       const tagsArray = typeof parsed.tags === 'string' 
         ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
         : [];
 
-      // 🎯 keywords-কেও অ্যারেতে কনভার্ট করা হলো
       const keywordsArray = typeof parsed.keywords === 'string'
         ? parsed.keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
         : [];
@@ -104,7 +103,7 @@ export async function GET() {
           slug: parsed.slug + "-" + Date.now(),
           body: parsed.body,
           tags: tagsArray, 
-          keywords: keywordsArray, // 🎯 এখানে অ্যারে পাঠানো হলো
+          keywords: keywordsArray, 
           categoryId: categoryId, 
           focusKeyword: parsed.focusKeyword,
           metaTitle: parsed.metaTitle,
@@ -113,6 +112,7 @@ export async function GET() {
         }
       });
     } else {
+      // 🎯 MCQ সেভ করার সময় difficulty ফিল্ড যুক্ত করা হলো
       await (db.question.createMany as any)({
         data: parsed.questions.map((q: any) => ({
           text: q.text,
@@ -122,6 +122,7 @@ export async function GET() {
           category: task.category || null,
           subject: task.subject || null,
           topic: task.topic || null,
+          difficulty: "MEDIUM", // 🎯 ডিফল্ট কঠিনতা যোগ করা হলো
           approved: false,
           source: "AI_GENERATOR"
         }))
