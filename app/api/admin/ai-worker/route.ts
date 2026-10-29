@@ -35,10 +35,8 @@ export async function GET() {
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY সেট করা নেই!");
 
     let systemPrompt = "";
-    const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
-
-    // 🎯 এখানে existingQs কে গ্লোবালি ডিক্লেয়ার করা হলো যাতে নিচে কাজ করে
     let existingQs: any[] = []; 
+    const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
 
     if (task.type === "BLOG") {
       // ব্লগের জন্য প্রম্পট
@@ -164,6 +162,7 @@ export async function GET() {
           subject: task.subject || "সাধারণ", 
           topic: task.topic || "সাধারণ",
           difficulty: (q.difficulty && ["EASY", "MEDIUM", "HARD"].includes(q.difficulty.toUpperCase())) ? q.difficulty.toUpperCase() : "MEDIUM", 
+          lang: "Bangla", // 🎯 এখানে lang ফিল্ড যুক্ত করা হলো
           approved: false, 
           source: "AI_GENERATOR"
         }))
