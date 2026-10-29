@@ -66,10 +66,13 @@ export async function GET() {
       if (existingCategory) {
         categoryId = existingCategory.id;
       } else {
-        // যদি ডাটাবেজে ক্যাটাগরি না থাকে, তবে নতুন ক্যাটাগরি তৈরি করা
+        // যদি ডাটাবেজে ক্যাটাগরি না থাকে, তবে নতুন ক্যাটাগরি তৈরি করা (slug সহ)
         try {
           const newCategory = await db.category.create({
-            data: { name: task.category }
+            data: { 
+              name: task.category,
+              slug: task.category.toLowerCase().replace(/\s+/g, '-') + "-" + Date.now() // 🎯 স্বয়ংক্রিয় slug তৈরি
+            }
           });
           categoryId = newCategory.id;
         } catch (err) {
