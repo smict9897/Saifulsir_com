@@ -8,14 +8,14 @@ export async function GET() {
   let currentTaskId = null;
 
   try {
-    // 🎯 ১. আটকে থাকা টাস্ক রিসেট (১ মিনিটের বেশি সময় ধরে PROCESSING থাকলে)
+    // ১. আটকে থাকা টাস্ক রিসেট (১ মিনিটের বেশি সময় ধরে PROCESSING থাকলে)
     const oneMinAgo = new Date(Date.now() - 1 * 60 * 1000);
     await db.aiTask.updateMany({
       where: { status: "PROCESSING", updatedAt: { lt: oneMinAgo } },
       data: { status: "PENDING" }
     });
 
-    // 🎯 ২. নতুন টাস্ক খোঁজা
+    // ২. নতুন টাস্ক খোঁজা
     const task = await db.aiTask.findFirst({
       where: { status: "PENDING" },
       orderBy: { createdAt: "asc" }
@@ -23,7 +23,7 @@ export async function GET() {
 
     if (!task) return new NextResponse("No Task", { status: 200 });
 
-    // 🎯 ৩. প্রসেসিং শুরু
+    // ৩. প্রসেসিং শুরু
     currentTaskId = task.id;
     await db.aiTask.update({ where: { id: task.id }, data: { status: "PROCESSING" } });
 
@@ -34,12 +34,12 @@ export async function GET() {
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
 
     if (task.type === "BLOG") {
-      systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post (around 1000-1500 words) for: "${contextText}". Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "...", "focusKeyword": "...", "keywords": "...", "metaTitle": "...", "metaDescription": "..." }`;
+      systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post (around 500-800 words) for: "${contextText}". Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "tag1, tag2, tag3", "focusKeyword": "...", "keywords": "...", "metaTitle": "...", "metaDescription": "..." }`;
     } else {
       systemPrompt = `You are an expert Bengali teacher. Generate exactly 10 high-quality MCQs for: "${contextText}". Return ONLY a valid JSON object: { "questions": [ { "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "explanation": "ব্যাখ্যা" } ] }`;
     }
 
-    // 🎯 ৪. ৪৫ সেকেন্ডের টাইমআউট কন্ট্রোলার
+    // ৪. ৪৫ সেকেন্ডের টাইমআউট কন্ট্রোলার
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000); 
 
@@ -51,7 +51,7 @@ export async function GET() {
         messages: [{ role: "system", content: "Output ONLY valid JSON." }, { role: "user", content: systemPrompt }],
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 4000 // 🎯 টোকেন কমানো হলো যাতে দ্রুত উত্তর আসে
+        max_tokens: 4000
       }),
       signal: controller.signal
     });
@@ -70,7 +70,7 @@ export async function GET() {
     content = content.replace(/```json/g, "").replace(/```/g, "").trim();
     const parsed = JSON.parse(content);
 
-    // 🎯 ৫. ক্যাটাগরি চেক ও সেভ
+    // ৫. ক্যাটাগরি চেক
     let categoryId = null;
     if (task.category) {
       const existingCategory = await db.category.findFirst({ where: { name: task.category } });
@@ -87,13 +87,19 @@ export async function GET() {
       }
     }
 
+    // 🎯 ৬. ডাটাবেজে সেভ করা (Tags-কে Array-তে কনভার্ট করে)
     if (task.type === "BLOG") {
+      // এআই যদি কমা দিয়ে স্ট্রিং দেয়, তবে সেটাকে ভেঙে অ্যারে বানানো
+      const tagsArray = typeof parsed.tags === 'string' 
+        ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
+        : [];
+
       await db.post.create({
         data: {
           title: parsed.title,
           slug: parsed.slug + "-" + Date.now(),
           body: parsed.body,
-          tags: parsed.tags,
+          tags: tagsArray, // 🎯 এখানে অ্যারে পাঠানো হলো
           categoryId: categoryId, 
           focusKeyword: parsed.focusKeyword,
           keywords: parsed.keywords,
@@ -124,7 +130,6 @@ export async function GET() {
   } catch (error: any) {
     console.error("Worker Error:", error.message);
     
-    // 🎯 ৬. এরর বা টাইমআউট হলে টাস্কটি FAILED হবে
     if (currentTaskId) {
       await db.aiTask.update({ 
         where: { id: currentTaskId }, 
