@@ -25,7 +25,7 @@ export async function GET() {
     await db.aiTask.update({ where: { id: task.id }, data: { status: "PROCESSING" } });
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) throw new Error("API Key Missing");
+    if (!apiKey) throw new Error("DEEPSEEK_API_KEY সেট করা নেই!");
 
     let systemPrompt = "";
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
@@ -48,12 +48,24 @@ export async function GET() {
       }),
     });
 
-    if (!res.ok) throw new Error("AI API Error");
+    if (!res.ok) {
+      const apiError = await res.text();
+      throw new Error(`DeepSeek API Error: ${apiError}`);
+    }
 
     const data = await res.json();
     let content = data?.choices?.[0]?.message?.content;
+    
+    if (!content) throw new Error("AI থেকে কোনো উত্তর পাওয়া যায়নি।");
+
     content = content.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(content);
+    
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseErr) {
+      throw new Error("AI এর উত্তর সঠিক JSON ফরম্যাটে নেই।");
+    }
 
     // 🎯 ৪. ডাটাবেজে সেভ করার আগে ক্যাটাগরি চেক করা
     let categoryId = null;
@@ -73,14 +85,13 @@ export async function GET() {
             }
           });
           categoryId = newCategory.id;
-        } catch (err) {
-          console.error("Category create failed:", err);
+        } catch (catErr: any) {
+          throw new Error(`Category তৈরি করতে সমস্যা: ${catErr.message}`);
         }
       }
     }
 
     if (task.type === "BLOG") {
-      // 🎯 ৫. আপনার Post মডেলে যে ফিল্ডগুলো আছে শুধু সেগুলোই পাঠানো হলো
       await db.post.create({
         data: {
           title: parsed.title,
@@ -96,7 +107,6 @@ export async function GET() {
         }
       });
     } else {
-      // 🎯 ৬. প্রশ্ন তৈরির ক্ষেত্রে (যদি subject/topic ফিল্ড থাকে)
       await (db.question.createMany as any)({
         data: parsed.questions.map((q: any) => ({
           text: q.text,
@@ -112,13 +122,15 @@ export async function GET() {
       });
     }
 
-    // ৭. কাজ শেষ
+    // ৫. কাজ শেষ
     await db.aiTask.update({ where: { id: task.id }, data: { status: "COMPLETED" } });
     
-    return new NextResponse("OK", { status: 200 }); 
+    return new NextResponse("সফলভাবে ব্লগ তৈরি হয়েছে!", { status: 200 }); 
 
   } catch (error: any) {
-    console.error("Worker Error:", error);
-    return new NextResponse("Error", { status: 500 });
+    console.error("Worker Error:", error.message);
+    
+    // 🎯 ৬. ডিবাগিংয়ের জন্য এরর মেসেজটি স্ক্রিনে দেখাবে
+    return new NextResponse(`Error: ${error.message}`, { status: 500 }); 
   }
 }
