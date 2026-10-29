@@ -55,7 +55,29 @@ export async function GET() {
     content = content.replace(/```json/g, "").replace(/```/g, "").trim();
     const parsed = JSON.parse(content);
 
-    // ৪. ডাটাবেজে সেভ
+    // 🎯 ৪. ডাটাবেজে সেভ করার আগে ক্যাটাগরি চেক করা
+    let categoryId = null;
+    if (task.category) {
+      // ডাটাবেজে ক্যাটাগরিটির নাম খোঁজা
+      const existingCategory = await db.category.findFirst({
+        where: { name: task.category }
+      });
+      
+      if (existingCategory) {
+        categoryId = existingCategory.id;
+      } else {
+        // যদি ডাটাবেজে ক্যাটাগরি না থাকে, তবে নতুন ক্যাটাগরি তৈরি করা
+        try {
+          const newCategory = await db.category.create({
+            data: { name: task.category }
+          });
+          categoryId = newCategory.id;
+        } catch (err) {
+          console.error("Category create failed:", err);
+        }
+      }
+    }
+
     if (task.type === "BLOG") {
       await db.post.create({
         data: {
@@ -63,9 +85,9 @@ export async function GET() {
           slug: parsed.slug + "-" + Date.now(),
           body: parsed.body,
           tags: parsed.tags,
-          category: task.category,
-          subject: task.subject,
-          topic: task.topic,
+          categoryId: categoryId, // 🎯 categoryId ব্যবহার করা হলো
+          subject: task.subject || undefined,
+          topic: task.topic || undefined,
           focusKeyword: parsed.focusKeyword,
           keywords: parsed.keywords,
           metaTitle: parsed.metaTitle,
@@ -80,9 +102,9 @@ export async function GET() {
           options: q.options,
           correct: q.correct,
           explanation: q.explanation,
-          category: task.category,
-          subject: task.subject,
-          topic: task.topic,
+          category: task.category || undefined,
+          subject: task.subject || undefined,
+          topic: task.topic || undefined,
           approved: false,
           source: "AI_GENERATOR"
         }))
