@@ -8,7 +8,7 @@ export async function GET() {
   let currentTaskId = null;
 
   try {
-    // ১. আটকে থাকা টাস্ক রিসেট (১ মিনিটের বেশি সময় ধরে PROCESSING থাকলে)
+    // ১. আটকে থাকা টাস্ক রিসেট
     const oneMinAgo = new Date(Date.now() - 1 * 60 * 1000);
     await db.aiTask.updateMany({
       where: { status: "PROCESSING", updatedAt: { lt: oneMinAgo } },
@@ -34,7 +34,7 @@ export async function GET() {
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
 
     if (task.type === "BLOG") {
-      systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post (around 500-800 words) for: "${contextText}". Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "tag1, tag2, tag3", "focusKeyword": "...", "keywords": "...", "metaTitle": "...", "metaDescription": "..." }`;
+      systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post (around 500-800 words) for: "${contextText}". Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "tag1, tag2, tag3", "focusKeyword": "...", "keywords": "kw1, kw2, kw3", "metaTitle": "...", "metaDescription": "..." }`;
     } else {
       systemPrompt = `You are an expert Bengali teacher. Generate exactly 10 high-quality MCQs for: "${contextText}". Return ONLY a valid JSON object: { "questions": [ { "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "explanation": "ব্যাখ্যা" } ] }`;
     }
@@ -87,11 +87,15 @@ export async function GET() {
       }
     }
 
-    // 🎯 ৬. ডাটাবেজে সেভ করা (Tags-কে Array-তে কনভার্ট করে)
+    // 🎯 ৬. ডাটাবেজে সেভ করা (tags ও keywords উভয়কে Array-তে কনভার্ট করে)
     if (task.type === "BLOG") {
-      // এআই যদি কমা দিয়ে স্ট্রিং দেয়, তবে সেটাকে ভেঙে অ্যারে বানানো
       const tagsArray = typeof parsed.tags === 'string' 
         ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) 
+        : [];
+
+      // 🎯 keywords-কেও অ্যারেতে কনভার্ট করা হলো
+      const keywordsArray = typeof parsed.keywords === 'string'
+        ? parsed.keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
         : [];
 
       await db.post.create({
@@ -99,10 +103,10 @@ export async function GET() {
           title: parsed.title,
           slug: parsed.slug + "-" + Date.now(),
           body: parsed.body,
-          tags: tagsArray, // 🎯 এখানে অ্যারে পাঠানো হলো
+          tags: tagsArray, 
+          keywords: keywordsArray, // 🎯 এখানে অ্যারে পাঠানো হলো
           categoryId: categoryId, 
           focusKeyword: parsed.focusKeyword,
-          keywords: parsed.keywords,
           metaTitle: parsed.metaTitle,
           metaDescription: parsed.metaDescription,
           published: false,
