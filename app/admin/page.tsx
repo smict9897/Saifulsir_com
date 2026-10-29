@@ -1,3 +1,4 @@
+import AdminAIGenerator from "@/components/admin-ai-generator";
 import Link from "next/link";
 import { Users, FileText, Download, Wallet, Sparkles, ListChecks, Mail, Briefcase, Plus } from "lucide-react";
 import { db } from "@/lib/db";
@@ -69,6 +70,10 @@ export default async function Admin() {
 
   return (
     <div className="grid gap-4">
+      
+      {/* 🎯 এখানে এআই জেনারেটর বক্সটি যুক্ত করা হলো */}
+      <AdminAIGenerator />
+      
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold">Overview</h1><p className="text-sm text-slate-500">{now.toLocaleDateString("en-GB", { dateStyle: "full" })}</p></div>
         <Link href="/admin/pdf" className="inline-flex items-center gap-2 rounded-xl bg-hire px-4 py-2.5 text-sm font-semibold text-white"><Plus size={16} />Add material</Link>
