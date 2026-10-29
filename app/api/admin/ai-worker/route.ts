@@ -58,7 +58,6 @@ export async function GET() {
     // 🎯 ৪. ডাটাবেজে সেভ করার আগে ক্যাটাগরি চেক করা
     let categoryId = null;
     if (task.category) {
-      // ডাটাবেজে ক্যাটাগরিটির নাম খোঁজা
       const existingCategory = await db.category.findFirst({
         where: { name: task.category }
       });
@@ -66,12 +65,11 @@ export async function GET() {
       if (existingCategory) {
         categoryId = existingCategory.id;
       } else {
-        // যদি ডাটাবেজে ক্যাটাগরি না থাকে, তবে নতুন ক্যাটাগরি তৈরি করা (slug সহ)
         try {
           const newCategory = await db.category.create({
             data: { 
               name: task.category,
-              slug: task.category.toLowerCase().replace(/\s+/g, '-') + "-" + Date.now() // 🎯 স্বয়ংক্রিয় slug তৈরি
+              slug: task.category.toLowerCase().replace(/\s+/g, '-') + "-" + Date.now()
             }
           });
           categoryId = newCategory.id;
@@ -82,15 +80,14 @@ export async function GET() {
     }
 
     if (task.type === "BLOG") {
+      // 🎯 ৫. আপনার Post মডেলে যে ফিল্ডগুলো আছে শুধু সেগুলোই পাঠানো হলো
       await db.post.create({
         data: {
           title: parsed.title,
           slug: parsed.slug + "-" + Date.now(),
           body: parsed.body,
           tags: parsed.tags,
-          categoryId: categoryId, // 🎯 categoryId ব্যবহার করা হলো
-          subject: task.subject || undefined,
-          topic: task.topic || undefined,
+          categoryId: categoryId, 
           focusKeyword: parsed.focusKeyword,
           keywords: parsed.keywords,
           metaTitle: parsed.metaTitle,
@@ -99,22 +96,23 @@ export async function GET() {
         }
       });
     } else {
-      await db.question.createMany({
+      // 🎯 ৬. প্রশ্ন তৈরির ক্ষেত্রে (যদি subject/topic ফিল্ড থাকে)
+      await (db.question.createMany as any)({
         data: parsed.questions.map((q: any) => ({
           text: q.text,
           options: q.options,
           correct: q.correct,
           explanation: q.explanation,
-          category: task.category || undefined,
-          subject: task.subject || undefined,
-          topic: task.topic || undefined,
+          category: task.category || null,
+          subject: task.subject || null,
+          topic: task.topic || null,
           approved: false,
           source: "AI_GENERATOR"
         }))
       });
     }
 
-    // ৫. কাজ শেষ
+    // ৭. কাজ শেষ
     await db.aiTask.update({ where: { id: task.id }, data: { status: "COMPLETED" } });
     
     return new NextResponse("OK", { status: 200 }); 
