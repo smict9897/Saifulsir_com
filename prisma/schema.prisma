@@ -173,13 +173,17 @@ model TeacherProfile {
   updatedAt   DateTime @updatedAt
 }
 model AiTask {
-  id        String   @id @default(cuid())
-  prompt    String
-  type      String   @default("BLOG") // BLOG অথবা MCQ
-  category  String?  
-  subject   String?  
-  topic     String?  
-  status    String   @default("PENDING") // PENDING, PROCESSING, COMPLETED
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  prompt     String
+  type       String   @default("BLOG") 
+  category   String?  
+  subject    String?  
+  topic      String?  
+  status     String   @default("PENDING")
+  part       Int      @default(1)   // 🎯 নতুন: কাজের পার্ট নাম্বার
+  totalParts Int      @default(1)   // 🎯 নতুন: মোট কত পার্ট
+  batchId    String?                // 🎯 নতুন: একই আর্টিকেলের কাজগুলো চেনার জন্য
+  postId     String?                // 🎯 নতুন: ব্লগ তৈরি হলে তার আইডি সেভ হবে
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
