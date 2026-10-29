@@ -61,15 +61,22 @@ export async function GET() {
         ? `CRITICAL WARNING: The following questions ALREADY EXIST in our database. You MUST NOT generate any of them again. Generate completely new and different questions:\n${existingQs.map(q => q.text).join("\n")}` 
         : "";
 
+      // 🎯 ৩ ধরনের প্রশ্ন তৈরির কড়াকড়ি নির্দেশনা
       systemPrompt = `You are an expert Bangladeshi teacher. Generate exactly 10 high-quality MCQs for: "${contextText}". 
       This is part ${task.part} of ${task.totalParts}. 
       
       ${avoidText}
       
+      YOU MUST FOLLOW THIS EXACT DISTRIBUTION:
+      - 6 Direct Questions (সাধারণ প্রশ্ন): Just a question and 4 options.
+      - 2 Stimulus-based Questions (উদ্দীপকভিত্তিক): Provide a short stimulus text (উদ্দীপক), followed by a question. Format the "text" field strictly as: "উদ্দীপক: [stimulus text]\\n\\nপ্রশ্ন: [question]"
+      - 2 Information-based Questions (অভিন্ন তথ্যভিত্তিক): Give statements i, ii, iii and ask "নিচের কোনটি সঠিক?". Format the "text" field strictly as: "i. [statement 1]\\nii. [statement 2]\\niii. [statement 3]\\n\\nনিচের কোনটি সঠিক?"
+
       CRITICAL RULES:
-      1. DO NOT put any checkmarks (✓, ✔), asterisks, or text like "উত্তর", "সঠিক", "Ans" inside the option texts.
-      2. The options A, B, C, D must ONLY contain the option text.
-      3. Generate ONLY NEW questions that are not in the avoid list.
+      1. DO NOT put any checkmarks (✓, ✔), asterisks, or text like "উত্তর", "সঠিক", "Ans" inside the option texts (A, B, C, D).
+      2. Ensure the options A, B, C, D are completely different from previous questions.
+      3. Cover DIFFERENT parts of the syllabus.
+      4. DO NOT break the JSON format.
       
       Return ONLY a valid JSON object: { "questions": [ { "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "explanation": "ব্যাখ্যা", "difficulty": "EASY" | "MEDIUM" | "HARD" } ] }`;
     }
@@ -84,7 +91,7 @@ export async function GET() {
         model: "deepseek-chat",
         messages: [{ role: "system", content: "Output ONLY valid JSON." }, { role: "user", content: systemPrompt }],
         response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: 0.8, // ভ্যারাইটি বাড়ানোর জন্য
         max_tokens: 5000
       }),
       signal: controller.signal
@@ -132,7 +139,7 @@ export async function GET() {
         }
       }
     } else {
-      // 🎯 MCQ সেভ (ডুপ্লিকেট ফিল্টার)
+      // 🎯 MCQ সেভ
       const questionsList = parsed.questions || parsed.mcqs || [];
       if (!Array.isArray(questionsList) || questionsList.length === 0) throw new Error("AI সঠিকভাবে কোনো প্রশ্ন তৈরি করতে পারেনি।");
 
@@ -162,7 +169,7 @@ export async function GET() {
           subject: task.subject || "সাধারণ", 
           topic: task.topic || "সাধারণ",
           difficulty: (q.difficulty && ["EASY", "MEDIUM", "HARD"].includes(q.difficulty.toUpperCase())) ? q.difficulty.toUpperCase() : "MEDIUM", 
-          lang: "Bangla", // 🎯 এখানে lang ফিল্ড যুক্ত করা হলো
+          lang: "Bangla", 
           approved: false, 
           source: "AI_GENERATOR"
         }))
