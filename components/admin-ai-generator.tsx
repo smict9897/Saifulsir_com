@@ -37,10 +37,20 @@ export default function AdminAIGenerator() {
     return foundClass ? foundClass.subjects : [];
   }, [category]);
 
-  const availableTopics = useMemo(() => {
-    const foundSubject = availableSubjects.find((s) => s.name === subject);
-    return foundSubject?.chapters ?? [];
+  const currentSubjectData = useMemo(() => {
+    return availableSubjects.find((s) => s.name === subject);
   }, [availableSubjects, subject]);
+
+  // ফ্ল্যাট চ্যাপ্টার লিস্ট
+  const flatTopics = useMemo(() => currentSubjectData?.chapters ?? [], [currentSubjectData]);
+  // গ্রুপ করা সাব-ক্যাটাগরি লিস্ট
+  const groupedTopics = useMemo(() => currentSubjectData?.subCategories ?? [], [currentSubjectData]);
+
+  // সবগুলো টপিক এক জায়গায় (চেক/ডিজেবল/"সব অধ্যায়" এর জন্য ব্যবহার হবে)
+  const availableTopics = useMemo(() => {
+    if (flatTopics.length > 0) return flatTopics;
+    return groupedTopics.flatMap((g) => g.topics);
+  }, [flatTopics, groupedTopics]);
 
   const fetchStats = async () => {
     try {
@@ -224,7 +234,12 @@ export default function AdminAIGenerator() {
             {!isAllTopics && (
               <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white" disabled={!subject || availableTopics.length === 0}>
                 <option value="">-- নির্দিষ্ট অধ্যায় বাছুন --</option>
-                {availableTopics.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
+                {flatTopics.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
+                {groupedTopics.map((group) => (
+                  <optgroup key={group.category} label={group.category}>
+                    {group.topics.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </optgroup>
+                ))}
               </select>
             )}
           </div>
