@@ -1,3 +1,5 @@
+// app/category/[slug]/page.tsx
+
 import { cache } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -41,15 +43,15 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     orderBy: { createdAt: "desc" },
   });
 
-  // 👇 NCTB ডাটা থেকে অধ্যায় খুঁজে বের করা (যদি এটি সাব-ক্যাটাগরি/বিষয় হয়) 👇
+  // 👇 NCTB ডাটা থেকে অধ্যায় খুঁজে বের করা (যদি এটি সাব-ক্যাটাগরি/বিষয় হয়) 👇
   let chapters: string[] = [];
   if (c.parent) {
     const classData = NCTB_CLASSES.find(cd => cd.class === c.parent?.name);
     const subjectData = classData?.subjects.find(s => s.name === c.name);
-    if (subjectData) chapters = subjectData.chapters;
+    if (subjectData) chapters = subjectData.chapters ?? []; // ✅ ফিক্সড: undefined হলে খালি অ্যারে
   }
 
-  // 👇 সাইডারের মতো একই ক্লাসের অন্যান্য বিষয়গুলো আনা (Pills এর জন্য) 👇
+  // 👇 সাইডারের মতো একই ক্লাসের অন্যান্য বিষয়গুলো আনা (Pills এর জন্য) 👇
   let siblings: { id: string, name: string, slug: string }[] = [];
   if (c.parentId) {
     siblings = await db.category.findMany({
@@ -72,16 +74,16 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         <h1 className="text-2xl font-bold">{c.name} <span className="text-base font-normal text-slate-500">({posts.length} টি কন্টেন্ট)</span></h1>
       </div>
 
-      {/* পিল বা বাটনসমূহ (সাব-ক্যাটাগরি থাকলে ভেতরের বিষয়, না থাকলে অন্যান্য বিষয়) */}
+      {/* পিল বা বাটনসমূহ (সাব-ক্যাটাগরি থাকলে ভেতরের বিষয়, না থাকলে অন্যান্য বিষয়) */}
       <div className="mt-4 flex flex-wrap gap-2">
         {c.children.length > 0 
-          ? // যদি এটি মেইন ক্যাটাগরি হয় (যেমন Class 9-10), তবে ভেতরের বিষয়গুলো দেখাবে
+          ? // যদি এটি মেইন ক্যাটাগরি হয় (যেমন Class 9-10), তবে ভেতরের বিষয়গুলো দেখাবে
             c.children.map((k) => (
               <Link key={k.id} href={`/category/${k.slug}`} className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 transition hover:border-royal hover:text-royal">
                 {k.name}
               </Link>
             ))
-          : // যদি এটি সাব-ক্যাটাগরি হয়, তবে একই ক্লাসের অন্যান্য বিষয়গুলো দেখাবে
+          : // যদি এটি সাব-ক্যাটাগরি হয়, তবে একই ক্লাসের অন্যান্য বিষয়গুলো দেখাবে
             siblings.map((sib) => (
               <Link key={sib.id} href={`/category/${sib.slug}`} className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${sib.id === c.id ? 'border-royal bg-royal text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-royal hover:text-royal'}`}>
                 {sib.name}
@@ -90,11 +92,11 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         }
       </div>
 
-      {/* 👇 অধ্যায়সমূহ (Chapters) সেকশন 👇 */}
+      {/* 👇 অধ্যায়সমূহ (Chapters) সেকশন 👇 */}
       {chapters.length > 0 && (
         <div className="mt-8">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800">
-            <FileText className="text-blue-600" size={20} /> অধ্যায়সমূহ
+            <FileText className="text-blue-600" size={20} /> অধ্যায়সমূহ
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {chapters.map((chapter, i) => (
