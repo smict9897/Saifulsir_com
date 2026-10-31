@@ -39,7 +39,7 @@ export default function AdminAIGenerator() {
 
   const availableTopics = useMemo(() => {
     const foundSubject = availableSubjects.find((s) => s.name === subject);
-    return foundSubject ? foundSubject.chapters : [];
+    return foundSubject?.chapters ?? [];
   }, [availableSubjects, subject]);
 
   const fetchStats = async () => {
@@ -66,12 +66,12 @@ export default function AdminAIGenerator() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!subject) return setStatus({ type: "error", msg: "অনুগ্রহ করে বিষয় নির্বাচন করুন।" });
+    if (!subject) return setStatus({ type: "error", msg: "অনুগ্রহ করে বিষয় নির্বাচন করুন।" });
 
     let finalTopics: string[] = [];
     if (isAllTopics) finalTopics = availableTopics; 
     else if (topic) finalTopics = [topic]; 
-    else finalTopics = ["সকল অধ্যায়"]; 
+    else finalTopics = ["সকল অধ্যায়"]; 
 
     setLoading(true);
     setStatus({ type: "info", msg: "কাজ লাইনে যোগ করা হচ্ছে..." });
@@ -85,7 +85,7 @@ export default function AdminAIGenerator() {
       const data = await res.json();
 
       if (data.success) {
-        setStatus({ type: "info", msg: "কাজ সফলভাবে জমা হয়েছে। এআই একের পর এক অংশ তৈরি করছে... (দয়া করে অপেক্ষা করুন)" });
+        setStatus({ type: "info", msg: "কাজ সফলভাবে জমা হয়েছে। এআই একের পর এক অংশ তৈরি করছে... (দয়া করে অপেক্ষা করুন)" });
         setPrompt(""); setTopic(""); setIsAllTopics(false);
         fetchStats(); 
 
@@ -97,11 +97,11 @@ export default function AdminAIGenerator() {
 
             if (workerText.includes("No Task")) {
               hasMoreTasks = false; 
-              setStatus({ type: "success", msg: "🎉 আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে এবং ড্রাফটে সেভ হয়েছে!" });
+              setStatus({ type: "success", msg: "🎉 আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে এবং ড্রাফটে সেভ হয়েছে!" });
               fetchPendingQuestions();
             } else if (workerText.includes("Error")) {
               hasMoreTasks = false; 
-              setStatus({ type: "error", msg: `সমস্যা হয়েছে: ${workerText}` });
+              setStatus({ type: "error", msg: `সমস্যা হয়েছে: ${workerText}` });
             } else {
               fetchStats();
               fetchPendingQuestions();
@@ -111,10 +111,10 @@ export default function AdminAIGenerator() {
         }
         router.refresh();
       } else {
-        setStatus({ type: "error", msg: data.error || "কিছু ভুল হয়েছে।" });
+        setStatus({ type: "error", msg: data.error || "কিছু ভুল হয়েছে।" });
       }
     } catch (error: any) {
-      setStatus({ type: "error", msg: "সার্ভারে সমস্যা হয়েছে।" });
+      setStatus({ type: "error", msg: "সার্ভারে সমস্যা হয়েছে।" });
     } finally { setLoading(false); }
   };
 
@@ -202,9 +202,9 @@ export default function AdminAIGenerator() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700">বিষয়</label>
+            <label className="text-xs font-bold text-slate-700">বিষয়</label>
             <select value={subject} onChange={(e) => { setSubject(e.target.value); setTopic(""); setIsAllTopics(false); }} className="w-full rounded-lg border border-blue-200 p-2 text-sm mt-1 bg-white">
-              <option value="">-- বিষয় বাছুন --</option>
+              <option value="">-- বিষয় বাছুন --</option>
               {availableSubjects.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
           </div>
@@ -219,11 +219,11 @@ export default function AdminAIGenerator() {
           <div className={`bg-blue-100/50 p-3 rounded-xl border border-blue-200 ${type === "BLOG" ? "sm:col-span-2" : ""}`}>
             <label className="flex items-center gap-2 cursor-pointer mb-2">
               <input type="checkbox" checked={isAllTopics} onChange={(e) => setIsAllTopics(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" disabled={!subject || availableTopics.length === 0} />
-              <span className="text-sm font-bold text-blue-900">সবগুলো অধ্যায়ের জন্য কাজ দিন</span>
+              <span className="text-sm font-bold text-blue-900">সবগুলো অধ্যায়ের জন্য কাজ দিন</span>
             </label>
             {!isAllTopics && (
               <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white" disabled={!subject || availableTopics.length === 0}>
-                <option value="">-- নির্দিষ্ট অধ্যায় বাছুন --</option>
+                <option value="">-- নির্দিষ্ট অধ্যায় বাছুন --</option>
                 {availableTopics.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
               </select>
             )}
@@ -231,7 +231,7 @@ export default function AdminAIGenerator() {
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="বাড়তি কোনো নির্দেশনা..." rows={3} className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm outline-none focus:border-blue-500" disabled={loading} />
+          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="বাড়তি কোনো নির্দেশনা..." rows={3} className="w-full rounded-xl border border-blue-200 bg-white p-3 text-sm outline-none focus:border-blue-500" disabled={loading} />
           
           <button onClick={handleGenerate} disabled={loading || !subject} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-60">
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
@@ -252,7 +252,7 @@ export default function AdminAIGenerator() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>কাজের বর্তমান অবস্থা</span>
-          <span className="text-[10px] text-slate-400 font-normal">(প্রতি ১০ সেকেন্ডে আপডেট হয়)</span>
+          <span className="text-[10px] text-slate-400 font-normal">(প্রতি ১০ সেকেন্ডে আপডেট হয়)</span>
         </h3>
         
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -265,14 +265,14 @@ export default function AdminAIGenerator() {
         {noTask && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm font-bold text-slate-600">
             <ListTodo size={18} className="text-slate-500" />
-            <span>No Task (এখন কোনো কাজ অপেক্ষায় বা চলমান নেই)</span>
+            <span>No Task (এখন কোনো কাজ অপেক্ষায় বা চলমান নেই)</span>
           </div>
         )}
 
         {allTasksCompleted && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 p-3 text-sm font-bold text-green-700 shadow-sm">
             <CheckCircle2 size={18} className="text-green-600" />
-            <span>🎉 Your all task is completed! (আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে)</span>
+            <span>🎉 Your all task is completed! (আপনার সব কাজ সফলভাবে সম্পন্ন হয়েছে)</span>
           </div>
         )}
       </div>
@@ -283,7 +283,7 @@ export default function AdminAIGenerator() {
             <div>
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <AlertCircle className="text-amber-500" size={20} />
-                অ্যাপ্রুভালের অপেক্ষায় ({pendingQuestions.length})
+                অ্যাপ্রুভালের অপেক্ষায় ({pendingQuestions.length})
               </h2>
               <p className="text-xs text-slate-500 mt-1">এআই-এর তৈরি প্রশ্নগুলো চেক করে অ্যাপ্রুভ করুন।</p>
             </div>
