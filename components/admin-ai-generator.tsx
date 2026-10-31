@@ -12,6 +12,7 @@ export default function AdminAIGenerator() {
   // জেনারেটরের স্টেট
   const [category, setCategory] = useState(NCTB_CLASSES[0]?.class || "Class 9-10");
   const [subject, setSubject] = useState("");
+  const [topicCategory, setTopicCategory] = useState(""); // 🎯 নতুন: ইউনিট/গ্রুপ নির্বাচনের জন্য
   const [topic, setTopic] = useState("");
   const [isAllTopics, setIsAllTopics] = useState(false);
   const [type, setType] = useState<"BLOG" | "MCQ">("BLOG");
@@ -41,10 +42,19 @@ export default function AdminAIGenerator() {
     return availableSubjects.find((s) => s.name === subject);
   }, [availableSubjects, subject]);
 
-  // ফ্ল্যাট চ্যাপ্টার লিস্ট
+  // ফ্ল্যাট চ্যাপ্টার লিস্ট (যে বিষয়গুলোতে গ্রুপ নেই)
   const flatTopics = useMemo(() => currentSubjectData?.chapters ?? [], [currentSubjectData]);
-  // গ্রুপ করা সাব-ক্যাটাগরি লিস্ট
+  // গ্রুপ করা সাব-ক্যাটাগরি লিস্ট (যেমন: Unit, গদ্য, পদ্য ইত্যাদি)
   const groupedTopics = useMemo(() => currentSubjectData?.subCategories ?? [], [currentSubjectData]);
+
+  const hasGroups = groupedTopics.length > 0;
+
+  // নির্বাচিত ক্যাটাগরির মধ্যকার টপিকগুলো
+  const topicsInSelectedCategory = useMemo(() => {
+    if (!topicCategory) return [];
+    const grp = groupedTopics.find((g) => g.category === topicCategory);
+    return grp?.topics ?? [];
+  }, [groupedTopics, topicCategory]);
 
   // সবগুলো টপিক এক জায়গায় (চেক/ডিজেবল/"সব অধ্যায়" এর জন্য ব্যবহার হবে)
   const availableTopics = useMemo(() => {
@@ -206,14 +216,23 @@ export default function AdminAIGenerator() {
 
           <div>
             <label className="text-xs font-bold text-slate-700">ক্লাস</label>
-            <select value={category} onChange={(e) => { setCategory(e.target.value); setSubject(""); setTopic(""); }} className="w-full rounded-lg border border-blue-200 p-2 text-sm mt-1 bg-white">
+            <select value={category} onChange={(e) => { setCategory(e.target.value); setSubject(""); setTopicCategory(""); setTopic(""); }} className="w-full rounded-lg border border-blue-200 p-2 text-sm mt-1 bg-white">
               {NCTB_CLASSES.map((c) => <option key={c.class} value={c.class}>{c.class}</option>)}
             </select>
           </div>
 
           <div>
             <label className="text-xs font-bold text-slate-700">বিষয়</label>
-            <select value={subject} onChange={(e) => { setSubject(e.target.value); setTopic(""); setIsAllTopics(false); }} className="w-full rounded-lg border border-blue-200 p-2 text-sm mt-1 bg-white">
+            <select
+              value={subject}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setTopicCategory("");
+                setTopic("");
+                setIsAllTopics(false);
+              }}
+              className="w-full rounded-lg border border-blue-200 p-2 text-sm mt-1 bg-white"
+            >
               <option value="">-- বিষয় বাছুন --</option>
               {availableSubjects.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
@@ -231,16 +250,44 @@ export default function AdminAIGenerator() {
               <input type="checkbox" checked={isAllTopics} onChange={(e) => setIsAllTopics(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" disabled={!subject || availableTopics.length === 0} />
               <span className="text-sm font-bold text-blue-900">সবগুলো অধ্যায়ের জন্য কাজ দিন</span>
             </label>
+
             {!isAllTopics && (
-              <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white" disabled={!subject || availableTopics.length === 0}>
-                <option value="">-- নির্দিষ্ট অধ্যায় বাছুন --</option>
-                {flatTopics.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
-                {groupedTopics.map((group) => (
-                  <optgroup key={group.category} label={group.category}>
-                    {group.topics.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </optgroup>
-                ))}
-              </select>
+              <>
+                {hasGroups ? (
+                  // 🎯 গ্রুপ করা বিষয়ের জন্য: ২ ধাপে সিলেক্ট (প্রথমে ইউনিট/ক্যাটাগরি, তারপর নির্দিষ্ট টপিক)
+                  <div className="space-y-2">
+                    <select
+                      value={topicCategory}
+                      onChange={(e) => { setTopicCategory(e.target.value); setTopic(""); }}
+                      className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white"
+                      disabled={!subject}
+                    >
+                      <option value="">-- ইউনিট/ক্যাটাগরি বাছুন --</option>
+                      {groupedTopics.map((group) => (
+                        <option key={group.category} value={group.category}>{group.category}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white"
+                      disabled={!topicCategory || topicsInSelectedCategory.length === 0}
+                    >
+                      <option value="">-- নির্দিষ্ট অধ্যায়/টপিক বাছুন --</option>
+                      {topicsInSelectedCategory.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  // ফ্ল্যাট চ্যাপ্টারের বিষয়ের জন্য: একটা ড্রপডাউন
+                  <select value={topic} onChange={(e) => setTopic(e.target.value)} className="w-full rounded-lg border border-blue-200 p-2 text-sm bg-white" disabled={!subject || availableTopics.length === 0}>
+                    <option value="">-- নির্দিষ্ট অধ্যায় বাছুন --</option>
+                    {flatTopics.map((ch) => <option key={ch} value={ch}>{ch}</option>)}
+                  </select>
+                )}
+              </>
             )}
           </div>
         </div>
