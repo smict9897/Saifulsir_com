@@ -2,41 +2,66 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import curriculum from "../nctb-curriculum.json";
+import { NCTB_CLASSES, type NctbClass } from "@/lib/nctb-data";
 
 type Pair = { category: string; subject: string };
 const LOW = ["1", "2", "3", "4", "5", "6", "7", "8"];
 const CHIPS = ["SSC", "HSC", "Admission", "Job"];
 
-const CLASS_MAP: Record<string, string> = {
-  "6": "Class 6",
-  "7": "Class 7",
-  "8": "Class 8",
-  "SSC": "Class 9-10",
-  "HSC": "Class 11-12",
-};
-
-function getCurriculumSubjects(cat: string): string[] {
-  const key = CLASS_MAP[cat];
-  if (!key) return [];
-  const cls = curriculum.classes.find((c) => c.class === key);
-  return cls ? cls.subjects.map((s) => s.name) : [];
+// ক্লাস কী (6/7/8/SSC/HSC) দিয়ে lib/nctb-data.ts থেকে সঠিক ক্লাস খুঁজে বের করা
+function findClassData(key: string): NctbClass | undefined {
+  if (!key) return undefined;
+  if (LOW.includes(key)) {
+    return NCTB_CLASSES.find((c) => c.class === `Class ${key}`);
+  }
+  if (key === "SSC") {
+    return NCTB_CLASSES.find((c) => /9|10|SSC/i.test(c.class));
+  }
+  if (key === "HSC") {
+    return NCTB_CLASSES.find((c) => /11|12|HSC/i.test(c.class));
+  }
+  return undefined;
 }
 
 export default function QbStart({ pairs }: { pairs: Pair[] }) {
   const router = useRouter();
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
+  const [topicCategory, setTopicCategory] = useState(""); // ক্যাটাগরি/ইউনিট
+  const [topic, setTopic] = useState(""); // নির্দিষ্ট টপিক
 
-  const curriculumSubjects = useMemo(() => getCurriculumSubjects(category), [category]);
+  const selectedClassData = useMemo(() => findClassData(category), [category]);
+
+  const curriculumSubjects = useMemo(
+    () => (selectedClassData ? selectedClassData.subjects.map((s) => s.name) : []),
+    [selectedClassData]
+  );
+
   const dbSubjects = useMemo(
     () => Array.from(new Set(pairs.filter((p) => !category || p.category === category).map((p) => p.subject))),
     [pairs, category]
   );
+
   const subjects = useMemo(
     () => Array.from(new Set([...curriculumSubjects, ...dbSubjects])),
     [curriculumSubjects, dbSubjects]
   );
+
+  // নির্বাচিত সাবজেক্টের ডেটা (chapters/subCategories সহ)
+  const currentSubjectData = useMemo(
+    () => selectedClassData?.subjects.find((s) => s.name === subject),
+    [selectedClassData, subject]
+  );
+
+  const flatTopics = useMemo(() => currentSubjectData?.chapters ?? [], [currentSubjectData]);
+  const groupedTopics = useMemo(() => currentSubjectData?.subCategories ?? [], [currentSubjectData]);
+  const hasGroups = groupedTopics.length > 0;
+
+  const topicsInSelectedCategory = useMemo(() => {
+    if (!topicCategory) return [];
+    const grp = groupedTopics.find((g) => g.category === topicCategory);
+    return grp?.topics ?? [];
+  }, [groupedTopics, topicCategory]);
 
   const chip = (active: boolean) =>
     `rounded-full border px-4 py-2 text-sm font-semibold ${
@@ -47,6 +72,12 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
     const p = new URLSearchParams();
     if (category) p.set("category", category);
     if (subject) p.set("subject", subject);
+    if (hasGroups) {
+      if (topicCategory) p.set("topicCategory", topicCategory);
+      if (topic) p.set("topic", topic);
+    } else if (topic) {
+      p.set("topic", topic);
+    }
     router.push(`/question-builder/create?${p.toString()}`);
   }
 
@@ -60,6 +91,8 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
           onChange={(e) => {
             setCategory(e.target.value);
             setSubject("");
+            setTopicCategory("");
+            setTopic("");
           }}
         >
           <option value="">All Class (1–8th)</option>
@@ -70,24 +103,30 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
           ))}
         </select>
         {CHIPS.map((c) => (
-  <button
-    key={c}
-    type="button"
-    className={chip(category === c)}
-    onClick={() => {
-      setCategory(category === c ? "" : c);
-      setSubject("");
-    }}
-  >
-    {c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}
-  </button>
-))}
+          <button
+            key={c}
+            type="button"
+            className={chip(category === c)}
+            onClick={() => {
+              setCategory(category === c ? "" : c);
+              setSubject("");
+              setTopicCategory("");
+              setTopic("");
+            }}
+          >
+            {c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}
+          </button>
+        ))}
       </div>
 
       <select
         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm"
         value={subject}
-        onChange={(e) => setSubject(e.target.value)}
+        onChange={(e) => {
+          setSubject(e.target.value);
+          setTopicCategory("");
+          setTopic("");
+        }}
       >
         <option value="">— Select Subject —</option>
         {subjects.map((s) => (
@@ -96,6 +135,56 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
           </option>
         ))}
       </select>
+
+      {/* 🎯 দুই-ধাপে ক্যাটাগরি/ইউনিট → টপিক সিলেকশন (subCategories থাকলে) */}
+      {hasGroups ? (
+        <>
+          <select
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm"
+            value={topicCategory}
+            onChange={(e) => {
+              setTopicCategory(e.target.value);
+              setTopic("");
+            }}
+          >
+            <option value="">-- ইউনিট/ক্যাটাগরি বাছুন --</option>
+            {groupedTopics.map((g) => (
+              <option key={g.category} value={g.category}>
+                {g.category}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm disabled:bg-slate-100"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            disabled={!topicCategory}
+          >
+            <option value="">-- নির্দিষ্ট অধ্যায়/টপিক বাছুন --</option>
+            {topicsInSelectedCategory.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : (
+        flatTopics.length > 0 && (
+          <select
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+          >
+            <option value="">-- অধ্যায়/টপিক বাছুন (ঐচ্ছিক) --</option>
+            {flatTopics.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        )
+      )}
 
       <button
         type="button"
