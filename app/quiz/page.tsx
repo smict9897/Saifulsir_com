@@ -48,14 +48,14 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
             <Zap size={26} />
           </span>
           <span className="flex-1">
-            <span className="block text-lg font-bold">এক ক্লিকে প্রশ্ন তৈরি করুন</span>
+            <span className="block text-lg font-bold">Live Online Exam</span>
             <span className="block text-sm text-white/90">ক্লাস, বিষয় ও অধ্যায় দিন, AI প্রশ্ন বানিয়ে দেবে</span>
           </span>
           <ArrowRight size={22} />
         </a>
       </div>
       <section id="ai" className="scroll-mt-24">
-        <h1 className="mb-4 text-2xl font-bold">এক ক্লিকে প্রশ্ন তৈরি করুন (AI)</h1>
+        <h1 className="mb-4 text-2xl font-bold"> Live Online Exam(AI)</h1>
         <QuizBox triples={triples} role={role} />
       </section>
       <section><h2 className="mb-4 text-2xl font-bold">Practice from the question bank</h2>
