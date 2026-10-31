@@ -133,7 +133,7 @@ export default function ExamPage() {
               <Zap size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-base font-bold">এক ক্লিকে প্রশ্ন তৈরি করুন</h2>
+              <h1 className="text-base font-bold">লাইভ অনলাইন এক্সাম </h1>
               <p className="text-xs text-emerald-100">ক্লাস, বিষয় ও অধ্যায় দিন, AI প্রশ্ন বানিয়ে দেবে</p>
             </div>
           </div>
