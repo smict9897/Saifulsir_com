@@ -38,7 +38,7 @@ export default function CategorySelector({
   const currentClassData = NCTB_CLASSES.find((c) => c.class === selectedClass);
   const subjects = currentClassData ? currentClassData.subjects : [];
   const currentSubjectData = subjects.find((s) => s.name === selectedSubject);
-  const chapters = currentSubjectData ? currentSubjectData.chapters : [];
+  const chapters = currentSubjectData?.chapters ?? [];
 
   const handleSubjectChange = (subName: string) => {
     setSelectedSubject(subName);
