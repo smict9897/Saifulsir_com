@@ -170,6 +170,11 @@ export const NCTB_CLASSES: NctbClass[] = [
   ]
 }
 // ================= CLASS 11-12 END =================
+// উদাহরণস্বরূপ, যদি আগের কোড শেষ হয়ে একটি নতুন অবজেক্ট যোগ করতে হয়:
+// ... আগের কোডের শেষ অংশ ...
+];
+
+export const subjectWiseCategory = {
   "id": "subject-wise",
   "name": "বিষয়ভিত্তিক প্রস্তুতি",
   "slug": "subject-wise",
@@ -200,7 +205,7 @@ export const NCTB_CLASSES: NctbClass[] = [
       "slug": "ict"
     }
   ]
-}
+},
 
 ];
 
