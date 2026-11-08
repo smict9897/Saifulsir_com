@@ -166,48 +166,26 @@ export const NCTB_CLASSES: NctbClass[] = [
     { name: "গার্হস্থ্য বিজ্ঞান ১ম পত্র", chapters: ["১. গার্হস্থ্য বিজ্ঞান পরিচিতি", "২. পারিবারিক সম্পদ", "৩. বস্ত্র ও পোশাক", "৪. খাদ্য ও পুষ্টি", "৫. গৃহস্থালি"] },
     { name: "গার্হস্থ্য বিজ্ঞান ২য় পত্র", chapters: ["১. শিশু বিকাশ", "২. পারিবারিক সম্পর্ক", "৩. গার্হস্থ্য অর্থনীতি", "৪. পারিবারিক স্বাস্থ্য", "৫. গ্রাহক শিক্ষা"] },
     { name: "Free Hand Writing", chapters: ["1. Paragraph", "2. Essay", "3. Email and Letter", "4. Application", "5. Dialogue", "6. Completing Story", "7. Graph and Chart", "8. Flow Chart", "9. Grammar", "10. Rearrangement"] },
-    { "id": "Free Hand Writing", chapters: ["1. Paragraph", "2. Essay", "3. Email and Letter", "4. Application", "5. Dialogue", "6. Completing Story", "7. Graph and Chart", "8. Flow Chart", "9. Grammar", "10. Rearrangement"] }
-    { "id": "Free Hand Writing", chapters: ["1. Paragraph", "2. Essay", "3. Email and Letter", "4. Application", "5. Dialogue", "6. Completing Story", "7. Graph and Chart", "8. Flow Chart", "9. Grammar", "10. Rearrangement"] }
-     
-  ]
-},
-{
-  "id": "exam-preparation",
-  "name": "প্রস্তুতি ও সহায়িকা",
-  "slug": "exam-preparation",
-  "subcategories": [
+      ]
+}
+];
+
+export const EXAM_PREPARATION = {
+  id: "exam-preparation",
+  name: "প্রস্তুতি ও সহায়িকা",
+  slug: "exam-preparation",
+  subcategories: [
     {
-      "id": "subject-wise",
-      "name": "বিষয়ভিত্তিক প্রস্তুতি",
-      "slug": "subject-wise",
-      "subcategories": [
-        {
-          "id": "bangla",
-          "name": "বাংলা ভাষা ও সাহিত্য",
-          "slug": "bangla"
-        },
-        {
-          "id": "english",
-          "name": "English Language & Literature",
-          "slug": "english"
-        },
-        {
-          "id": "math-mental",
-          "name": "সাধারণ গণিত ও মানসিক দক্ষতা",
-          "slug": "math-mental"
-        },
-        {
-          "id": "general-knowledge",
-          "name": "বাংলাদেশ ও আন্তর্জাতিক বিষয়াবলী",
-          "slug": "general-knowledge"
-        },
-        {
-          "id": "ict",
-          "name": "তথ্য ও যোগাযোগ প্রযুক্তি (ICT)",
-          "slug": "ict"
-        }
+      id: "subject-wise",
+      name: "বিষয়ভিত্তিক প্রস্তুতি",
+      slug: "subject-wise",
+      subcategories: [
+        { id: "bangla", name: "বাংলা ভাষা ও সাহিত্য", slug: "bangla" },
+        { id: "english", name: "English Language & Literature", slug: "english" },
+        { id: "math-mental", name: "সাধারণ গণিত ও মানসিক দক্ষতা", slug: "math-mental" },
+        { id: "general-knowledge", name: "বাংলাদেশ ও আন্তর্জাতিক বিষয়াবলী", slug: "general-knowledge" },
+        { id: "ict", name: "তথ্য ও যোগাযোগ প্রযুক্তি (ICT)", slug: "ict" }
       ]
     }
   ]
-          }
-          
+};
