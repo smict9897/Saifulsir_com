@@ -1,10 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
-import { NCTB_CLASSES } from "@/lib/nctb-data";
+import { NCTB_CLASSES, EXAM_PREPARATION } from "@/lib/nctb-data";
+import type { NctbClass } from "@/lib/nctb-data";
 
 function createSlug(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, "-").replace(/^-+|-+$/g, "");
 }
+
+// "প্রস্তুতি ও সহায়িকা" কে ক্লাসের মতো করে ড্রপডাউনে যোগ করা হয়েছে
+const EXAM_PREP_LABEL = EXAM_PREPARATION.name;
+const EXAM_PREP_SLUG = EXAM_PREPARATION.slug;
+
+const EXAM_PREP_CLASS: NctbClass = {
+  class: EXAM_PREP_LABEL,
+  subjects: EXAM_PREPARATION.subcategories.flatMap((group) =>
+    group.subcategories.map((s) => ({ name: s.name }))
+  ),
+};
+
+const ALL_CLASSES: NctbClass[] = [...NCTB_CLASSES, EXAM_PREP_CLASS];
 
 export default function CategorySelector({
   cats,
@@ -24,6 +38,11 @@ export default function CategorySelector({
     if (initialCategoryId) {
       const cat = cats.find((c) => c.id === initialCategoryId);
       if (cat) {
+        if (cat.slug?.startsWith(EXAM_PREP_SLUG)) {
+          setSelectedClass(EXAM_PREP_LABEL);
+          setSelectedSubject(cat.name);
+          return;
+        }
         for (const cls of NCTB_CLASSES) {
           if (cat.slug?.startsWith(createSlug(cls.class))) {
             setSelectedClass(cls.class);
@@ -35,13 +54,11 @@ export default function CategorySelector({
     }
   }, [initialCategoryId, cats]);
 
-  const currentClassData = NCTB_CLASSES.find((c) => c.class === selectedClass);
+  const currentClassData = ALL_CLASSES.find((c) => c.class === selectedClass);
   const subjects = currentClassData ? currentClassData.subjects : [];
   const currentSubjectData = subjects.find((s) => s.name === selectedSubject);
 
-  // ফ্ল্যাট চ্যাপ্টার লিস্ট
   const flatChapters = currentSubjectData?.chapters ?? [];
-  // গ্রুপ করা সাব-ক্যাটাগরি লিস্ট (যেমন: গদ্য, পদ্য ইত্যাদি)
   const groupedChapters = currentSubjectData?.subCategories ?? [];
 
   const hasChapterOptions = flatChapters.length > 0 || groupedChapters.length > 0;
@@ -49,17 +66,24 @@ export default function CategorySelector({
   const handleSubjectChange = (subName: string) => {
     setSelectedSubject(subName);
     setChapter("");
-    const classSlug = createSlug(selectedClass);
-    const expectedSlug = `${classSlug}-${createSlug(subName)}`;
-    const matchedCat = cats.find((c) => c.slug === expectedSlug || (c.name === subName && c.slug?.startsWith(classSlug)));
-    if (matchedCat) setCategoryId(matchedCat.id);
-    else setCategoryId("");
+
+    let matchedCat;
+    if (selectedClass === EXAM_PREP_LABEL) {
+      matchedCat = cats.find((c) => c.name === subName && c.slug?.startsWith(EXAM_PREP_SLUG));
+    } else {
+      const classSlug = createSlug(selectedClass);
+      const expectedSlug = `${classSlug}-${createSlug(subName)}`;
+      matchedCat = cats.find(
+        (c) => c.slug === expectedSlug || (c.name === subName && c.slug?.startsWith(classSlug))
+      );
+    }
+    setCategoryId(matchedCat ? matchedCat.id : "");
   };
 
   return (
     <div className="grid gap-4 rounded-2xl border border-slate-200 p-4 bg-slate-50/50">
       <p className="text-sm font-semibold text-slate-800">শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করুন</p>
-      
+
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="chapter" value={chapter} />
 
@@ -77,7 +101,7 @@ export default function CategorySelector({
             className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-royal focus:outline-none"
           >
             <option value="">-- শ্রেণি বাছুন --</option>
-            {NCTB_CLASSES.map((c) => (
+            {ALL_CLASSES.map((c) => (
               <option key={c.class} value={c.class}>{c.class}</option>
             ))}
           </select>
@@ -108,12 +132,10 @@ export default function CategorySelector({
           >
             <option value="">-- অধ্যায় বাছুন --</option>
 
-            {/* ফ্ল্যাট চ্যাপ্টার থাকলে সরাসরি দেখাবে */}
             {flatChapters.map((ch) => (
               <option key={ch} value={ch}>{ch}</option>
             ))}
 
-            {/* সাব-ক্যাটাগরি (গ্রুপ) থাকলে optgroup আকারে দেখাবে */}
             {groupedChapters.map((group) => (
               <optgroup key={group.category} label={group.category}>
                 {group.topics.map((t) => (
