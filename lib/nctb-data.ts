@@ -170,4 +170,38 @@ export const NCTB_CLASSES: NctbClass[] = [
   ]
 }
 // ================= CLASS 11-12 END =================
+  "id": "subject-wise",
+  "name": "বিষয়ভিত্তিক প্রস্তুতি",
+  "slug": "subject-wise",
+  "subcategories": [
+    {
+      "id": "bangla",
+      "name": "বাংলা ভাষা ও সাহিত্য",
+      "slug": "bangla"
+    },
+    {
+      "id": "english",
+      "name": "English Language & Literature",
+      "slug": "english"
+    },
+    {
+      "id": "math-mental",
+      "name": "সাধারণ গণিত ও মানসিক দক্ষতা",
+      "slug": "math-mental"
+    },
+    {
+      "id": "general-knowledge",
+      "name": "বাংলাদেশ ও আন্তর্জাতিক বিষয়াবলী",
+      "slug": "general-knowledge"
+    },
+    {
+      "id": "ict",
+      "name": "তথ্য ও যোগাযোগ প্রযুক্তি (ICT)",
+      "slug": "ict"
+    }
+  ]
+}
+
 ];
+
+  
