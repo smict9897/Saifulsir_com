@@ -90,7 +90,7 @@ export async function POST(req: Request) {
 
     6. Author Card (At the very end of the article):
     <div class="mt-12 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col items-center text-center shadow-sm">
-      <img src="/saiful.jpg" alt="MD.SAIFUL ISLAM" class="w-24 h-24 rounded-full object-cover border-4 border-teal-100 shadow-md mb-4" />
+      <img src="/saiful.jpg" alt="Md. Saiful Islam" class="w-24 h-24 rounded-full object-cover border-4 border-teal-100 shadow-md mb-4" />
       <h3 class="text-xl font-bold text-slate-800 mb-1">Blog Writer: MD.SAIFUL ISLAM</h3>
       <p class="text-sm font-semibold text-teal-700 mb-2">Assistant Teacher (ICT)</p>
       <p class="text-sm text-slate-600 mb-1">S.N.P High School And College</p>
