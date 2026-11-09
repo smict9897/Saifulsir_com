@@ -80,26 +80,30 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
     };
   }
 
-  // 👇 সাজেশন পোস্ট আনার লজিক 👇
-  const relatedPosts = await db.post.findMany({
-    where: {
-      published: true,
-      id: { not: p.id },
-      ...(p.categoryId ? { categoryId: p.categoryId } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-  });
+  // 👇 সাজেশন পোস্ট আনার লজিক (একটু সহজ করা হলো) 👇
+  let finalSuggestions: any[] = [];
+  try {
+    // প্রথমে এই ক্যাটাগরির অন্য পোস্ট খুঁজি
+    if (p.categoryId) {
+      finalSuggestions = await db.post.findMany({
+        where: { published: true, id: { not: p.id }, categoryId: p.categoryId },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      });
+    }
 
-  // যদি ক্যাটাগরিতে ৩টার কম পোস্ট থাকে, তবে অন্য পোস্ট থেকে পূরণ করা
-  let finalSuggestions = relatedPosts;
-  if (finalSuggestions.length < 3) {
-    const extra = await db.post.findMany({
-      where: { published: true, id: { notIn: [p.id, ...relatedPosts.map(r => r.id)] } },
-      orderBy: { createdAt: "desc" },
-      take: 3 - finalSuggestions.length,
-    });
-    finalSuggestions = [...finalSuggestions, ...extra];
+    // যদি ৩টার কম থাকে, তবে বাকি পোস্ট থেকে পূরণ করি
+    if (finalSuggestions.length < 3) {
+      const existingIds = [p.id, ...finalSuggestions.map(r => r.id)];
+      const extra = await db.post.findMany({
+        where: { published: true, id: { notIn: existingIds } },
+        orderBy: { createdAt: "desc" },
+        take: 3 - finalSuggestions.length,
+      });
+      finalSuggestions = [...finalSuggestions, ...extra];
+    }
+  } catch (error) {
+    console.error("Failed to fetch related posts:", error);
   }
 
   return (
@@ -134,12 +138,10 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
         )}
         <CopyGuard />
         
-        {/* 👇 PDF-এর জন্য id যুক্ত করা হলো 👇 */}
         <div id="post-content" className="no-copy">
           <PostBody body={p.body} />
         </div>
 
-        {/* 👇 PDF ডাউনলোড বাটন 👇 */}
         {p.published && (
           <DownloadPdfButton contentId="post-content" fileName={p.title} />
         )}
@@ -150,8 +152,8 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
           </a>
         )}
 
-        {/* 👇 নতুন সাজেশন সেকশন 👇 */}
-        {finalSuggestions.length > 0 && (
+        {/* 👇 নতুন সাজেশন সেকশন (ডাটা থাকলেই দেখাবে) 👇 */}
+        {finalSuggestions && finalSuggestions.length > 0 && (
           <div className="mt-12 border-t border-slate-200 pt-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
               <span className="w-1.5 h-6 bg-blue-600 rounded-full inline-block"></span>
