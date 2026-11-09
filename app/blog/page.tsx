@@ -13,18 +13,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
+// এক পেজে কতটি পোস্ট দেখাবে
 const POSTS_PER_PAGE = 12;
 
 export default async function Blog({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  // Next.js 15-এ searchParams একটি Promise, তাই await করতে হবে
   const params = await searchParams;
-  const pageStr = params.page || "1";
-  const currentPage = parseInt(pageStr, 10);
-  
-  // ভুল পেজ নাম্বার দিলে ১ ধরে নেবে
-  const validPage = isNaN(currentPage) || currentPage < 1 ? 1 : currentPage;
-  const skip = (validPage - 1) * POSTS_PER_PAGE;
+  const currentPage = Math.max(1, parseInt(params.page || "1"));
+  const skip = (currentPage - 1) * POSTS_PER_PAGE;
 
+  // মোট কতটি পোস্ট আছে এবং বর্তমান পেজের পোস্টগুলো আনা
   const [totalPosts, posts, tags] = await Promise.all([
     db.post.count({ where: { published: true } }).catch(() => 0),
     db.post.findMany({ 
@@ -38,11 +35,12 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
 
   const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
 
-  // পেজ নম্বর লিস্ট তৈরি
+  // পেজ নম্বর লিস্ট তৈরি (যেমন: 1 2 3 4 5)
   const getPageNumbers = () => {
-    const pages: number[] = [];
+    const pages = [];
     const maxVisible = 5;
-    let start = Math.max(1, validPage - Math.floor(maxVisible / 2));
+    
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(totalPages, start + maxVisible - 1);
     
     if (end - start + 1 < maxVisible) {
@@ -58,7 +56,6 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-bold">Blog</h1>
-      
       {tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2" aria-label="Popular tags">
           {tags.map(([t, n]) => (
@@ -68,8 +65,7 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
           ))}
         </div>
       )}
-      
-      {posts.length === 0 && <p className="mt-6 text-slate-600">No posts found.</p>}
+      {posts.length === 0 && <p className="mt-6 text-slate-600">No posts yet.</p>}
       
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((p) => {
@@ -100,27 +96,16 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
 
       {/* 👇 পেজিনেশন সেকশন 👇 */}
       {totalPages > 1 && (
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-10 flex items-center justify-center gap-2">
           {/* Prev Button */}
           <Link
-            href={`/blog?page=${validPage > 1 ? validPage - 1 : 1}`}
+            href={`/blog?page=${currentPage - 1}`}
             className={`flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 ${
-              validPage === 1 ? "pointer-events-none opacity-40" : ""
+              currentPage === 1 ? "pointer-events-none opacity-50" : ""
             }`}
-            aria-label="Previous page"
           >
             <ChevronLeft size={18} />
           </Link>
-
-          {/* First Page + Dots */}
-          {getPageNumbers()[0] > 1 && (
-            <>
-              <Link href={`/blog?page=1`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold transition hover:bg-slate-50">
-                1
-              </Link>
-              {getPageNumbers()[0] > 2 && <span className="px-1 text-slate-400">...</span>}
-            </>
-          )}
 
           {/* Page Numbers */}
           {getPageNumbers().map((pageNum) => (
@@ -128,8 +113,8 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
               key={pageNum}
               href={`/blog?page=${pageNum}`}
               className={`flex h-10 w-10 items-center justify-center rounded-xl border transition font-semibold ${
-                validPage === pageNum
-                  ? "border-blue-600 bg-blue-600 text-white shadow-md"
+                currentPage === pageNum
+                  ? "border-blue-600 bg-blue-600 text-white"
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -137,23 +122,12 @@ export default async function Blog({ searchParams }: { searchParams: Promise<{ p
             </Link>
           ))}
 
-          {/* Last Page + Dots */}
-          {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
-            <>
-              {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && <span className="px-1 text-slate-400">...</span>}
-              <Link href={`/blog?page=${totalPages}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold transition hover:bg-slate-50">
-                {totalPages}
-              </Link>
-            </>
-          )}
-
           {/* Next Button */}
           <Link
-            href={`/blog?page=${validPage < totalPages ? validPage + 1 : totalPages}`}
+            href={`/blog?page=${currentPage + 1}`}
             className={`flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 ${
-              validPage === totalPages ? "pointer-events-none opacity-40" : ""
+              currentPage === totalPages ? "pointer-events-none opacity-50" : ""
             }`}
-            aria-label="Next page"
           >
             <ChevronRight size={18} />
           </Link>
