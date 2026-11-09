@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { popularTags } from "@/lib/popular-tags";
 
@@ -13,11 +13,45 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
-export default async function Blog() {
-  const [posts, tags] = await Promise.all([
-    db.post.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 60 }).catch(() => []),
+// এক পেজে কতটি পোস্ট দেখাবে
+const POSTS_PER_PAGE = 12;
+
+export default async function Blog({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const params = await searchParams;
+  const currentPage = Math.max(1, parseInt(params.page || "1"));
+  const skip = (currentPage - 1) * POSTS_PER_PAGE;
+
+  // মোট কতটি পোস্ট আছে এবং বর্তমান পেজের পোস্টগুলো আনা
+  const [totalPosts, posts, tags] = await Promise.all([
+    db.post.count({ where: { published: true } }).catch(() => 0),
+    db.post.findMany({ 
+      where: { published: true }, 
+      orderBy: { createdAt: "desc" }, 
+      take: POSTS_PER_PAGE,
+      skip: skip
+    }).catch(() => []),
     popularTags(20),
   ]);
+
+  const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
+
+  // পেজ নম্বর লিস্ট তৈরি (যেমন: 1 2 3 4 5)
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -35,7 +69,6 @@ export default async function Blog() {
       
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((p) => {
-          // এখানে চেক করা হচ্ছে coverUrl আছে কিনা, না থাকলে placeholder.jpg দেখাবে
           const imageUrl = p.coverUrl || "/placeholder.jpg";
 
           return (
@@ -60,6 +93,46 @@ export default async function Blog() {
           );
         })}
       </div>
+
+      {/* 👇 পেজিনেশন সেকশন 👇 */}
+      {totalPages > 1 && (
+        <div className="mt-10 flex items-center justify-center gap-2">
+          {/* Prev Button */}
+          <Link
+            href={`/blog?page=${currentPage - 1}`}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 ${
+              currentPage === 1 ? "pointer-events-none opacity-50" : ""
+            }`}
+          >
+            <ChevronLeft size={18} />
+          </Link>
+
+          {/* Page Numbers */}
+          {getPageNumbers().map((pageNum) => (
+            <Link
+              key={pageNum}
+              href={`/blog?page=${pageNum}`}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border transition font-semibold ${
+                currentPage === pageNum
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {pageNum}
+            </Link>
+          ))}
+
+          {/* Next Button */}
+          <Link
+            href={`/blog?page=${currentPage + 1}`}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 ${
+              currentPage === totalPages ? "pointer-events-none opacity-50" : ""
+            }`}
+          >
+            <ChevronRight size={18} />
+          </Link>
+        </div>
+      )}
     </main>
   );
 }
