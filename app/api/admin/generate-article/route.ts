@@ -9,7 +9,7 @@ const Body = z.object({
   topic: z.string().min(2).max(200),
   outline: z.array(z.string()).min(1),
   keywords: z.array(z.string()).optional(),
-  prompt: z.string().optional(), // 👈 প্রম্পট যুক্ত করা হলো
+  prompt: z.string().optional(), 
 });
 
 export async function POST(req: Request) {
@@ -21,58 +21,94 @@ export async function POST(req: Request) {
 
   const { topic, outline, keywords = [], prompt: customPrompt } = p.data;
 
-  // 👇 কাস্টম প্রম্পট তৈরি 👇
   let customInstruction = "";
   if (customPrompt && customPrompt.trim().length > 0) {
     customInstruction = `
-    IMPORTANT USER INSTRUCTIONS (You MUST follow these strictly and ignore any conflicting rules above):
+    IMPORTANT USER INSTRUCTIONS (Follow these strictly):
     "${customPrompt.trim()}"
     `;
   }
 
-  // 👇 মূল প্রম্পট (উন্নত ও কড়া) 👇
   const prompt = `You are an expert web content writer and a highly experienced, friendly human teacher from Bangladesh.
 
     Topic: "${topic}"
     Main Keywords to include: ${keywords.join(", ")}
 
-    Write a comprehensive, engaging, and highly professional blog post in Bangla following this exact outline:
-    ${outline.map((h, i) => `<h2>${h}</h2>\n(Write 3-4 detailed paragraphs with real-life examples for this section)`).join("\n\n")}
+    Write a comprehensive, engaging, and highly professional blog post in Bangla.
 
     ${customInstruction}
 
-    *** CRITICAL VISUAL & STYLING RULES (TAILWIND CSS) ***
-    To make the article look beautiful and colorful, you MUST use the following Tailwind CSS classes inside your HTML tags:
-    1. Subheadings: Use <h2 class="text-2xl font-bold text-slate-800 mt-8 mb-4 border-b pb-2"> and <h3 class="text-xl font-semibold text-royal mt-6 mb-3">.
-    2. Important Text/Keywords: Use <strong class="text-royal font-bold"> or highlight with <mark class="bg-yellow-200 px-1 rounded text-slate-800">.
-    3. Important Notes / Warnings / Key Takeaways: Wrap them in this styled box:
-       <div class="bg-blue-50 border-l-4 border-blue-500 p-4 my-4 rounded-r-lg text-slate-800">
-          <h4 class="font-bold text-blue-800 mb-2">📌 মনে রাখার বিষয়</h4>
-          <p>Your text here...</p>
-       </div>
-    4. Tables: Use <div class="overflow-x-auto"><table class="w-full border-collapse border border-slate-300 my-6 text-sm"> with <th class="bg-slate-100 p-3 border border-slate-300 text-left font-bold"> and <td class="p-3 border border-slate-300">.
-    5. Quotes / Stories: Use <blockquote class="border-l-4 border-emerald-500 bg-emerald-50 p-4 my-4 italic text-slate-700 rounded-r-lg">.
-    6. Lists: Use <ul class="list-disc pl-6 space-y-2 my-4"> and <li> with <span class="font-semibold text-royal"> for the main point.
+    *** CRITICAL STRUCTURAL FORMAT (You MUST follow this exact HTML structure) ***
+    You must output the article in the following structure. Do NOT deviate from these specific Tailwind CSS classes.
 
-    *** HUMAN-LIKE WRITING RULES (NO ROBOTIC TONE) ***
-    - Write in a conversational, empathetic, and friendly Bangla tone as if you are sitting with the student and explaining.
-    - Use transition words (e.g., "তবে", "অতএব", "উদাহরণস্বরূপ", "মনে করুন", "ধরুন", "খুব সহজভাবে বলতে গেলে")।
-    - Do NOT just list facts. Tell stories, use real-life analogies, and give examples. Explain deeply.
-    - Vary your sentence lengths. Mix short and long sentences to make it sound natural.
+    1. Hero Header Section:
+    <header class="rounded-2xl bg-gradient-to-r from-teal-600 to-blue-600 p-6 text-white shadow-lg mb-8">
+      <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">${topic}</span>
+      <h1 class="text-3xl font-bold mt-3 mb-2">[Make a Catchy H1 Title]</h1>
+      <p class="opacity-90">[Write a short compelling description]</p>
+    </header>
 
-    *** SEO & WORD COUNT RULES ***
-    1. The main focus keyword MUST be used naturally within the first 100 words of the article.
-    2. The focus keyword MUST be included in at least one <h2> or <h3> heading.
-    3. Return ONLY valid HTML code. (No Markdown, NO \`\`\`html blocks).
-    4. Start directly with the first <h2>. Do not include the main title (H1).
-    5. Write AT LEAST 2000 words. Do not stop generating until the word count is sufficient.
-    6. DO NOT USE MARKDOWN ANYWHERE. Use only HTML tags for formatting.`;
+    2. Table of Contents (TOC):
+    <div class="bg-white p-4 rounded-xl border border-slate-200 mb-8 shadow-sm">
+      <h2 class="text-xl font-bold text-teal-700 mb-3">📑 সূচিপত্র</h2>
+      <ul class="list-disc pl-5 space-y-1 text-blue-600">
+         [Create anchor links for each H2 section]
+      </ul>
+    </div>
+
+    3. Revision Table (Only if applicable to the topic):
+    <div class="overflow-x-auto rounded-xl border border-slate-200 mb-8 shadow-sm">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-teal-600 text-white">
+          <tr><th class="p-3 border-b">শিরোনাম</th><th class="p-3 border-b">বিবরণ</th></tr>
+        </thead>
+        <tbody class="bg-white">
+          <tr><td class="p-3 border-b">[Item 1]</td><td class="p-3 border-b">[Description]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    4. Main Content Sections (For each H2 in the outline):
+    <article class="bg-white border-l-4 border-teal-500 rounded-r-xl p-5 mb-6 shadow-sm">
+      <h2 class="text-2xl font-bold text-teal-800 mb-3">[H2 Heading]</h2>
+      <p class="text-slate-700 leading-relaxed mb-3">[Detailed paragraph]</p>
+      
+      <!-- Include an Exam Point Box -->
+      <div class="bg-emerald-50 border border-emerald-200 border-dashed rounded-lg p-4 mt-4 text-emerald-900">
+        <strong>🎯 পরীক্ষার পয়েন্ট:</strong> [Write a tip for exams here]
+      </div>
+    </article>
+
+    5. FAQ Section (At the end):
+    <div class="mt-8 space-y-3">
+      <h2 class="text-2xl font-bold text-teal-800 mb-4">❓ সাধারণ প্রশ্নোত্তর (FAQ)</h2>
+      <details class="bg-white border border-slate-200 rounded-lg p-4">
+        <summary class="font-semibold text-teal-700 cursor-pointer">[Question here]</summary>
+        <p class="mt-2 text-slate-600">[Answer here]</p>
+      </details>
+    </div>
+
+    6. Author Card (At the very end of the article):
+    <div class="mt-12 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col items-center text-center shadow-sm">
+      <div class="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
+        <span class="text-2xl">👨‍🏫</span>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">Blog Writer: MD.SAIFUL ISLAM</h3>
+      <p class="text-sm font-semibold text-teal-700 mb-2">Assistant Teacher (ICT)</p>
+      <p class="text-sm text-slate-600 mb-1">S.N.P High School And College</p>
+      <p class="text-xs text-slate-500">Nabiganj, Hobiganj</p>
+    </div>
+
+    *** RULES ***
+    - Write in a conversational, empathetic, and friendly Bangla tone.
+    - Return ONLY valid HTML code. DO NOT wrap in \`\`\`html.
+    - DO NOT use Markdown (no #, no **).
+    - Write AT LEAST 1500 words.`;
 
   const r = await callDeepSeekText(prompt, 0.6, 8192); 
   
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status || 500 });
 
-  // TypeScript এরর ফিক্স ও মার্কডাউন ক্লিনআপ
   let cleanHtml = String(r.data || "");
   
   if (cleanHtml.startsWith("```html")) {
