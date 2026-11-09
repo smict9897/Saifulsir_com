@@ -157,6 +157,7 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
   // 👇 নতুন আর্টিকেল জেনারেটরের স্টেট 👇
   const [articleLoading, setArticleLoading] = useState(false);
   const [articleText, setArticleText] = useState("");
+  const [customPrompt, setCustomPrompt] = useState(""); // 👈 প্রম্পট রাখার স্টেট
   // 👆 --------------------------------- 👆
 
   const [saved, setSaved] = useState<SavedList[] | null>(null);
@@ -263,7 +264,7 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
     setPackLoading(false);
   }
 
-  // 👇 নতুন আর্টিকেল জেনারেট করার ফাংশন 👇
+  // 👇 নতুন আর্টিকেল জেনারেট করার ফাংশন (প্রম্পট সহ) 👇
   async function generateArticle() {
     if (!pack || !pack.outline.length) return;
     setArticleLoading(true);
@@ -278,7 +279,8 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
       body: JSON.stringify({ 
         topic: topic.trim() || "Blog Post", 
         outline: pack.outline,
-        keywords: kwList.slice(0, 10)
+        keywords: kwList.slice(0, 10),
+        prompt: customPrompt // 👈 এখানে আপনার লেখা প্রম্পট যাচ্ছে
       }),
     });
 
@@ -410,7 +412,7 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
             onChange={(e) => setTopic(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                e.preventDefault(); // পোস্ট ফর্মের ভেতরে থাকলে ফর্ম সাবমিট হওয়া আটকায়
+                e.preventDefault();
                 if (!loading) void search();
               }
             }}
@@ -534,7 +536,6 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
             </div>
           </div>
 
-          {/* নির্বাচিত কিওয়ার্ডের জন্য অ্যাকশন বার */}
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
             <label className="flex items-center gap-2 font-medium">
               <input type="checkbox" checked={allVisibleSelected} onChange={toggleAll} /> সব বাছুন
@@ -590,18 +591,40 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
                 </div>
               )}
 
-              {/* 👇 আর্টিকেল জেনারেটর ও প্রিভিউ বাটন 👇 */}
-              {pack.outline.length > 0 && (
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    disabled={articleLoading}
-                    onClick={() => void generateArticle()}
-                    className={`${btn} border-purple-600 bg-purple-600 text-white`}
-                  >
-                    {articleLoading ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-                    {articleLoading ? "আর্টিকেল লেখা হচ্ছে..." : "সম্পূর্ণ আর্টিকেল তৈরি করুন"}
+              {pack.faqs.length > 0 && (
+                <div className="rounded-lg border border-slate-200 bg-white p-2 text-sm">
+                  <p className="text-xs text-slate-500">FAQ প্রশ্ন (পোস্টের শেষে দিন)</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                    {pack.faqs.map((o, i) => <li key={i}>{o}</li>)}
+                  </ul>
+                  <button type="button" onClick={() => void copy(pack.faqs.join("\n"), "pack-faq")} className={`${btn} mt-1.5 border-slate-300 bg-white`}>
+                    {copied === "pack-faq" ? <Check size={13} className="text-green-600" /> : <Copy size={13} />} কপি
                   </button>
+                </div>
+              )}
+
+              {/* 👇 প্রম্পট বক্স ও আর্টিকেল জেনারেটর বাটন 👇 */}
+              {pack.outline.length > 0 && (
+                <div className="mt-4 rounded-xl border border-purple-200 bg-white p-3 shadow-sm">
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">কেমন আর্টিকেল চান? (প্রম্পট)</label>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    rows={2}
+                    placeholder="যেমন: সহজ ভাষায়, ছোট ছোট প্যারাগ্রাফে, ৮০০ শব্দে..."
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-purple-500 focus:outline-none"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={articleLoading}
+                      onClick={() => void generateArticle()}
+                      className={`${btn} border-purple-600 bg-purple-600 text-white`}
+                    >
+                      {articleLoading ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+                      {articleLoading ? "আর্টিকেল লেখা হচ্ছে..." : "সম্পূর্ণ আর্টিকেল তৈরি করুন"}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -634,18 +657,6 @@ export default function AdminKeywordTool({ onSelectKeyword, onApplySeo, initialT
                 </div>
               )}
               {/* 👆 ------------------------------------------------- 👆 */}
-
-              {pack.faqs.length > 0 && (
-                <div className="rounded-lg border border-slate-200 bg-white p-2 text-sm">
-                  <p className="text-xs text-slate-500">FAQ প্রশ্ন (পোস্টের শেষে দিন)</p>
-                  <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                    {pack.faqs.map((o, i) => <li key={i}>{o}</li>)}
-                  </ul>
-                  <button type="button" onClick={() => void copy(pack.faqs.join("\n"), "pack-faq")} className={`${btn} mt-1.5 border-slate-300 bg-white`}>
-                    {copied === "pack-faq" ? <Check size={13} className="text-green-600" /> : <Copy size={13} />} কপি
-                  </button>
-                </div>
-              )}
             </section>
           )}
 
