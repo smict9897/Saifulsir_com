@@ -61,11 +61,11 @@ export async function callDeepSeekJson(
   }
 }
 
-// 👇 নতুন ফাংশন: যা JSON ছাড়া সরাসরি আর্টিকেল (Markdown) লিখতে পারবে 👇
+// 👇 নতুন ফাংশন: যা JSON ছাড়া সরাসরি HTML আর্টিকেল লিখবে 👇
 export async function callDeepSeekText(
   prompt: string,
-  temperature = 0.7,
-  maxTokens = 4096
+  temperature = 0.6,
+  maxTokens = 8192
 ) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -84,11 +84,10 @@ export async function callDeepSeekText(
         messages: [
           {
             role: "system",
-            content: "You are an expert SEO content writer. Write high-quality, engaging content in Markdown format.",
+            content: "You are an expert SEO content writer. You MUST output ONLY valid HTML code. Do NOT use Markdown syntax like #, **, or - for lists. Use proper HTML tags (<h2>, <p>, <ul>, <li>, <strong>, <table>). Do not wrap the output in ```html blocks.",
           },
           { role: "user", content: prompt },
         ],
-        // এখানে response_format নেই, তাই এটি অবাধে টেক্সট লিখতে পারবে
         temperature: temperature,
         max_tokens: maxTokens,
       }),
