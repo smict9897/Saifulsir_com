@@ -9,6 +9,7 @@ const Body = z.object({
   topic: z.string().min(2).max(200),
   outline: z.array(z.string()).min(1),
   keywords: z.array(z.string()).optional(),
+  prompt: z.string().optional(), // 👈 নতুন প্রম্পট ফিল্ড
 });
 
 export async function POST(req: Request) {
@@ -18,12 +19,18 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => ({})));
   if (!p.success) return NextResponse.json({ ok: false, error: "Invalid data" }, { status: 400 });
 
-  const { topic, outline, keywords = [] } = p.data;
+  const { topic, outline, keywords = [], prompt: customPrompt } = p.data;
 
-  // 👇 সম্পূর্ণ নতুন, স্টাইলিশ, কালারফুল এবং ২০০০+ শব্দের জন্য আপডেট করা প্রম্পট 👇
+  // 👇 প্রম্পট থাকলে সেটা AI-এর নির্দেশনার সাথে যোগ হবে 👇
+  let finalInstruction = "";
+  if (customPrompt && customPrompt.trim().length > 0) {
+    finalInstruction = `\n*** USER CUSTOM INSTRUCTIONS (Follow these strictly) ***\n${customPrompt.trim()}\n`;
+  }
+
   const prompt = `You are an expert web content writer and a highly experienced, friendly human teacher from Bangladesh.
 Topic: "${topic}"
 Main Keywords to include: ${keywords.join(", ")}
+${finalInstruction}
 
 Write a comprehensive, engaging, and highly professional blog post in Bangla following this exact outline:
 ${outline.map((h, i) => `<h2>${h}</h2>\n(Write 3-4 detailed paragraphs with real-life examples for this section)`).join("\n\n")}
