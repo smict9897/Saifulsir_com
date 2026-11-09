@@ -11,6 +11,7 @@ import SaveButton from "@/components/save-button";
 import ShareBar from "@/components/share-bar";
 import CopyGuard from "@/components/copy-guard";
 import PostViewTracker from "@/components/post-view-tracker";
+import DownloadPdfButton from "@/components/download-pdf-button"; // 👈 নতুন ইম্পোর্ট
 export const dynamic = "force-dynamic";
 
 const find = cache((key: string) => db.post.findFirst({ where: { OR: [{ slug: key }, { id: key }] }, include: { category: true } }));
@@ -44,7 +45,6 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
   
   const description = p.metaDescription || p.excerpt || p.body.replace(/[#!\[\]()]/g, "").replace(/\s+/g, " ").slice(0, 155);
 
-  // 👇 আপডেট করা Article Schema 👇
   const ld = {
     "@context": "https://schema.org", 
     "@type": "Article", 
@@ -62,8 +62,6 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
     ...(p.coverUrl ? { image: [p.coverUrl] } : {}),
   };
 
-  // 👇 নতুন FAQ Schema (আপনার ডাটাবেসে faqs থাকলে এটি কাজ করবে) 👇
-  // টাইপ এরর এড়াতে (p as any) ব্যবহার করা হলো
   const postFaqs = (p as any).faqs; 
   let faqLd = null;
   
@@ -84,14 +82,12 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      {/* 👇 স্কিমা স্ক্রিপ্টসমূহ 👇 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       {faqLd && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }} />
       )}
       
       <article>
-        {/* 👁 ভিউ গণনা (শুধু Published লেখায়) */}
         {p.published && <PostViewTracker postId={p.id} />}
 
         {!p.published && <p className="mb-4 rounded-xl bg-orange-100 p-3 text-sm font-medium text-orange-800">Draft: only admins and teachers can see this page.</p>}
@@ -114,12 +110,20 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
         {p.coverUrl && (
           <Image src={p.coverUrl} alt={p.coverAlt ?? p.title} width={1200} height={630} priority sizes="(max-width: 768px) 100vw, 672px" className="mt-6 h-auto w-full rounded-2xl" />
         )}
-                <CopyGuard />
-        <div className="no-copy">
+        <CopyGuard />
+        
+        {/* 👇 PDF-এর জন্য id যুক্ত করা হলো 👇 */}
+        <div id="post-content" className="no-copy">
           <PostBody body={p.body} />
         </div>
+
+        {/* 👇 PDF ডাউনলোড বাটন (শুধু পাবলিশড পোস্টে) 👇 */}
+        {p.published && (
+          <DownloadPdfButton contentId="post-content" fileName={p.title} />
+        )}
+
         {p.downloadUrl && (
-          <a href={p.downloadUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-royal px-5 py-3 font-semibold text-white">
+          <a href={p.downloadUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-royal px-5 py-3 font-semibold text-white">
             <Download size={18} />Download
           </a>
         )}
@@ -133,5 +137,3 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
     </main>
   );
 }
-
-// ===== ফাইল শেষ =====
