@@ -11,7 +11,8 @@ import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
-import { SessionProvider } from "next-auth/react"; // 🎯 নতুন যুক্ত করা হলো
+import VisitorTracker from "@/components/visitor-tracker";
+import { SessionProvider } from "next-auth/react";
 
 // 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ
 const bn = localFont({
@@ -87,7 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
 
-        {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
+        {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
@@ -101,8 +102,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           fontFamily: 'var(--font-en), "Times New Roman", var(--font-bn), serif',
         }}
       >
-        {/* 🎯 SessionProvider দিয়ে পুরো অ্যাপকে মুড়ে দেওয়া হলো */}
+        {/* 🎯 SessionProvider দিয়ে পুরো অ্যাপকে মুড়ে দেওয়া হলো */}
         <SessionProvider>
+          <VisitorTracker />
           <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
 
           <main>{children}</main>
