@@ -11,7 +11,7 @@ import SaveButton from "@/components/save-button";
 import ShareBar from "@/components/share-bar";
 import CopyGuard from "@/components/copy-guard";
 import PostViewTracker from "@/components/post-view-tracker";
-import DownloadPdfButton from "@/components/download-pdf-button"; // 👈 নতুন ইম্পোর্ট
+import DownloadPdfButton from "@/components/download-pdf-button";
 export const dynamic = "force-dynamic";
 
 const find = cache((key: string) => db.post.findFirst({ where: { OR: [{ slug: key }, { id: key }] }, include: { category: true } }));
@@ -80,6 +80,28 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
     };
   }
 
+  // 👇 সাজেশন পোস্ট আনার লজিক 👇
+  const relatedPosts = await db.post.findMany({
+    where: {
+      published: true,
+      id: { not: p.id },
+      ...(p.categoryId ? { categoryId: p.categoryId } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+
+  // যদি ক্যাটাগরিতে ৩টার কম পোস্ট থাকে, তবে অন্য পোস্ট থেকে পূরণ করা
+  let finalSuggestions = relatedPosts;
+  if (finalSuggestions.length < 3) {
+    const extra = await db.post.findMany({
+      where: { published: true, id: { notIn: [p.id, ...relatedPosts.map(r => r.id)] } },
+      orderBy: { createdAt: "desc" },
+      take: 3 - finalSuggestions.length,
+    });
+    finalSuggestions = [...finalSuggestions, ...extra];
+  }
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
@@ -117,7 +139,7 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
           <PostBody body={p.body} />
         </div>
 
-        {/* 👇 PDF ডাউনলোড বাটন (শুধু পাবলিশড পোস্টে) 👇 */}
+        {/* 👇 PDF ডাউনলোড বাটন 👇 */}
         {p.published && (
           <DownloadPdfButton contentId="post-content" fileName={p.title} />
         )}
@@ -127,6 +149,36 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
             <Download size={18} />Download
           </a>
         )}
+
+        {/* 👇 নতুন সাজেশন সেকশন 👇 */}
+        {finalSuggestions.length > 0 && (
+          <div className="mt-12 border-t border-slate-200 pt-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-blue-600 rounded-full inline-block"></span>
+              আপনার জন্য আরও কিছু
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {finalSuggestions.map((s) => (
+                <Link key={s.id} href={`/blog/${s.slug ?? s.id}`} className="group flex flex-col rounded-2xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition-all hover:border-blue-300">
+                  {s.coverUrl ? (
+                    <div className="relative h-40 w-full overflow-hidden">
+                      <Image src={s.coverUrl} alt={s.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, 33vw" />
+                    </div>
+                  ) : (
+                    <div className="h-40 w-full bg-slate-100 flex items-center justify-center text-slate-400">
+                      <span className="text-3xl">📝</span>
+                    </div>
+                  )}
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="text-base font-bold text-slate-800 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">{s.title}</h3>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-auto">{s.excerpt || s.metaDescription || "এই পোস্টে আরও জানুন..."}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {p.tags.length > 0 && (
           <div className="mt-8 flex flex-wrap gap-2">
             {p.tags.map((t) => <Link key={t} href={`/tag/${encodeURIComponent(t)}`} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-royal hover:bg-blue-100">#{t}</Link>)}
@@ -137,5 +189,3 @@ export default async function Post({ params }: { params: Promise<{ id: string }>
     </main>
   );
 }
-
-
