@@ -318,3 +318,25 @@ model ExamLeaderboard {
 
   @@map("ExamLeaderboard")
 }
+// ================== নতুন ফিচার: Visitor Counter (Admin Dashboard) ==================
+model VisitLog {
+  id        String   @id @default(cuid())
+  path      String   @default("/")
+  ipHash    String?
+  uaHash    String?
+  country   String?  @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model DailyStat {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  views     Int      @default(0)
+  uniques   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
